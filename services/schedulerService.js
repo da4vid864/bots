@@ -1,105 +1,165 @@
 // services/schedulerService.js
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+const pool = require('./db');
 const botConfigService = require('./botConfigService');
 
-const dbPath = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(dbPath)) {
-    fs.mkdirSync(dbPath, { recursive: true });
+/**
+ * Inicializar tabla de tareas programadas
+ */
+async function initSchedulesTable() {
+    const createSchedulesTable = `
+    CREATE TABLE IF NOT EXISTS schedules (
+        id SERIAL PRIMARY KEY,
+        bot_id TEXT NOT NULL,
+        action TEXT NOT NULL,
+        scheduled_at TIMESTAMP NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        executed BOOLEAN DEFAULT FALSE,
+        executed_at TIMESTAMP,
+        created_by TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    `;
+
+    try {
+        await pool.query(createSchedulesTable);
+        console.log('✅ Tabla schedules inicializada');
+    } catch (error) {
+        console.error('❌ Error creando tabla schedules:', error);
+    }
 }
 
-const db = new Database(path.join(dbPath, 'scheduler.db'));
-
-// Tabla de tareas programadas
-const createSchedulesTable = `
-CREATE TABLE IF NOT EXISTS schedules (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    botId TEXT NOT NULL,
-    action TEXT NOT NULL,
-    scheduledAt DATETIME NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending',
-    executed BOOLEAN DEFAULT 0,
-    executedAt DATETIME,
-    createdBy TEXT NOT NULL,
-    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-`;
-
-db.exec(createSchedulesTable);
+// Inicializar al cargar el módulo
+initSchedulesTable();
 
 /**
  * Crear una nueva tarea programada
  */
-function createSchedule(botId, action, scheduledAt, createdBy) {
-    const stmt = db.prepare('INSERT INTO schedules (botId, action, scheduledAt, createdBy, status) VALUES (?, ?, ?, ?, ?)');
-    const result = stmt.run(botId, action, scheduledAt, createdBy, 'pending');
-    return db.prepare('SELECT * FROM schedules WHERE id = ?').get(result.lastInsertRowID);
+async function createSchedule(botId, action, scheduledAt, createdBy) {
+    try {
+        const result = await pool.query(
+            'INSERT INTO schedules (bot_id, action, scheduled_at, created_by, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [botId, action, scheduledAt, createdBy, 'pending']
+        );
+        
+        return result.rows[0];
+    } catch (error) {
+        console.error('Error creando schedule:', error);
+        throw error;
+    }
 }
 
 /**
  * Obtener todas las tareas pendientes que deben ejecutarse
  */
-function getPendingSchedules() {
-    return db.prepare(`
-        SELECT * FROM schedules 
-        WHERE status = 'pending' 
-        AND executed = 0 
-        AND datetime(scheduledAt) <= datetime('now')
-        ORDER BY scheduledAt ASC
-    `).all();
+async function getPendingSchedules() {
+    try {
+        const result = await pool.query(`
+            SELECT * FROM schedules 
+            WHERE status = 'pending' 
+            AND executed = FALSE 
+            AND scheduled_at <= NOW()
+            ORDER BY scheduled_at ASC
+        `);
+        
+        return result.rows;
+    } catch (error) {
+        console.error('Error obteniendo schedules pendientes:', error);
+        return [];
+    }
 }
 
 /**
  * Marcar una tarea como ejecutada
  */
-function markScheduleAsExecuted(scheduleId) {
-    const stmt = db.prepare('UPDATE schedules SET executed = 1, executedAt = CURRENT_TIMESTAMP, status = ? WHERE id = ?');
-    stmt.run('completed', scheduleId);
+async function markScheduleAsExecuted(scheduleId) {
+    try {
+        await pool.query(
+            'UPDATE schedules SET executed = TRUE, executed_at = NOW(), status = $1 WHERE id = $2',
+            ['completed', scheduleId]
+        );
+    } catch (error) {
+        console.error(`Error marcando schedule ${scheduleId} como ejecutado:`, error);
+    }
 }
 
 /**
  * Cancelar una tarea programada
  */
-function cancelSchedule(scheduleId) {
-    const stmt = db.prepare('UPDATE schedules SET status = ? WHERE id = ?');
-    stmt.run('cancelled', scheduleId);
+async function cancelSchedule(scheduleId) {
+    try {
+        await pool.query(
+            'UPDATE schedules SET status = $1 WHERE id = $2',
+            ['cancelled', scheduleId]
+        );
+    } catch (error) {
+        console.error(`Error cancelando schedule ${scheduleId}:`, error);
+    }
 }
 
 /**
  * Obtener todas las tareas de un bot específico
  */
-function getSchedulesByBot(botId) {
-    return db.prepare('SELECT * FROM schedules WHERE botId = ? ORDER BY scheduledAt DESC').all(botId);
+async function getSchedulesByBot(botId) {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM schedules WHERE bot_id = $1 ORDER BY scheduled_at DESC',
+            [botId]
+        );
+        
+        return result.rows;
+    } catch (error) {
+        console.error(`Error obteniendo schedules del bot ${botId}:`, error);
+        return [];
+    }
 }
 
 /**
  * Obtener tareas pendientes de un bot específico
  */
-function getPendingSchedulesByBot(botId) {
-    return db.prepare(`
-        SELECT * FROM schedules 
-        WHERE botId = ? 
-        AND status = 'pending' 
-        AND executed = 0 
-        ORDER BY scheduledAt ASC
-    `).all(botId);
+async function getPendingSchedulesByBot(botId) {
+    try {
+        const result = await pool.query(`
+            SELECT * FROM schedules 
+            WHERE bot_id = $1 
+            AND status = 'pending' 
+            AND executed = FALSE 
+            ORDER BY scheduled_at ASC
+        `, [botId]);
+        
+        return result.rows;
+    } catch (error) {
+        console.error(`Error obteniendo schedules pendientes del bot ${botId}:`, error);
+        return [];
+    }
 }
 
 /**
  * Eliminar tareas de un bot eliminado
  */
-function deleteSchedulesByBot(botId) {
-    const stmt = db.prepare('DELETE FROM schedules WHERE botId = ?');
-    stmt.run(botId);
+async function deleteSchedulesByBot(botId) {
+    try {
+        await pool.query(
+            'DELETE FROM schedules WHERE bot_id = $1',
+            [botId]
+        );
+        
+        console.log(`✅ Schedules del bot ${botId} eliminados`);
+    } catch (error) {
+        console.error(`Error eliminando schedules del bot ${botId}:`, error);
+    }
 }
 
 /**
  * Verificar si el agendamiento está habilitado para un bot
  */
-function isSchedulingEnabled(botId) {
-    const features = botConfigService.getBotFeatures(botId);
-    return features.schedulingEnabled === 1;
+async function isSchedulingEnabled(botId) {
+    try {
+        const features = await botConfigService.getBotFeatures(botId);
+        return features.scheduling_enabled === true;
+    } catch (error) {
+        console.error(`Error verificando scheduling para bot ${botId}:`, error);
+        return false;
+    }
 }
 
 module.exports = {

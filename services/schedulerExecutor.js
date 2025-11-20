@@ -41,30 +41,34 @@ function stopSchedulerExecutor() {
 /**
  * Revisar y ejecutar tareas pendientes
  */
-function checkAndExecutePendingTasks() {
-    const pendingTasks = schedulerService.getPendingSchedules();
+async function checkAndExecutePendingTasks() {
+    try {
+        const pendingTasks = await schedulerService.getPendingSchedules();
 
-    if (pendingTasks.length > 0) {
-        console.log(`📅 Encontradas ${pendingTasks.length} tarea(s) pendiente(s) para ejecutar`);
-    }
-
-    pendingTasks.forEach(task => {
-        try {
-            console.log(`⚡ Ejecutando tarea programada: ${task.action} para bot ${task.botId}`);
-            
-            // Ejecutar la acción a través del callback
-            if (onActionCallback) {
-                onActionCallback(task.botId, task.action);
-            }
-
-            // Marcar como ejecutada
-            schedulerService.markScheduleAsExecuted(task.id);
-            
-            console.log(`✅ Tarea ${task.id} ejecutada exitosamente`);
-        } catch (error) {
-            console.error(`❌ Error ejecutando tarea ${task.id}:`, error);
+        if (pendingTasks.length > 0) {
+            console.log(`📅 Encontradas ${pendingTasks.length} tarea(s) pendiente(s) para ejecutar`);
         }
-    });
+
+        for (const task of pendingTasks) {
+            try {
+                console.log(`⚡ Ejecutando tarea programada: ${task.action} para bot ${task.bot_id}`);
+                
+                // Ejecutar la acción a través del callback
+                if (onActionCallback) {
+                    await onActionCallback(task.bot_id, task.action);
+                }
+
+                // Marcar como ejecutada
+                await schedulerService.markScheduleAsExecuted(task.id);
+                
+                console.log(`✅ Tarea ${task.id} ejecutada exitosamente`);
+            } catch (error) {
+                console.error(`❌ Error ejecutando tarea ${task.id}:`, error);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error en checkAndExecutePendingTasks:', error);
+    }
 }
 
 module.exports = {
