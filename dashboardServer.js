@@ -71,26 +71,26 @@ app.get('/sales', requireAuth, (req, res) => {
 });
 
 // Iniciar el ejecutor de tareas programadas
-startSchedulerExecutor((botId, action) => {
-    const bot = botDbService.getBotById(botId);
+startSchedulerExecutor(async (botId, action) => {
+    const bot = await botDbService.getBotById(botId);
     if (!bot) {
         console.error(`Bot ${botId} no encontrado para ejecutar acción programada`);
         return;
     }
 
     if (action === 'enable') {
-        botDbService.updateBotStatus(botId, 'enabled');
+        await botDbService.updateBotStatus(botId, 'enabled');
         launchBot(bot);
         broadcastToDashboard({
             type: 'UPDATE_BOT',
-            data: { ...botDbService.getBotById(botId), runtimeStatus: 'STARTING' }
+            data: { ...(await botDbService.getBotById(botId)), runtimeStatus: 'STARTING' }
         });
     } else if (action === 'disable') {
-        botDbService.updateBotStatus(botId, 'disabled');
+        await botDbService.updateBotStatus(botId, 'disabled');
         stopBot(botId);
         broadcastToDashboard({
             type: 'UPDATE_BOT',
-            data: { ...botDbService.getBotById(botId), runtimeStatus: 'DISABLED' }
+            data: { ...(await botDbService.getBotById(botId)), runtimeStatus: 'DISABLED' }
         });
     }
 
@@ -101,7 +101,7 @@ startSchedulerExecutor((botId, action) => {
 });
 
 // === WEBSOCKET: CONEXIÓN CON AUTENTICACIÓN ===
-wss.on('connection', (ws, req) => {
+wss.on('connection', async (ws, req) => {
     // Extraer y validar el token de la cookie
     const cookies = cookie.parse(req.headers.cookie || '');
     const token = cookies.auth_token;
@@ -133,7 +133,7 @@ wss.on('connection', (ws, req) => {
 
     // Si es admin, enviar información de bots
     if (user.role === 'admin') {
-        const allBots = botDbService.getAllBots();
+        const allBots = await botDbService.getAllBots();
         const botsData = allBots.map(bot => ({
             ...bot,
             runtimeStatus: getRuntimeStatus(bot)
@@ -142,23 +142,23 @@ wss.on('connection', (ws, req) => {
     }
 
     // Enviar leads calificados (ambos roles pueden verlos)
-    const qualifiedLeads = leadDbService.getQualifiedLeads();
+    const qualifiedLeads = await leadDbService.getQualifiedLeads();
     ws.send(JSON.stringify({ type: 'INIT_LEADS', data: qualifiedLeads }));
 
-    ws.on('message', (message) => {
+    ws.on('message', async (message) => {
         try {
             const data = JSON.parse(message);
             
             if (data.type === 'ASSIGN_LEAD') {
-                handleAssignLead(data.leadId, user.email);
+                await handleAssignLead(data.leadId, user.email);
             }
             
             if (data.type === 'SEND_MESSAGE') {
-                handleSendMessage(data.leadId, data.message, user.email);
+                await handleSendMessage(data.leadId, data.message, user.email);
             }
 
             if (data.type === 'GET_LEAD_MESSAGES') {
-                handleGetLeadMessages(ws, data.leadId);
+                await handleGetLeadMessages(ws, data.leadId);
             }
 
         } catch (error) {
@@ -193,26 +193,29 @@ function broadcastToDashboard(message) {
 }
 
 // === MANEJO DE MENSAJES DE PROCESOS HIJOS (BOTS) ===
-function handleBotMessage(botId, message) {
+async function handleBotMessage(botId, message) {
     switch (message.type) {
         case 'QR_GENERATED':
+            const botWithQR = await botDbService.getBotById(botId);
             broadcastToDashboard({
                 type: 'UPDATE_BOT',
-                data: { ...botDbService.getBotById(botId), runtimeStatus: 'PENDING_QR', qr: message.qr }
+                data: { ...botWithQR, runtimeStatus: 'PENDING_QR', qr: message.qr }
             });
             break;
         
         case 'CONNECTED':
+            const connectedBot = await botDbService.getBotById(botId);
             broadcastToDashboard({
                 type: 'UPDATE_BOT',
-                data: { ...botDbService.getBotById(botId), runtimeStatus: 'CONNECTED' }
+                data: { ...connectedBot, runtimeStatus: 'CONNECTED' }
             });
             break;
         
         case 'DISCONNECTED':
+            const disconnectedBot = await botDbService.getBotById(botId);
             broadcastToDashboard({
                 type: 'UPDATE_BOT',
-                data: { ...botDbService.getBotById(botId), runtimeStatus: 'DISCONNECTED' }
+                data: { ...disconnectedBot, runtimeStatus: 'DISCONNECTED' }
             });
             break;
 
@@ -253,12 +256,13 @@ function launchBot(botConfig) {
 
     botProcess.on('message', (msg) => handleBotMessage(botConfig.id, msg));
 
-    botProcess.on('exit', (code) => {
+    botProcess.on('exit', async (code) => {
         console.log(`❌ Bot ${botConfig.id} terminado con código ${code}`);
         activeBots.delete(botConfig.id);
+        const exitedBot = await botDbService.getBotById(botConfig.id);
         broadcastToDashboard({
             type: 'UPDATE_BOT',
-            data: { ...botConfig, runtimeStatus: 'DISCONNECTED' }
+            data: { ...exitedBot, runtimeStatus: 'DISCONNECTED' }
         });
     });
 
@@ -276,9 +280,9 @@ function stopBot(botId) {
 }
 
 // === MANEJO DE ASIGNACIÓN DE LEADS ===
-function handleAssignLead(leadId, vendorEmail) {
+async function handleAssignLead(leadId, vendorEmail) {
     try {
-        const lead = leadDbService.assignLead(leadId, vendorEmail);
+        const lead = await leadDbService.assignLead(leadId, vendorEmail);
         
         broadcastToDashboard({
             type: 'LEAD_ASSIGNED',
@@ -292,21 +296,21 @@ function handleAssignLead(leadId, vendorEmail) {
 }
 
 // === MANEJO DE ENVÍO DE MENSAJES DESDE VENTAS ===
-function handleSendMessage(leadId, message, vendorEmail) {
+async function handleSendMessage(leadId, message, vendorEmail) {
     try {
-        const lead = leadDbService.getLeadById(leadId);
+        const lead = await leadDbService.getLeadById(leadId);
         if (!lead) {
             console.error(`Lead ${leadId} no encontrado`);
             return;
         }
 
-        leadDbService.addLeadMessage(leadId, vendorEmail, message);
+        await leadDbService.addLeadMessage(leadId, vendorEmail, message);
 
-        const botProcess = activeBots.get(lead.botId);
+        const botProcess = activeBots.get(lead.bot_id);
         if (botProcess) {
             botProcess.send({
                 type: 'SEND_MESSAGE',
-                to: lead.whatsappNumber,
+                to: lead.whatsapp_number,
                 message: message
             });
         }
@@ -328,10 +332,10 @@ function handleSendMessage(leadId, message, vendorEmail) {
 }
 
 // === OBTENER HISTORIAL DE MENSAJES DE UN LEAD ===
-function handleGetLeadMessages(ws, leadId) {
+async function handleGetLeadMessages(ws, leadId) {
     try {
-        const messages = leadDbService.getLeadMessages(leadId, 1000);
-        const lead = leadDbService.getLeadById(leadId);
+        const messages = await leadDbService.getLeadMessages(leadId, 1000);
+        const lead = await leadDbService.getLeadById(leadId);
         
         broadcastToDashboard({
             type: 'LEAD_MESSAGES',
@@ -348,7 +352,7 @@ function handleGetLeadMessages(ws, leadId) {
 }
 
 // === API: CREAR BOT (SOLO ADMIN) ===
-app.post('/create-bot', requireAdmin, (req, res) => {
+app.post('/create-bot', requireAdmin, async (req, res) => {
     const { name, id, prompt } = req.body;
     const ownerEmail = req.user.email;
 
@@ -356,19 +360,19 @@ app.post('/create-bot', requireAdmin, (req, res) => {
         return res.status(400).json({ message: 'Faltan campos requeridos' });
     }
 
-    const existingBot = botDbService.getBotById(id);
+    const existingBot = await botDbService.getBotById(id);
     if (existingBot) {
         return res.status(400).json({ message: 'Ya existe un bot con ese ID' });
     }
 
-    const lastPort = botDbService.getLastPort();
+    const lastPort = await botDbService.getLastPort();
     const newPort = lastPort + 1;
 
     const botConfig = { id, name, port: newPort, prompt, status: 'enabled', ownerEmail };
     
     try {
-        botDbService.addBot(botConfig);
-        botConfigService.createBotFeatures(id);
+        await botDbService.addBot(botConfig);
+        await botConfigService.createBotFeatures(id);
         launchBot(botConfig);
 
         broadcastToDashboard({
@@ -384,12 +388,12 @@ app.post('/create-bot', requireAdmin, (req, res) => {
 });
 
 // === API: EDITAR PROMPT DE BOT (SOLO ADMIN) ===
-app.patch('/edit-bot/:id', requireAdmin, (req, res) => {
+app.patch('/edit-bot/:id', requireAdmin, async (req, res) => {
     const { id } = req.params;
     const { prompt } = req.body;
     const ownerEmail = req.user.email;
 
-    const bot = botDbService.getBotByIdAndOwner(id, ownerEmail);
+    const bot = await botDbService.getBotByIdAndOwner(id, ownerEmail);
     if (!bot) {
         return res.status(404).json({ message: 'Bot no encontrado o no tienes permiso' });
     }
@@ -398,12 +402,12 @@ app.patch('/edit-bot/:id', requireAdmin, (req, res) => {
         return res.status(400).json({ message: 'El prompt es requerido' });
     }
 
-    botDbService.updateBotPrompt(id, prompt);
+    await botDbService.updateBotPrompt(id, prompt);
 
     if (activeBots.has(id)) {
         stopBot(id);
-        setTimeout(() => {
-            const updatedBot = botDbService.getBotById(id);
+        setTimeout(async () => {
+            const updatedBot = await botDbService.getBotById(id);
             if (updatedBot.status === 'enabled') {
                 launchBot(updatedBot);
             }
@@ -414,61 +418,63 @@ app.patch('/edit-bot/:id', requireAdmin, (req, res) => {
 });
 
 // === API: DESHABILITAR BOT (SOLO ADMIN) ===
-app.post('/disable-bot/:id', requireAdmin, (req, res) => {
+app.post('/disable-bot/:id', requireAdmin, async (req, res) => {
     const { id } = req.params;
     const ownerEmail = req.user.email;
 
-    const bot = botDbService.getBotByIdAndOwner(id, ownerEmail);
+    const bot = await botDbService.getBotByIdAndOwner(id, ownerEmail);
     if (!bot) {
         return res.status(404).json({ message: 'Bot no encontrado o no tienes permiso' });
     }
 
-    botDbService.updateBotStatus(id, 'disabled');
+    await botDbService.updateBotStatus(id, 'disabled');
     stopBot(id);
 
+    const disabledBot = await botDbService.getBotById(id);
     broadcastToDashboard({
         type: 'UPDATE_BOT',
-        data: { ...botDbService.getBotById(id), runtimeStatus: 'DISABLED' }
+        data: { ...disabledBot, runtimeStatus: 'DISABLED' }
     });
 
     res.json({ message: 'Bot deshabilitado' });
 });
 
 // === API: HABILITAR BOT (SOLO ADMIN) ===
-app.post('/enable-bot/:id', requireAdmin, (req, res) => {
+app.post('/enable-bot/:id', requireAdmin, async (req, res) => {
     const { id } = req.params;
     const ownerEmail = req.user.email;
 
-    const bot = botDbService.getBotByIdAndOwner(id, ownerEmail);
+    const bot = await botDbService.getBotByIdAndOwner(id, ownerEmail);
     if (!bot) {
         return res.status(404).json({ message: 'Bot no encontrado o no tienes permiso' });
     }
 
-    botDbService.updateBotStatus(id, 'enabled');
-    launchBot(botDbService.getBotById(id));
+    await botDbService.updateBotStatus(id, 'enabled');
+    const enabledBot = await botDbService.getBotById(id);
+    launchBot(enabledBot);
 
     broadcastToDashboard({
         type: 'UPDATE_BOT',
-        data: { ...botDbService.getBotById(id), runtimeStatus: 'STARTING' }
+        data: { ...enabledBot, runtimeStatus: 'STARTING' }
     });
 
     res.json({ message: 'Bot habilitado' });
 });
 
 // === API: ELIMINAR BOT (SOLO ADMIN) ===
-app.delete('/delete-bot/:id', requireAdmin, (req, res) => {
+app.delete('/delete-bot/:id', requireAdmin, async (req, res) => {
     const { id } = req.params;
     const ownerEmail = req.user.email;
 
-    const bot = botDbService.getBotByIdAndOwner(id, ownerEmail);
+    const bot = await botDbService.getBotByIdAndOwner(id, ownerEmail);
     if (!bot) {
         return res.status(404).json({ message: 'Bot no encontrado o no tienes permiso' });
     }
 
     stopBot(id);
-    schedulerService.deleteSchedulesByBot(id);
-    botConfigService.deleteBotFeatures(id);
-    botDbService.deleteBotById(id);
+    await schedulerService.deleteSchedulesByBot(id);
+    await botConfigService.deleteBotFeatures(id);
+    await botDbService.deleteBotById(id);
 
     broadcastToDashboard({
         type: 'BOT_DELETED',
@@ -479,24 +485,24 @@ app.delete('/delete-bot/:id', requireAdmin, (req, res) => {
 });
 
 // === API: OBTENER LEADS CALIFICADOS (ADMIN Y VENDEDOR) ===
-app.get('/api/leads/qualified', requireAuth, (req, res) => {
-    const leads = leadDbService.getQualifiedLeads();
+app.get('/api/leads/qualified', requireAuth, async (req, res) => {
+    const leads = await leadDbService.getQualifiedLeads();
     res.json(leads);
 });
 
 // === API: OBTENER LEADS ASIGNADOS AL USUARIO (ADMIN Y VENDEDOR) ===
-app.get('/api/leads/assigned', requireAuth, (req, res) => {
-    const leads = leadDbService.getLeadsByVendor(req.user.email);
+app.get('/api/leads/assigned', requireAuth, async (req, res) => {
+    const leads = await leadDbService.getLeadsByVendor(req.user.email);
     res.json(leads);
 });
 
 // === API: OBTENER HISTORIAL DE MENSAJES DE UN LEAD (ADMIN Y VENDEDOR) ===
-app.get('/api/leads/:id/messages', requireAuth, (req, res) => {
+app.get('/api/leads/:id/messages', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { limit = 1000 } = req.query;
     
-    const messages = leadDbService.getLeadMessages(id, parseInt(limit));
-    const lead = leadDbService.getLeadById(id);
+    const messages = await leadDbService.getLeadMessages(id, parseInt(limit));
+    const lead = await leadDbService.getLeadById(id);
     
     res.json({ 
         lead, 
@@ -506,31 +512,31 @@ app.get('/api/leads/:id/messages', requireAuth, (req, res) => {
 });
 
 // === API: OBTENER CONFIGURACIÓN DE FUNCIONALIDADES DE UN BOT (SOLO ADMIN) ===
-app.get('/api/bot/:botId/features', requireAdmin, (req, res) => {
+app.get('/api/bot/:botId/features', requireAdmin, async (req, res) => {
     const { botId } = req.params;
     const ownerEmail = req.user.email;
 
-    const bot = botDbService.getBotByIdAndOwner(botId, ownerEmail);
+    const bot = await botDbService.getBotByIdAndOwner(botId, ownerEmail);
     if (!bot) {
         return res.status(404).json({ message: 'Bot no encontrado o no tienes permiso' });
     }
 
-    const features = botConfigService.getBotFeatures(botId);
+    const features = await botConfigService.getBotFeatures(botId);
     res.json(features);
 });
 
 // === API: ACTUALIZAR FUNCIONALIDADES DE UN BOT (SOLO ADMIN) ===
-app.patch('/api/bot/:botId/features', requireAdmin, (req, res) => {
+app.patch('/api/bot/:botId/features', requireAdmin, async (req, res) => {
     const { botId } = req.params;
     const ownerEmail = req.user.email;
 
-    const bot = botDbService.getBotByIdAndOwner(botId, ownerEmail);
+    const bot = await botDbService.getBotByIdAndOwner(botId, ownerEmail);
     if (!bot) {
         return res.status(404).json({ message: 'Bot no encontrado o no tienes permiso' });
     }
 
     try {
-        const updatedFeatures = botConfigService.updateBotFeatures(botId, req.body);
+        const updatedFeatures = await botConfigService.updateBotFeatures(botId, req.body);
         
         broadcastToDashboard({
             type: 'BOT_FEATURES_UPDATED',
@@ -544,16 +550,17 @@ app.patch('/api/bot/:botId/features', requireAdmin, (req, res) => {
 });
 
 // === API: CREAR TAREA PROGRAMADA (SOLO ADMIN) ===
-app.post('/api/schedule', requireAdmin, (req, res) => {
+app.post('/api/schedule', requireAdmin, async (req, res) => {
     const { botId, action, scheduledAt } = req.body;
     const ownerEmail = req.user.email;
 
-    const bot = botDbService.getBotByIdAndOwner(botId, ownerEmail);
+    const bot = await botDbService.getBotByIdAndOwner(botId, ownerEmail);
     if (!bot) {
         return res.status(404).json({ message: 'Bot no encontrado o no tienes permiso' });
     }
 
-    if (!schedulerService.isSchedulingEnabled(botId)) {
+    const isEnabled = await schedulerService.isSchedulingEnabled(botId);
+    if (!isEnabled) {
         return res.status(403).json({ message: 'La función de agendamiento no está habilitada para este bot' });
     }
 
@@ -561,7 +568,7 @@ app.post('/api/schedule', requireAdmin, (req, res) => {
         return res.status(400).json({ message: 'Acción inválida. Usa "enable" o "disable"' });
     }
 
-    const schedule = schedulerService.createSchedule(botId, action, scheduledAt, ownerEmail);
+    const schedule = await schedulerService.createSchedule(botId, action, scheduledAt, ownerEmail);
     
     broadcastToDashboard({
         type: 'SCHEDULE_CREATED',
@@ -572,27 +579,27 @@ app.post('/api/schedule', requireAdmin, (req, res) => {
 });
 
 // === API: OBTENER TAREAS PROGRAMADAS DE UN BOT (SOLO ADMIN) ===
-app.get('/api/schedules/:botId', requireAdmin, (req, res) => {
+app.get('/api/schedules/:botId', requireAdmin, async (req, res) => {
     const { botId } = req.params;
     const ownerEmail = req.user.email;
 
-    const bot = botDbService.getBotByIdAndOwner(botId, ownerEmail);
+    const bot = await botDbService.getBotByIdAndOwner(botId, ownerEmail);
     if (!bot) {
         return res.status(404).json({ message: 'Bot no encontrado o no tienes permiso' });
     }
 
-    const schedules = schedulerService.getSchedulesByBot(botId);
+    const schedules = await schedulerService.getSchedulesByBot(botId);
     res.json(schedules);
 });
 
 // === API: CANCELAR TAREA PROGRAMADA (SOLO ADMIN) ===
-app.delete('/api/schedule/:scheduleId', requireAdmin, (req, res) => {
+app.delete('/api/schedule/:scheduleId', requireAdmin, async (req, res) => {
     const { scheduleId } = req.params;
     
-    schedulerService.cancelSchedule(scheduleId);
+    await schedulerService.cancelSchedule(scheduleId);
     
     broadcastToDashboard({
-                type: 'SCHEDULE_CANCELLED',
+        type: 'SCHEDULE_CANCELLED',
         data: { scheduleId: parseInt(scheduleId) }
     });
 
@@ -600,9 +607,9 @@ app.delete('/api/schedule/:scheduleId', requireAdmin, (req, res) => {
 });
 
 // === INICIAR SERVIDOR ===
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', async () => {
     console.log(`🚀 Dashboard corriendo en puerto ${PORT}`);
     
-    const enabledBots = botDbService.getAllBots().filter(bot => bot.status === 'enabled');
+    const enabledBots = (await botDbService.getAllBots()).filter(bot => bot.status === 'enabled');
     enabledBots.forEach(bot => launchBot(bot));
 });

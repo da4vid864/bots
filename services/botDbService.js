@@ -1,134 +1,119 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+// services/botDbService.js
+const pool = require('./db');
 
-const dbPath = path.join(__dirname, 'data');
-if (!fs.existsSync(dbPath)) {
-    fs.mkdirSync(dbPath, { recursive: true });
+/**
+ * Inicializar tabla de bots
+ */
+async function initBotTable() {
+    const createTableQuery = `
+    CREATE TABLE IF NOT EXISTS bots (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL,
+        port INTEGER UNIQUE NOT NULL,
+        prompt TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'enabled',
+        owner_email TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    `;
+    
+    try {
+        await pool.query(createTableQuery);
+        console.log('✅ Tabla bots inicializada');
+    } catch (error) {
+        console.error('❌ Error creando tabla bots:', error);
+    }
 }
 
-const db = new Database(path.join(dbPath, 'bots.db'));
-
-// Define la estructura de la tabla, con la nueva columna 'ownerEmail'.
-const createTableQuery = `
-CREATE TABLE IF NOT EXISTS bots (
-    id TEXT PRIMARY KEY NOT NULL,
-    name TEXT NOT NULL,
-    port INTEGER UNIQUE NOT NULL,
-    prompt TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'enabled',
-    ownerEmail TEXT NOT NULL,
-    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-`;
-db.exec(createTableQuery);
-
-// Bloque de migración: Añade la columna 'ownerEmail' si no existe.
-// Esto es para actualizar tu base de datos existente sin perder datos.
-// Se ejecutará solo una vez si la columna falta.
-try {
-    db.prepare('SELECT ownerEmail FROM bots LIMIT 1').get();
-} catch (e) {
-    console.log("Migración: Añadiendo la columna 'ownerEmail' a la tabla de bots...");
-    const adminEmail = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',')[0] : 'default@admin.com';
-    db.exec(`ALTER TABLE bots ADD COLUMN ownerEmail TEXT NOT NULL DEFAULT "${adminEmail}"`);
-    console.log(`Migración completada. Los bots existentes han sido asignados a '${adminEmail}'.`);
-}
-
+// Inicializar al cargar el módulo
+initBotTable();
 
 /**
  * Añade la configuración de un nuevo bot a la base de datos.
- * @param {object} botConfig - { id, name, port, prompt, ownerEmail }
  */
-function addBot(botConfig) {
-  const { id, name, port, prompt, ownerEmail } = botConfig;
-  const stmt = db.prepare('INSERT INTO bots (id, name, port, prompt, status, ownerEmail) VALUES (?, ?, ?, ?, ?, ?)');
-  stmt.run(id, name, port, prompt, 'enabled', ownerEmail);
+async function addBot(botConfig) {
+    const { id, name, port, prompt, ownerEmail } = botConfig;
+    const query = 'INSERT INTO bots (id, name, port, prompt, status, owner_email) VALUES ($1, $2, $3, $4, $5, $6)';
+    await pool.query(query, [id, name, port, prompt, 'enabled', ownerEmail]);
 }
 
 /**
- * Actualiza el estado de un bot ('enabled' o 'disabled').
- * @param {string} id - El ID del bot.
- * @param {string} status - El nuevo estado.
+ * Actualiza el estado de un bot
  */
-function updateBotStatus(id, status) {
-    const stmt = db.prepare('UPDATE bots SET status = ? WHERE id = ?');
-    stmt.run(status, id);
+async function updateBotStatus(id, status) {
+    const query = 'UPDATE bots SET status = $1 WHERE id = $2';
+    await pool.query(query, [status, id]);
 }
 
 /**
- * Actualiza únicamente el prompt de un bot específico.
- * @param {string} id - El ID del bot.
- * @param {string} prompt - El nuevo contenido del prompt.
+ * Actualiza el prompt de un bot
  */
-function updateBotPrompt(id, prompt) {
-    const stmt = db.prepare('UPDATE bots SET prompt = ? WHERE id = ?');
-    stmt.run(prompt, id);
+async function updateBotPrompt(id, prompt) {
+    const query = 'UPDATE bots SET prompt = $1 WHERE id = $2';
+    await pool.query(query, [prompt, id]);
 }
 
 /**
- * Obtiene la configuración de un bot por su ID.
- * @param {string} id - El ID del bot.
- * @returns {object|undefined}
+ * Obtiene un bot por ID
  */
-function getBotById(id) {
-  return db.prepare('SELECT * FROM bots WHERE id = ?').get(id);
+async function getBotById(id) {
+    const query = 'SELECT * FROM bots WHERE id = $1';
+    const result = await pool.query(query, [id]);
+    return result.rows[0];
 }
 
 /**
- * Obtiene la configuración de un bot solo si pertenece al usuario especificado.
- * ¡Función clave para la seguridad!
- * @param {string} id - El ID del bot.
- * @param {string} ownerEmail - El email del usuario.
- * @returns {object|undefined}
+ * Obtiene un bot por ID y owner
  */
-function getBotByIdAndOwner(id, ownerEmail) {
-    return db.prepare('SELECT * FROM bots WHERE id = ? AND ownerEmail = ?').get(id, ownerEmail);
+async function getBotByIdAndOwner(id, ownerEmail) {
+    const query = 'SELECT * FROM bots WHERE id = $1 AND owner_email = $2';
+    const result = await pool.query(query, [id, ownerEmail]);
+    return result.rows[0];
 }
 
 /**
- * Obtiene la configuración de todos los bots (para uso interno o de super-admin).
- * @returns {Array<object>}
+ * Obtiene todos los bots
  */
-function getAllBots() {
-  return db.prepare('SELECT * FROM bots').all();
+async function getAllBots() {
+    const query = 'SELECT * FROM bots';
+    const result = await pool.query(query);
+    return result.rows;
 }
 
 /**
- * Obtiene todos los bots que pertenecen a un usuario específico.
- * @param {string} ownerEmail - El email del dueño.
- * @returns {Array<object>}
+ * Obtiene bots por owner
  */
-function getBotsByOwner(ownerEmail) {
-    return db.prepare('SELECT * FROM bots WHERE ownerEmail = ?').all(ownerEmail);
+async function getBotsByOwner(ownerEmail) {
+    const query = 'SELECT * FROM bots WHERE owner_email = $1';
+    const result = await pool.query(query, [ownerEmail]);
+    return result.rows;
 }
 
 /**
- * Encuentra el último puerto utilizado para asignar el siguiente.
- * @returns {number}
+ * Obtiene el último puerto usado
  */
-function getLastPort() {
-    const row = db.prepare('SELECT MAX(port) as maxPort FROM bots').get();
-    return row.maxPort || 3000; // Puerto base si no hay bots.
+async function getLastPort() {
+    const query = 'SELECT MAX(port) as max_port FROM bots';
+    const result = await pool.query(query);
+    return result.rows[0]?.max_port || 3000;
 }
 
 /**
- * Elimina un bot de la base de datos por su ID.
- * @param {string} id - El ID del bot a eliminar.
+ * Elimina un bot
  */
-function deleteBotById(id) {
-    const stmt = db.prepare('DELETE FROM bots WHERE id = ?');
-    stmt.run(id);
+async function deleteBotById(id) {
+    const query = 'DELETE FROM bots WHERE id = $1';
+    await pool.query(query, [id]);
 }
 
 module.exports = {
-  addBot,
-  getBotById,
-  getAllBots,
-  getBotsByOwner,       // Exportar nueva función
-  getBotByIdAndOwner,   // Exportar nueva función de seguridad
-  getLastPort,
-  updateBotStatus,
-  deleteBotById,
-  updateBotPrompt
+    addBot,
+    getBotById,
+    getAllBots,
+    getBotsByOwner,
+    getBotByIdAndOwner,
+    getLastPort,
+    updateBotStatus,
+    deleteBotById,
+    updateBotPrompt
 };

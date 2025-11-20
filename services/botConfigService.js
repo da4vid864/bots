@@ -1,167 +1,219 @@
 // services/botConfigService.js
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+const pool = require('./db');
 
-const dbPath = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(dbPath)) {
-    fs.mkdirSync(dbPath, { recursive: true });
+/**
+ * Inicializar tabla de configuración de funcionalidades
+ */
+async function initBotFeaturesTable() {
+    const createBotFeaturesTable = `
+    CREATE TABLE IF NOT EXISTS bot_features (
+        id SERIAL PRIMARY KEY,
+        bot_id TEXT NOT NULL UNIQUE,
+        scheduling_enabled BOOLEAN DEFAULT FALSE,
+        auto_response_enabled BOOLEAN DEFAULT TRUE,
+        lead_capture_enabled BOOLEAN DEFAULT TRUE,
+        working_hours_enabled BOOLEAN DEFAULT FALSE,
+        working_hours_start TEXT DEFAULT '09:00',
+        working_hours_end TEXT DEFAULT '18:00',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    `;
+
+    try {
+        await pool.query(createBotFeaturesTable);
+        console.log('✅ Tabla bot_features inicializada');
+    } catch (error) {
+        console.error('❌ Error creando tabla bot_features:', error);
+    }
 }
 
-const db = new Database(path.join(dbPath, 'bots.db'));
-
-// Tabla de configuraciones de funcionalidades de bots (SIN FOREIGN KEY)
-const createBotFeaturesTable = `
-CREATE TABLE IF NOT EXISTS bot_features (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    botId TEXT NOT NULL UNIQUE,
-    schedulingEnabled BOOLEAN DEFAULT 0,
-    autoResponseEnabled BOOLEAN DEFAULT 1,
-    leadCaptureEnabled BOOLEAN DEFAULT 1,
-    workingHoursEnabled BOOLEAN DEFAULT 0,
-    workingHoursStart TEXT DEFAULT '09:00',
-    workingHoursEnd TEXT DEFAULT '18:00',
-    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-`;
-
-db.exec(createBotFeaturesTable);
+// Inicializar al cargar el módulo
+initBotFeaturesTable();
 
 /**
  * Obtener las funcionalidades de un bot (crea registro si no existe)
  */
-function getBotFeatures(botId) {
-    let features = db.prepare('SELECT * FROM bot_features WHERE botId = ?').get(botId);
-    
-    if (!features) {
-        try {
-            const stmt = db.prepare('INSERT INTO bot_features (botId) VALUES (?)');
-            stmt.run(botId);
-            features = db.prepare('SELECT * FROM bot_features WHERE botId = ?').get(botId);
-        } catch (error) {
-            console.warn(`No se pudo crear features para bot ${botId}, usando valores por defecto`);
-            return {
-                botId: botId,
-                schedulingEnabled: 0,
-                autoResponseEnabled: 1,
-                leadCaptureEnabled: 1,
-                workingHoursEnabled: 0,
-                workingHoursStart: '09:00',
-                workingHoursEnd: '18:00'
-            };
+async function getBotFeatures(botId) {
+    try {
+        let result = await pool.query(
+            'SELECT * FROM bot_features WHERE bot_id = $1',
+            [botId]
+        );
+        
+        if (result.rows.length === 0) {
+            // Crear registro con valores por defecto
+            await pool.query(
+                'INSERT INTO bot_features (bot_id) VALUES ($1)',
+                [botId]
+            );
+            
+            result = await pool.query(
+                'SELECT * FROM bot_features WHERE bot_id = $1',
+                [botId]
+            );
         }
+        
+        return result.rows[0];
+    } catch (error) {
+        console.error(`Error obteniendo features para bot ${botId}:`, error);
+        
+        // Retornar valores por defecto en caso de error
+        return {
+            bot_id: botId,
+            scheduling_enabled: false,
+            auto_response_enabled: true,
+            lead_capture_enabled: true,
+            working_hours_enabled: false,
+            working_hours_start: '09:00',
+            working_hours_end: '18:00'
+        };
     }
-    
-    return features;
 }
 
 /**
  * Actualizar una funcionalidad específica de un bot
  */
-function updateBotFeature(botId, featureName, value) {
+async function updateBotFeature(botId, featureName, value) {
     const validFeatures = [
-        'schedulingEnabled',
-        'autoResponseEnabled', 
-        'leadCaptureEnabled',
-        'workingHoursEnabled',
-        'workingHoursStart',
-        'workingHoursEnd'
+        'scheduling_enabled',
+        'auto_response_enabled', 
+        'lead_capture_enabled',
+        'working_hours_enabled',
+        'working_hours_start',
+        'working_hours_end'
     ];
     
     if (!validFeatures.includes(featureName)) {
         throw new Error(`Funcionalidad inválida: ${featureName}`);
     }
 
-    // Asegurarse de que exista el registro
-    let features = db.prepare('SELECT * FROM bot_features WHERE botId = ?').get(botId);
-    
-    if (!features) {
-        try {
-            const stmt = db.prepare('INSERT INTO bot_features (botId) VALUES (?)');
-            stmt.run(botId);
-        } catch (error) {
-            console.error(`Error creando features para bot ${botId}:`, error.message);
-            throw error;
+    try {
+        // Asegurarse de que exista el registro
+        const existing = await pool.query(
+            'SELECT * FROM bot_features WHERE bot_id = $1',
+            [botId]
+        );
+        
+        if (existing.rows.length === 0) {
+            await pool.query(
+                'INSERT INTO bot_features (bot_id) VALUES ($1)',
+                [botId]
+            );
         }
+        
+        // Actualizar la funcionalidad
+        const query = `
+            UPDATE bot_features 
+            SET ${featureName} = $1, updated_at = CURRENT_TIMESTAMP 
+            WHERE bot_id = $2
+        `;
+        await pool.query(query, [value, botId]);
+        
+        return await getBotFeatures(botId);
+    } catch (error) {
+        console.error(`Error actualizando feature ${featureName} para bot ${botId}:`, error);
+        throw error;
     }
-    
-    const query = `UPDATE bot_features SET ${featureName} = ?, updatedAt = CURRENT_TIMESTAMP WHERE botId = ?`;
-    const stmt = db.prepare(query);
-    stmt.run(value, botId);
-    
-    return getBotFeatures(botId);
 }
 
 /**
  * Actualizar múltiples funcionalidades a la vez
  */
-function updateBotFeatures(botId, features) {
-    // Asegurarse de que exista el registro
-    let existingFeatures = db.prepare('SELECT * FROM bot_features WHERE botId = ?').get(botId);
-    
-    if (!existingFeatures) {
-        try {
-            const stmt = db.prepare('INSERT INTO bot_features (botId) VALUES (?)');
-            stmt.run(botId);
-        } catch (error) {
-            console.error(`Error creando features para bot ${botId}:`, error.message);
-            throw error;
+async function updateBotFeatures(botId, features) {
+    try {
+        // Asegurarse de que exista el registro
+        const existing = await pool.query(
+            'SELECT * FROM bot_features WHERE bot_id = $1',
+            [botId]
+        );
+        
+        if (existing.rows.length === 0) {
+            await pool.query(
+                'INSERT INTO bot_features (bot_id) VALUES ($1)',
+                [botId]
+            );
         }
-    }
-    
-    const updates = [];
-    const values = [];
-    
-    const validFeatures = {
-        schedulingEnabled: 'BOOLEAN',
-        autoResponseEnabled: 'BOOLEAN',
-        leadCaptureEnabled: 'BOOLEAN',
-        workingHoursEnabled: 'BOOLEAN',
-        workingHoursStart: 'TEXT',
-        workingHoursEnd: 'TEXT'
-    };
-    
-    for (const [key, value] of Object.entries(features)) {
-        if (validFeatures[key]) {
-            updates.push(`${key} = ?`);
-            values.push(value);
+        
+        const updates = [];
+        const values = [];
+        let paramCount = 1;
+        
+        const validFeatures = {
+            scheduling_enabled: 'BOOLEAN',
+            auto_response_enabled: 'BOOLEAN',
+            lead_capture_enabled: 'BOOLEAN',
+            working_hours_enabled: 'BOOLEAN',
+            working_hours_start: 'TEXT',
+            working_hours_end: 'TEXT'
+        };
+        
+        // Convertir camelCase a snake_case para las claves
+        const featureMap = {
+            schedulingEnabled: 'scheduling_enabled',
+            autoResponseEnabled: 'auto_response_enabled',
+            leadCaptureEnabled: 'lead_capture_enabled',
+            workingHoursEnabled: 'working_hours_enabled',
+            workingHoursStart: 'working_hours_start',
+            workingHoursEnd: 'working_hours_end'
+        };
+        
+        for (const [key, value] of Object.entries(features)) {
+            const dbKey = featureMap[key] || key;
+            
+            if (validFeatures[dbKey]) {
+                updates.push(`${dbKey} = $${paramCount++}`);
+                values.push(value);
+            }
         }
+        
+        if (updates.length > 0) {
+            updates.push('updated_at = CURRENT_TIMESTAMP');
+            values.push(botId);
+            
+            const query = `
+                UPDATE bot_features 
+                SET ${updates.join(', ')} 
+                WHERE bot_id = $${paramCount}
+            `;
+            await pool.query(query, values);
+        }
+        
+        return await getBotFeatures(botId);
+    } catch (error) {
+        console.error(`Error actualizando features para bot ${botId}:`, error);
+        throw error;
     }
-    
-    if (updates.length > 0) {
-        updates.push('updatedAt = CURRENT_TIMESTAMP');
-        values.push(botId);
-        const query = `UPDATE bot_features SET ${updates.join(', ')} WHERE botId = ?`;
-        db.prepare(query).run(...values);
-    }
-    
-    return getBotFeatures(botId);
 }
 
 /**
  * Crear registro de features cuando se crea un bot
  */
-function createBotFeatures(botId) {
+async function createBotFeatures(botId) {
     try {
-        const stmt = db.prepare('INSERT INTO bot_features (botId) VALUES (?)');
-        stmt.run(botId);
-        return getBotFeatures(botId);
+        await pool.query(
+            'INSERT INTO bot_features (bot_id) VALUES ($1) ON CONFLICT (bot_id) DO NOTHING',
+            [botId]
+        );
+        
+        return await getBotFeatures(botId);
     } catch (error) {
-        console.error(`Error creando features iniciales para bot ${botId}:`, error.message);
-        return getBotFeatures(botId);
+        console.error(`Error creando features iniciales para bot ${botId}:`, error);
+        return await getBotFeatures(botId);
     }
 }
 
 /**
  * Eliminar funcionalidades de un bot
  */
-function deleteBotFeatures(botId) {
+async function deleteBotFeatures(botId) {
     try {
-        const stmt = db.prepare('DELETE FROM bot_features WHERE botId = ?');
-        stmt.run(botId);
+        await pool.query(
+            'DELETE FROM bot_features WHERE bot_id = $1',
+            [botId]
+        );
         console.log(`✅ Features del bot ${botId} eliminadas`);
     } catch (error) {
-        console.error(`Error eliminando features del bot ${botId}:`, error.message);
+        console.error(`Error eliminando features del bot ${botId}:`, error);
     }
 }
 
