@@ -70,36 +70,6 @@ app.get('/sales', requireAuth, (req, res) => {
     res.render('sales', { user: req.user });
 });
 
-// Iniciar el ejecutor de tareas programadas
-startSchedulerExecutor(async (botId, action) => {
-    const bot = await botDbService.getBotById(botId);
-    if (!bot) {
-        console.error(`Bot ${botId} no encontrado para ejecutar acción programada`);
-        return;
-    }
-
-    if (action === 'enable') {
-        await botDbService.updateBotStatus(botId, 'enabled');
-        launchBot(bot);
-        broadcastToDashboard({
-            type: 'UPDATE_BOT',
-            data: { ...(await botDbService.getBotById(botId)), runtimeStatus: 'STARTING' }
-        });
-    } else if (action === 'disable') {
-        await botDbService.updateBotStatus(botId, 'disabled');
-        stopBot(botId);
-        broadcastToDashboard({
-            type: 'UPDATE_BOT',
-            data: { ...(await botDbService.getBotById(botId)), runtimeStatus: 'DISABLED' }
-        });
-    }
-
-    broadcastToDashboard({
-        type: 'SCHEDULE_EXECUTED',
-        data: { botId, action }
-    });
-});
-
 // === WEBSOCKET: CONEXIÓN CON AUTENTICACIÓN ===
 wss.on('connection', async (ws, req) => {
     // Extraer y validar el token de la cookie
@@ -572,8 +542,7 @@ app.post('/api/schedule', requireAdmin, async (req, res) => {
     
     broadcastToDashboard({
         type: 'SCHEDULE_CREATED',
-        data: schedule
-    });
+        data: schedule    });
 
     res.json({ message: 'Tarea programada creada exitosamente', schedule });
 });
@@ -606,10 +575,57 @@ app.delete('/api/schedule/:scheduleId', requireAdmin, async (req, res) => {
     res.json({ message: 'Tarea cancelada exitosamente' });
 });
 
-// === INICIAR SERVIDOR ===
-server.listen(PORT, '0.0.0.0', async () => {
-    console.log(`🚀 Dashboard corriendo en puerto ${PORT}`);
-    
-    const enabledBots = (await botDbService.getAllBots()).filter(bot => bot.status === 'enabled');
-    enabledBots.forEach(bot => launchBot(bot));
-});
+// === INICIAR SERVIDOR CON INICIALIZACIÓN DE DB ===
+async function startServer() {
+    try {
+        // 1. Inicializar base de datos PRIMERO
+        const { initializeDatabase } = require('./services/initDb');
+        await initializeDatabase();
+        
+        // 2. Iniciar ejecutor de tareas programadas
+        startSchedulerExecutor(async (botId, action) => {
+            const bot = await botDbService.getBotById(botId);
+            if (!bot) {
+                console.error(`Bot ${botId} no encontrado para ejecutar acción programada`);
+                return;
+            }
+
+            if (action === 'enable') {
+                await botDbService.updateBotStatus(botId, 'enabled');
+                launchBot(bot);
+                broadcastToDashboard({
+                    type: 'UPDATE_BOT',
+                    data: { ...(await botDbService.getBotById(botId)), runtimeStatus: 'STARTING' }
+                });
+            } else if (action === 'disable') {
+                await botDbService.updateBotStatus(botId, 'disabled');
+                stopBot(botId);
+                broadcastToDashboard({
+                    type: 'UPDATE_BOT',
+                    data: { ...(await botDbService.getBotById(botId)), runtimeStatus: 'DISABLED' }
+                });
+            }
+
+            broadcastToDashboard({
+                type: 'SCHEDULE_EXECUTED',
+                data: { botId, action }
+            });
+        });
+        
+        // 3. Iniciar servidor HTTP
+        server.listen(PORT, '0.0.0.0', async () => {
+            console.log(`🚀 Dashboard corriendo en puerto ${PORT}`);
+            
+            // 4. Lanzar bots habilitados
+            const enabledBots = (await botDbService.getAllBots()).filter(bot => bot.status === 'enabled');
+            enabledBots.forEach(bot => launchBot(bot));
+        });
+        
+    } catch (error) {
+        console.error('❌ Error fatal al iniciar servidor:', error);
+        process.exit(1);
+    }
+}
+
+// Iniciar la aplicación
+startServer();

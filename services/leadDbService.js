@@ -2,49 +2,6 @@
 const pool = require('./db');
 
 /**
- * Inicializar tablas de leads
- */
-async function initLeadTables() {
-    const createLeadsTable = `
-    CREATE TABLE IF NOT EXISTS leads (
-        id SERIAL PRIMARY KEY,
-        bot_id TEXT NOT NULL,
-        whatsapp_number TEXT NOT NULL,
-        name TEXT,
-        email TEXT,
-        location TEXT,
-        phone TEXT,
-        status TEXT NOT NULL DEFAULT 'capturing',
-        assigned_to TEXT,
-        captured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        qualified_at TIMESTAMP,
-        last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(bot_id, whatsapp_number)
-    );
-    `;
-
-    const createMessagesTable = `
-    CREATE TABLE IF NOT EXISTS lead_messages (
-        id SERIAL PRIMARY KEY,
-        lead_id INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
-        sender TEXT NOT NULL,
-        message TEXT NOT NULL,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    `;
-
-    try {
-        await pool.query(createLeadsTable);
-        await pool.query(createMessagesTable);
-        console.log('✅ Tablas de leads inicializadas');
-    } catch (error) {
-        console.error('❌ Error creando tablas de leads:', error);
-    }
-}
-
-initLeadTables();
-
-/**
  * Obtiene o crea un lead
  */
 async function getOrCreateLead(botId, whatsappNumber) {

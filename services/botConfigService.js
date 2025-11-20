@@ -1,34 +1,6 @@
 // services/botConfigService.js
 const pool = require('./db');
 
-/**
- * Inicializar tabla de configuración de funcionalidades
- */
-async function initBotFeaturesTable() {
-    const createBotFeaturesTable = `
-    CREATE TABLE IF NOT EXISTS bot_features (
-        id SERIAL PRIMARY KEY,
-        bot_id TEXT NOT NULL UNIQUE,
-        scheduling_enabled BOOLEAN DEFAULT FALSE,
-        auto_response_enabled BOOLEAN DEFAULT TRUE,
-        lead_capture_enabled BOOLEAN DEFAULT TRUE,
-        working_hours_enabled BOOLEAN DEFAULT FALSE,
-        working_hours_start TEXT DEFAULT '09:00',
-        working_hours_end TEXT DEFAULT '18:00',
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    `;
-
-    try {
-        await pool.query(createBotFeaturesTable);
-        console.log('✅ Tabla bot_features inicializada');
-    } catch (error) {
-        console.error('❌ Error creando tabla bot_features:', error);
-    }
-}
-
-// Inicializar al cargar el módulo
-initBotFeaturesTable();
 
 /**
  * Obtener las funcionalidades de un bot (crea registro si no existe)

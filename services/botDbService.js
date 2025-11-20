@@ -2,33 +2,6 @@
 const pool = require('./db');
 
 /**
- * Inicializar tabla de bots
- */
-async function initBotTable() {
-    const createTableQuery = `
-    CREATE TABLE IF NOT EXISTS bots (
-        id TEXT PRIMARY KEY NOT NULL,
-        name TEXT NOT NULL,
-        port INTEGER UNIQUE NOT NULL,
-        prompt TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'enabled',
-        owner_email TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    `;
-    
-    try {
-        await pool.query(createTableQuery);
-        console.log('✅ Tabla bots inicializada');
-    } catch (error) {
-        console.error('❌ Error creando tabla bots:', error);
-    }
-}
-
-// Inicializar al cargar el módulo
-initBotTable();
-
-/**
  * Añade la configuración de un nuevo bot a la base de datos.
  */
 async function addBot(botConfig) {

@@ -3,35 +3,6 @@ const pool = require('./db');
 const botConfigService = require('./botConfigService');
 
 /**
- * Inicializar tabla de tareas programadas
- */
-async function initSchedulesTable() {
-    const createSchedulesTable = `
-    CREATE TABLE IF NOT EXISTS schedules (
-        id SERIAL PRIMARY KEY,
-        bot_id TEXT NOT NULL,
-        action TEXT NOT NULL,
-        scheduled_at TIMESTAMP NOT NULL,
-        status TEXT NOT NULL DEFAULT 'pending',
-        executed BOOLEAN DEFAULT FALSE,
-        executed_at TIMESTAMP,
-        created_by TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    `;
-
-    try {
-        await pool.query(createSchedulesTable);
-        console.log('✅ Tabla schedules inicializada');
-    } catch (error) {
-        console.error('❌ Error creando tabla schedules:', error);
-    }
-}
-
-// Inicializar al cargar el módulo
-initSchedulesTable();
-
-/**
  * Crear una nueva tarea programada
  */
 async function createSchedule(botId, action, scheduledAt, createdBy) {
