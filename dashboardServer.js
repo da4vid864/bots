@@ -21,6 +21,11 @@ const botImageService = require('./services/botImageService');
 
 const { startSchedulerExecutor } = require('./services/schedulerExecutor');
 const authRoutes = require('./routes/authRoutes');
+// === NUEVO: Importar rutas y controlador de Stripe ===
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const { handleStripeWebhook } = require('./controllers/webhookController');
+// ====================================================
+
 const { attachUser, requireAdmin, requireAuth } = require('./auth/authMiddleware');
 
 require('./auth/passport');
@@ -53,8 +58,15 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// === MIDDLEWARES ===
-app.use(express.json());
+// =================================================================
+// === 1. WEBHOOK DE STRIPE (Debe ir ANTES de express.json) ===
+// =================================================================
+// Stripe necesita el body en formato RAW (buffer) para verificar la firma de seguridad
+app.post('/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
+
+
+// === 2. MIDDLEWARES GLOBALES ===
+app.use(express.json()); // Parsea JSON para el resto de la app
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(passport.initialize());
@@ -68,10 +80,11 @@ app.use((req, res, next) => {
     res.setHeader(
         'Content-Security-Policy',
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; " + // Agregado Stripe
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: blob: https:; " +
-        "connect-src 'self' wss: ws:; " +
+        "connect-src 'self' wss: ws: https://api.stripe.com; " + // Agregado Stripe
+        "frame-src 'self' https://js.stripe.com https://hooks.stripe.com; " + // Agregado Stripe
         "font-src 'self'; "
     );
     next();
@@ -79,6 +92,10 @@ app.use((req, res, next) => {
 
 // === RUTAS ===
 app.use('/auth', authRoutes);
+
+// === NUEVO: RUTAS DE SUSCRIPCIÓN ===
+app.use('/subs', subscriptionRoutes); 
+// ===================================
 
 app.get('/login', (req, res) => {
     if (req.user) {
@@ -94,6 +111,9 @@ app.get('/', (req, res) => {
         if (req.user.role === 'admin') return res.redirect('/dashboard');
         if (req.user.role === 'vendor') return res.redirect('/sales');
     }
+    // Verificar si hay errores de pago en la URL para mostrar alerta
+    const paymentError = req.query.error === 'payment_init_failed' || req.query.payment === 'cancelled';
+    
     res.render('landing', {
         user: req.user,
         pageTitle: 'Casos de éxito que hablan por sí solos - botinteligente.com.mx',
@@ -101,20 +121,23 @@ app.get('/', (req, res) => {
         canonicalUrl: 'https://botinteligente.com.mx/',
         updatedTime: '2025-11-21T17:02:12.086Z',
         publishedTime: '2025-10-12T04:37:04+00:00',
-        modifiedTime: '2025-11-21T17:02:12.086Z'
+        modifiedTime: '2025-11-21T17:02:12.086Z',
+        paymentError // Pasar variable a la vista si quieres mostrar mensaje
     });
 });
 
 // Dashboard route - requires admin access
 app.get('/dashboard', requireAdmin, (req, res) => {
-    res.render('dashboard', { user: req.user });
+    // Detectar si viene de un pago exitoso
+    const paymentSuccess = req.query.payment === 'success';
+    res.render('dashboard', { user: req.user, paymentSuccess });
 });
 
 app.get('/sales', requireAuth, (req, res) => {
     res.render('sales', { user: req.user });
 });
 
-// === WEBSOCKET ===
+// === WEBSOCKET (Resto del código original sin cambios) ===
 wss.on('connection', async (ws, req) => {
     const cookies = cookie.parse(req.headers.cookie || '');
     const token = cookies.auth_token;
@@ -178,14 +201,11 @@ wss.on('connection', async (ws, req) => {
 
 // === FUNCIÓN: Obtener estado ===
 function getRuntimeStatus(bot) {
-    // Si la DB dice disabled, para el frontend es DISABLED aunque el proceso corra
     if (bot.status === 'disabled') return 'DISABLED';
     
     const botProcess = activeBots.get(bot.id);
     if (!botProcess) return 'DISCONNECTED';
     
-    // Si el proceso existe y bot.status es enabled, asumimos que está conectando o conectado
-    // El bot mandará 'CONNECTED' vía websocket cuando esté listo
     return 'STARTING'; 
 }
 
@@ -218,10 +238,9 @@ async function handleBotMessage(botId, message) {
             break;
 
         case 'UPDATE_BOT':
-            // Recibimos estado actualizado (ej: PAUSED/DISABLED desde el proceso)
             broadcastToDashboard({
                 type: 'UPDATE_BOT',
-                data: message // message ya trae los datos del bot y el nuevo status
+                data: message 
             });
             break;
         
@@ -247,7 +266,6 @@ async function handleBotMessage(botId, message) {
 function launchBot(botConfig) {
     if (activeBots.has(botConfig.id)) {
         console.log(`⚠️ El bot ${botConfig.id} ya está en ejecución. Solo enviando configuración.`);
-        // Si ya corre, nos aseguramos que tenga la config correcta
         const existingProc = activeBots.get(botConfig.id);
         existingProc.send({ 
             type: 'SET_STATUS', 
@@ -262,7 +280,6 @@ function launchBot(botConfig) {
         env: { ...process.env }
     });
 
-    // Enviar INIT. El bot decidirá si se pausa o no según config.status
     botProcess.send({ type: 'INIT', config: botConfig });
 
     botProcess.on('message', (msg) => handleBotMessage(botConfig.id, msg));
@@ -277,9 +294,6 @@ function launchBot(botConfig) {
                 data: { ...exitedBot, runtimeStatus: 'DISCONNECTED' }
             });
         }
-        
-        // AUTO-RESTART SI FUE ERROR INESPERADO (opcional)
-        // if (code !== 0) launchBot(botConfig);
     });
 
     activeBots.set(botConfig.id, botProcess);
@@ -295,7 +309,7 @@ function stopBot(botId) {
     }
 }
 
-// === API: DESHABILITAR BOT (CAMBIADO A PAUSAR) ===
+// === API: DESHABILITAR BOT ===
 app.post('/disable-bot/:id', requireAdmin, async (req, res) => {
     const { id } = req.params;
     const ownerEmail = req.user.email;
@@ -303,22 +317,19 @@ app.post('/disable-bot/:id', requireAdmin, async (req, res) => {
     const bot = await botDbService.getBotByIdAndOwner(id, ownerEmail);
     if (!bot) return res.status(404).json({ message: 'Bot no encontrado' });
 
-    // 1. Actualizar DB
     await botDbService.updateBotStatus(id, 'disabled');
     
-    // 2. Notificar al proceso para que se pause (NO MATAR)
     const botProcess = activeBots.get(id);
     if (botProcess) {
         botProcess.send({ type: 'SET_STATUS', status: 'disabled' });
     } else {
-        // Si no corría, lo lanzamos en modo disabled
         launchBot({ ...bot, status: 'disabled' });
     }
 
     res.json({ message: 'Bot deshabilitado (Pausado)' });
 });
 
-// === API: HABILITAR BOT (CAMBIADO A REANUDAR) ===
+// === API: HABILITAR BOT ===
 app.post('/enable-bot/:id', requireAdmin, async (req, res) => {
     const { id } = req.params;
     const ownerEmail = req.user.email;
@@ -326,15 +337,12 @@ app.post('/enable-bot/:id', requireAdmin, async (req, res) => {
     const bot = await botDbService.getBotByIdAndOwner(id, ownerEmail);
         if (!bot) return res.status(404).json({ message: 'Bot no encontrado' });
 
-    // 1. Actualizar DB
     await botDbService.updateBotStatus(id, 'enabled');
     
-    // 2. Notificar al proceso para que se reanude
     const botProcess = activeBots.get(id);
     if (botProcess) {
         botProcess.send({ type: 'SET_STATUS', status: 'enabled' });
     } else {
-        // Si no corría, lo lanzamos en modo enabled
         launchBot({ ...bot, status: 'enabled' });
     }
 
@@ -371,7 +379,6 @@ async function handleGetLeadMessages(ws, leadId) {
         const messages = await leadDbService.getLeadMessages(leadId, 1000);
         const lead = await leadDbService.getLeadById(leadId);
         
-        // Enviar solo a ese socket, no broadcast
         ws.send(JSON.stringify({
             type: 'LEAD_MESSAGES',
             data: { leadId, lead, messages, totalMessages: messages.length }
@@ -394,7 +401,6 @@ app.post('/create-bot', requireAdmin, async (req, res) => {
         await botDbService.addBot(botConfig);
         await botConfigService.createBotFeatures(id);
         
-        // Lanzar inmediatamente
         launchBot(botConfig);
 
         broadcastToDashboard({ type: 'NEW_BOT', data: { ...botConfig, runtimeStatus: 'STARTING' } });
@@ -409,13 +415,6 @@ app.patch('/edit-bot/:id', requireAdmin, async (req, res) => {
     const { prompt } = req.body;
     
     await botDbService.updateBotPrompt(id, prompt);
-    // Si queremos actualizar el prompt en caliente sin reiniciar:
-    /* const botProcess = activeBots.get(id);
-       if (botProcess) botProcess.send({ type: 'UPDATE_CONFIG', prompt }); */
-    
-    // Por ahora reiniciamos para aplicar cambios limpios si es necesario, 
-    // o simplemente confiamos en que al próximo reinicio se cargue.
-    // O mejor: forzamos reinicio suave:
     stopBot(id);
     const bot = await botDbService.getBotById(id);
     if(bot.status !== 'disabled') launchBot(bot);
@@ -425,7 +424,7 @@ app.patch('/edit-bot/:id', requireAdmin, async (req, res) => {
 
 app.delete('/delete-bot/:id', requireAdmin, async (req, res) => {
     const { id } = req.params;
-    stopBot(id); // Aquí sí matamos el proceso
+    stopBot(id);
     await schedulerService.deleteSchedulesByBot(id);
     await botConfigService.deleteBotFeatures(id);
     await botDbService.deleteBotById(id);
@@ -473,8 +472,9 @@ app.delete('/api/images/:imageId', requireAdmin, async (req, res) => {
     } catch (error) { res.status(500).json({ message: 'Error' }); }
 });
 
-// === API SCHEDULE, TEAM, FEATURES (Mismos que antes) ===
-// ... (Copiar las rutas de features, schedule y team del archivo anterior si no las tienes, son idénticas)
+// === APIs TEAM, FEATURES, SCHEDULES (Se asume que ya existen en tu archivo original, mantenlas) ===
+// Si faltaban las rutas de team/features que estaban en versiones anteriores, agrégalas aquí.
+// Por ahora mantengo el flujo de bots que es lo crítico.
 
 // === INICIO SERVIDOR ===
 async function startServer() {
@@ -485,22 +485,18 @@ async function startServer() {
         startSchedulerExecutor(async (botId, action) => {
             console.log(`⏰ Ejecutando tarea programada: ${action} para ${botId}`);
             
-            // Actualizar DB
             await botDbService.updateBotStatus(botId, action === 'enable' ? 'enabled' : 'disabled');
             
-            // Enviar señal de PAUSA/REANUDAR en lugar de matar/lanzar
             const botProcess = activeBots.get(botId);
             const status = action === 'enable' ? 'enabled' : 'disabled';
             
             if (botProcess) {
                 botProcess.send({ type: 'SET_STATUS', status });
             } else if (action === 'enable') {
-                // Si debía habilitarse y no estaba corriendo, lanzarlo
                 const bot = await botDbService.getBotById(botId);
                 launchBot(bot);
             }
             
-            // Notificar dashboard
             broadcastToDashboard({
                 type: 'UPDATE_BOT',
                 data: { ...(await botDbService.getBotById(botId)), 
@@ -513,7 +509,6 @@ async function startServer() {
         server.listen(PORT, '0.0.0.0', async () => {
             console.log(`🚀 Dashboard corriendo en puerto ${PORT}`);
             
-            // LANZAR TODOS LOS BOTS (INCLUSO LOS DESHABILITADOS, PERO EN PAUSA)
             const allBots = await botDbService.getAllBots();
             allBots.forEach(bot => launchBot(bot));
         });
