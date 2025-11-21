@@ -307,14 +307,17 @@ sequenceDiagram
 | Service | Primary Responsibility | Dependencies | Data Stores |
 |---------|------------------------|--------------|-------------|
 | **Dashboard Server** | HTTP routing, WebSocket management, bot orchestration | All services, PostgreSQL | Session state, active bots |
-| **Bot Instance** | WhatsApp client, AI processing, lead capture | DeepSeek API, Lead Service | Local auth, session data |
+| **Bot Instance** | WhatsApp client, AI processing, lead capture, image handling | DeepSeek API, Lead Service, Bot Image Service | Local auth, session data |
 | **Lead Service** | Lead management, message storage, assignment | PostgreSQL | leads, lead_messages tables |
 | **Bot Config Service** | Feature flag management, bot settings | PostgreSQL | bot_features table |
 | **Scheduler Service** | Automated task scheduling | PostgreSQL, Scheduler Executor | schedules table |
 | **Scheduler Executor** | Task execution engine | Scheduler Service, Bot Manager | In-memory intervals |
 | **DeepSeek Service** | AI conversation handling | DeepSeek API | None (stateless) |
 | **Lead Extraction Service** | Contact info parsing | DeepSeek API | None (stateless) |
-| **Auth Service** | User authentication, JWT management | Google OAuth, PostgreSQL | JWT tokens, user roles |
+| **Auth Service** | User authentication, JWT management, hybrid role resolution | Google OAuth, PostgreSQL, User Service | JWT tokens, user roles |
+| **User Service** | Team management, user status, role assignment | PostgreSQL | users table |
+| **Subscription Service** | Freemium plan management, Stripe integration, billing | PostgreSQL, Stripe API | subscriptions table |
+| **Bot Image Service** | Media management, keyword-based image selection | PostgreSQL, File System | bot_images table, uploads directory |
 | **Database Service** | Connection pooling, query execution | PostgreSQL | All application data |
 
 ### Real-time Communication Events
@@ -426,6 +429,47 @@ CREATE TABLE bots (
 );
 ```
 
+### User Management Database ([`services/userService.js`](services/userService.js:1))
+```sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    role TEXT NOT NULL DEFAULT 'vendor',
+    added_by TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+```
+
+### Subscription Management Database ([`services/subscriptionService.js`](services/subscriptionService.js:1))
+```sql
+CREATE TABLE subscriptions (
+    id SERIAL PRIMARY KEY,
+    user_email TEXT NOT NULL UNIQUE,
+    plan TEXT NOT NULL DEFAULT 'free',
+    status TEXT NOT NULL DEFAULT 'active',
+    bot_limit INTEGER NOT NULL DEFAULT 1,
+    stripe_customer_id TEXT,
+    stripe_subscription_id TEXT,
+    current_period_end TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Bot Image Management Database ([`services/botImageService.js`](services/botImageService.js:1))
+```sql
+CREATE TABLE bot_images (
+    id SERIAL PRIMARY KEY,
+    bot_id TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    keyword TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ### Lead Management Database ([`services/leadDbService.js`](services/leadDbService.js:14))
 ```sql
 CREATE TABLE leads (
@@ -487,36 +531,46 @@ CREATE TABLE schedules (
 
 ### Recent System Enhancements
 
-#### 1. PostgreSQL Database Migration
+#### 1. Evolution to Comprehensive SaaS Platform
+- **Multi-Tenant Architecture**: Full SaaS platform with user management, team collaboration, and subscription tiers
+- **Freemium Business Model**: Free tier with 1 bot limit and unlimited Pro tier with Stripe integration
+- **Team Management**: Database-driven team management with hybrid role assignment (environment variables + database teams)
+- **Subscription Management**: Automated plan enforcement, payment processing, and billing portal integration
+
+#### 2. Advanced Bot Capabilities
+- **Dynamic Pause/Resume**: Bot instances can be paused and resumed without process restart via real-time status control
+- **AI-Powered Image Selection**: Context-aware image sending based on conversation keywords and bot image libraries
+- **Enhanced Chat Processing**: Improved historical chat loading with memory optimization and duplicate detection
+- **Media Management**: Multer-based file upload system for bot images with keyword association
+- **Real-time Status Control**: Runtime status updates without bot process termination
+
+#### 3. PostgreSQL Database Migration & Enhancement
 - **Migration from SQLite**: Transitioned from file-based SQLite to robust PostgreSQL for better concurrency and scalability
 - **Connection Pooling**: Implemented efficient database connection management via [`services/db.js`](services/db.js:1)
 - **Schema Updates**: Converted all tables to PostgreSQL-compatible schema with proper foreign key constraints and SERIAL primary keys
 - **Data Integrity**: Added ON DELETE CASCADE for lead_messages to maintain referential integrity
+- **Extended Schema**: Added users, subscriptions, and bot_images tables for SaaS functionality
 
-#### 2. Role-Based Access Control (RBAC)
-- **Dual-Role System**: Implemented Admin and Vendor roles with distinct permissions
-- **Admin Dashboard**: Full bot management, configuration, and scheduling capabilities
-- **Vendor Sales Panel**: Lead assignment, messaging, and conversation management only
-- **Environment Configuration**: Role assignment via ADMIN_EMAILS and VENDOR_EMAILS environment variables
-- **Route Protection**: Middleware enforcement of role-based access in [`auth/authMiddleware.js`](auth/authMiddleware.js:1)
+#### 4. Enhanced Hybrid Role System
+- **Environment-Based Admins**: Primary administrators defined in ADMIN_EMAILS environment variable
+- **Database-Managed Teams**: Vendors and team members managed through User Service with activation controls
+- **Dynamic Role Resolution**: System checks environment variables first, then database for role assignment
+- **Team Management**: Admins can add, remove, and activate/deactivate team members via User Service
+- **Status Tracking**: Last login timestamps and active/inactive user status monitoring
 
-#### 3. Enhanced Bot Instance Management
-- **Historical Chat Loading**: Bots now load and process existing WhatsApp conversations on startup without generating responses
-- **Ready State Management**: Introduced `isReady` flag to prevent bot responses during historical data loading
-- **Improved Error Handling**: Enhanced initialization retry logic with exponential backoff
-- **Memory Optimization**: Better resource management for multiple bot instances
-
-#### 4. Advanced Lead Management
+#### 5. Advanced Lead Management
 - **Progressive Lead Qualification**: Multi-stage capture process (capturing → qualified → assigned)
 - **Intelligent Information Extraction**: AI-powered parsing of contact details from natural conversations
 - **Vendor Assignment System**: Leads can be assigned to specific vendors for follow-up
 - **Message Continuity**: Seamless handoff from bot to human sales representatives
+- **AI-Enhanced Interactions**: Context-aware responses with integrated media capabilities
 
-#### 5. Real-time Communication Enhancements
+#### 6. Real-time Communication Enhancements
 - **WebSocket Authentication**: JWT-based authentication for WebSocket connections
 - **Role-specific Events**: Different event streams for admin dashboard vs sales panel
 - **Bi-directional Messaging**: Sales team can send messages directly through bot instances
 - **Live Status Updates**: Real-time bot status, lead notifications, and message synchronization
+- **Subscription Events**: Real-time plan limit enforcement and upgrade notifications
 
 ### Multi-Tenant Bot Architecture
 - **Isolated Instances**: Each bot runs in separate child processes with independent WhatsApp sessions

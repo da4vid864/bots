@@ -82,13 +82,31 @@ app.use('/auth', authRoutes);
 
 app.get('/login', (req, res) => {
     if (req.user) {
-        if (req.user.role === 'admin') return res.redirect('/');
+        if (req.user.role === 'admin') return res.redirect('/dashboard');
         if (req.user.role === 'vendor') return res.redirect('/sales');
     }
     res.render('login');
 });
 
-app.get('/', requireAdmin, (req, res) => {
+// Landing page route - accessible to everyone
+app.get('/', (req, res) => {
+    if (req.user) {
+        if (req.user.role === 'admin') return res.redirect('/dashboard');
+        if (req.user.role === 'vendor') return res.redirect('/sales');
+    }
+    res.render('landing', {
+        user: req.user,
+        pageTitle: 'Casos de éxito que hablan por sí solos - botinteligente.com.mx',
+        pageDescription: 'Confía en la inteligencia que vende por ti',
+        canonicalUrl: 'https://botinteligente.com.mx/',
+        updatedTime: '2025-11-21T17:02:12.086Z',
+        publishedTime: '2025-10-12T04:37:04+00:00',
+        modifiedTime: '2025-11-21T17:02:12.086Z'
+    });
+});
+
+// Dashboard route - requires admin access
+app.get('/dashboard', requireAdmin, (req, res) => {
     res.render('dashboard', { user: req.user });
 });
 
