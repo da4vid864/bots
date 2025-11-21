@@ -223,6 +223,33 @@ a:hover {
 .hero-actions {
     margin-bottom: 4rem;
 }
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+.pricing-card {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Stripe Pricing Table Customization */
+.stripe-pricing-wrapper {
+    min-height: 500px;
+}
+
+stripe-pricing-table {
+    width: 100%;
+    display: block;
+}
+
+/* Override Stripe default styles if needed */
+stripe-pricing-table::part(container) {
+    border: none;
+    border-radius: 0;
+}
 
 /* Buttons */
 .btn {
@@ -687,7 +714,13 @@ a:hover {
         display: block;
         animation: fadeIn 0.3s ease;
     }
+        .pricing-grid {
+        grid-template-columns: 1fr;
+    }
     
+    .stripe-pricing-wrapper {
+        min-height: 450px;
+    }
     @keyframes slideInRight {
         from {
             transform: translateX(100%);
@@ -952,39 +985,55 @@ a:hover {
         </section>
 
         <!-- Pricing Section -->
-        <section class="features-section" id="pricing">
-            <div class="ct-container">
-                <h2>Planes de inversión transparentes</h2>
-                                <p>Sin costos ocultos ni sorpresas. Inversión clara que se paga sola con el tiempo y ventas que recuperas.</p>
+<!-- Pricing Section -->
+<section class="features-section" id="pricing">
+    <div class="ct-container">
+        <h2>Planes de inversión transparentes</h2>
+        <p>Sin costos ocultos ni sorpresas. Inversión clara que se paga sola con el tiempo y ventas que recuperas.</p>
 
-                <div class="feature-grid" style="margin-top: 3rem;">
-                    <div class="feature-card" style="text-align: center; border: 2px solid var(--theme-palette-color-1);">
-                        <div class="feature-icon">💼</div>
-                        <h3>Desarrollo del bot Modular</h3>
-                        <div style="margin: 2rem 0;">
-                            <span style="font-size: 2.5rem; font-weight: 800; color: var(--theme-palette-color-1);">$1,500 - $5,000</span>
-                            <p style="margin-top: 0.5rem; font-size: 14px; opacity: 0.7;">Pago único por desarrollo completo</p>
-                        </div>
-                        <a href="#contact" class="btn">Ver Más</a>
-                    </div>
-                    <div class="feature-card" style="text-align: center; border: 2px solid var(--theme-palette-color-1);">
-                        <div class="feature-icon">🔄</div>
-                        <h3>Mantenimiento Mensual</h3>
-                        <div style="margin: 2rem 0;">
-                            <span style="font-size: 2.5rem; font-weight: 800; color: var(--theme-palette-color-1);">$499</span>
-                            <p style="margin-top: 0.5rem; font-size: 14px; opacity: 0.7;">Por mes</p>
-                        </div>
-                        <ul style="list-style: none; padding: 0; text-align: left; margin-bottom: 2rem;">
-                            <li style="padding: 0.5rem 0;">✅ Soporte técnico continuo</li>
-                            <li style="padding: 0.5rem 0;">✅ Actualizaciones incluidas</li>
-                            <li style="padding: 0.5rem 0;">✅ Mejoras del sistema</li>
-                            <li style="padding: 0.5rem 0;">✅ Hosting garantizado</li>
-                        </ul>
-                        <a href="#contact" class="btn">Contratar</a>
-                    </div>
+        <div class="pricing-grid" style="margin-top: 3rem;">
+            <!-- Desarrollo del Bot -->
+            <div class="feature-card pricing-card" style="text-align: center; border: 2px solid var(--theme-palette-color-1);">
+                <div class="feature-icon">💼</div>
+                <h3>Desarrollo del bot Modular</h3>
+                <div style="margin: 2rem 0;">
+                    <span style="font-size: 2.5rem; font-weight: 800; color: var(--theme-palette-color-1);">$1,500 - $5,000</span>
+                    <p style="margin-top: 0.5rem; font-size: 14px; opacity: 0.7;">Pago único por desarrollo completo</p>
                 </div>
+                <ul style="list-style: none; padding: 0; text-align: left; margin-bottom: 2rem;">
+                    <li style="padding: 0.5rem 0;">✅ Diseño estratégico personalizado</li>
+                    <li style="padding: 0.5rem 0;">✅ Desarrollo desde cero</li>
+                    <li style="padding: 0.5rem 0;">✅ Integración completa</li>
+                    <li style="padding: 0.5rem 0;">✅ Capacitación incluida</li>
+                </ul>
+                <a href="#contact" class="btn">Solicitar Cotización</a>
             </div>
-        </section>
+
+            <!-- Stripe Pricing Table -->
+            <div class="feature-card pricing-card stripe-pricing-wrapper" style="text-align: center; border: 2px solid var(--theme-palette-color-1); padding: 0; overflow: hidden;">
+                <div style="padding: 2.5rem 2.5rem 1rem;">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Planes de Mantenimiento</h3>
+                    <p style="font-size: 14px; opacity: 0.8; margin-bottom: 1rem;">Elige el plan que mejor se adapte a tu negocio</p>
+                </div>
+                
+                <!-- Stripe Pricing Table Component -->
+                <stripe-pricing-table 
+                    pricing-table-id="prctbl_1SQeHkGbVcdR2CYOgx2IAHPD"
+                    publishable-key="pk_live_51SQUkKGbVcdR2CYoyXnBdaAgnL7HKq3S6YbhlsyzTuHCk0OiBSqVU37wZLSgh99SFoo0GE6j3UHNw0g3No33S4ld00rBGj2xqU">
+                </stripe-pricing-table>
+            </div>
+        </div>
+
+        <!-- Additional Info -->
+        <div style="text-align: center; margin-top: 3rem; padding: 2rem; background: var(--theme-palette-color-7); border-radius: 12px;">
+            <p style="font-size: 15px; color: var(--theme-palette-color-3); margin: 0;">
+                <strong>💳 Pagos seguros procesados por Stripe</strong><br>
+                <span style="font-size: 14px; opacity: 0.8;">Acepta tarjetas de crédito, débito y otros métodos de pago</span>
+            </p>
+        </div>
+    </div>
+</section>
 
         <!-- Testimonials Section -->
         <section class="testimonials-section" id="testimonials">
@@ -1570,6 +1619,6 @@ fbq('track', 'PageView');
     ]
 }
 </script>
-
+<script async src="https://js.stripe.com/v3/pricing-table.js"></script>
 </body>
 </html>
