@@ -22,6 +22,7 @@
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.11.3",
     "qrcode": "^1.5.3",
+    "stripe": "^20.0.0",
     "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js",
     "ws": "^8.16.0"
   },
