@@ -1,14 +1,11 @@
 // services/initDb.js
 const pool = require('./db');
 
-/**
- * Inicializar TODAS las tablas en el orden correcto
- */
 async function initializeDatabase() {
     console.log('🔄 Inicializando base de datos...');
     
     try {
-        // 1. Tabla de usuarios y equipos
+        // 1. Tabla de usuarios
         await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -20,7 +17,7 @@ async function initializeDatabase() {
                 is_active BOOLEAN DEFAULT TRUE
             );
         `);
-        console.log('✅ Tabla users inicializada');
+        console.log('✅ Tabla users verificada');
 
         // 2. Tabla de bots
         await pool.query(`
@@ -34,7 +31,7 @@ async function initializeDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log('✅ Tabla bots inicializada');
+        console.log('✅ Tabla bots verificada');
 
         // 3. Tabla de leads
         await pool.query(`
@@ -54,7 +51,7 @@ async function initializeDatabase() {
                 UNIQUE(bot_id, whatsapp_number)
             );
         `);
-        console.log('✅ Tabla leads inicializada');
+        console.log('✅ Tabla leads verificada');
 
         // 4. Tabla de mensajes de leads
         await pool.query(`
@@ -66,7 +63,7 @@ async function initializeDatabase() {
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log('✅ Tabla lead_messages inicializada');
+        console.log('✅ Tabla lead_messages verificada');
 
         // 5. Tabla de features
         await pool.query(`
@@ -82,7 +79,7 @@ async function initializeDatabase() {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log('✅ Tabla bot_features inicializada');
+        console.log('✅ Tabla bot_features verificada');
 
         // 6. Tabla de schedules
         await pool.query(`
@@ -98,9 +95,9 @@ async function initializeDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log('✅ Tabla schedules inicializada');
+        console.log('✅ Tabla schedules verificada');
 
-        // 7. Tabla de imágenes del bot (NUEVO)
+        // 7. Tabla de imágenes del bot
         await pool.query(`
             CREATE TABLE IF NOT EXISTS bot_images (
                 id SERIAL PRIMARY KEY,
@@ -111,13 +108,29 @@ async function initializeDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log('✅ Tabla bot_images inicializada');
+        console.log('✅ Tabla bot_images verificada');
+
+        // === 8. NUEVA TABLA DE SUSCRIPCIONES (AQUÍ ESTABA EL ERROR) ===
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS subscriptions (
+                id SERIAL PRIMARY KEY,
+                user_email TEXT NOT NULL UNIQUE,
+                plan TEXT NOT NULL DEFAULT 'free',
+                status TEXT NOT NULL DEFAULT 'active',
+                bot_limit INTEGER NOT NULL DEFAULT 1,
+                stripe_customer_id TEXT,
+                stripe_subscription_id TEXT,
+                current_period_end TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log('✅ Tabla subscriptions verificada (NUEVA)');
 
         console.log('✅ Base de datos inicializada correctamente');
         return true;
     } catch (error) {
         console.error('❌ Error inicializando base de datos:', error);
-        console.error('Stack trace:', error.stack);
         throw error;
     }
 }

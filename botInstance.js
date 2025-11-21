@@ -222,10 +222,7 @@ function initializeWhatsApp() {
                         botReply = aiResponse;
                     }
                     
-                    const imageTagRegex = /
-$$
-ENVIAR_IMAGEN:\s*(.+?)
-$$/i;
+                    const imageTagRegex = /\$\$ENVIAR_IMAGEN:\s*(.+?)\$\$/i;
                     const match = botReply.match(imageTagRegex);
                     let imageToSend = null;
 
