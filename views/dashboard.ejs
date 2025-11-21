@@ -156,6 +156,7 @@
 
   <script>
     const currentUserEmail = '<%= user.email %>';
+    console.log('👤 Usuario actual:', currentUserEmail);
 
     // --- Referencias a elementos del DOM ---
     const botsContainer = document.getElementById('bots-container');
@@ -210,11 +211,10 @@
             const response = await fetch(`/api/bot/${botId}/features`);
             const features = await response.json();
             
-            // Cargar valores en los toggles
-            document.getElementById('feature-scheduling').checked = features.schedulingEnabled === 1;
-            document.getElementById('feature-autoresponse').checked = features.autoResponseEnabled === 1;
-            document.getElementById('feature-leadcapture').checked = features.leadCaptureEnabled === 1;
-            document.getElementById('feature-workinghours').checked = features.workingHoursEnabled === 1;
+            document.getElementById('feature-scheduling').checked = features.scheduling_enabled === true || features.scheduling_enabled === 1;
+            document.getElementById('feature-autoresponse').checked = features.auto_response_enabled === true || features.auto_response_enabled === 1;
+            document.getElementById('feature-leadcapture').checked = features.lead_capture_enabled === true || features.lead_capture_enabled === 1;
+            document.getElementById('feature-workinghours').checked = features.working_hours_enabled === true || features.working_hours_enabled === 1;
             
             settingsModalBackdrop.style.display = 'flex';
         } catch (error) {
@@ -254,11 +254,22 @@
         e.preventDefault();
         const data = Object.fromEntries(new FormData(createBotForm).entries());
         try {
-            const response = await fetch('/create-bot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+            const response = await fetch('/create-bot', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(data) 
+            });
             const result = await response.json();
-            if (response.ok) { createModalBackdrop.style.display = 'none'; createBotForm.reset(); } 
-            else { alert(`Error: ${result.message}`); }
-        } catch (error) { alert('No se pudo crear el bot.'); }
+            if (response.ok) { 
+                createModalBackdrop.style.display = 'none'; 
+                createBotForm.reset(); 
+                console.log('✅ Bot creado exitosamente');
+            } else { 
+                alert(`Error: ${result.message}`); 
+            }
+        } catch (error) { 
+            alert('No se pudo crear el bot.'); 
+        }
     });
 
     editBotForm.addEventListener('submit', async (e) => {
@@ -266,17 +277,26 @@
         const botId = e.currentTarget.dataset.botId;
         const newPrompt = editBotPromptTextarea.value;
         try {
-            const response = await fetch(`/edit-bot/${botId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: newPrompt }) });
+            const response = await fetch(`/edit-bot/${botId}`, { 
+                method: 'PATCH', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ prompt: newPrompt }) 
+            });
             const result = await response.json();
             if (response.ok) {
                 const card = botsContainer.querySelector(`.bot-card[data-bot-id="${botId}"]`);
                 if(card) card.dataset.prompt = newPrompt;
                 editModalBackdrop.style.display = 'none';
-            } else { alert(`Error: ${result.message}`); }
-        } catch (error) { alert('No se pudieron guardar los cambios.'); }
+                console.log('✅ Prompt actualizado');
+            } else { 
+                alert(`Error: ${result.message}`); 
+            }
+        } catch (error) { 
+            alert('No se pudieron guardar los cambios.'); 
+        }
     });
 
-    // --- Lógica de Acciones en Tarjetas (Delegación de Eventos) ---
+    // --- Lógica de Acciones en Tarjetas ---
     botsContainer.addEventListener('click', async (e) => {
         const button = e.target.closest('button');
         if (!button) return;
@@ -290,11 +310,19 @@
             const action = button.dataset.action;
             const endpoint = action === 'disable' ? `/disable-bot/${botId}` : `/enable-bot/${botId}`;
             button.disabled = true;
-            try { await fetch(endpoint, { method: 'POST' }); } catch (error) { console.error(`Error al ${action} bot:`, error); }
+            try { 
+                await fetch(endpoint, { method: 'POST' }); 
+            } catch (error) { 
+                console.error(`Error al ${action} bot:`, error); 
+            }
         } else if (button.classList.contains('btn-close')) {
             const botName = card.querySelector('.bot-name').textContent;
             if (confirm(`¿Seguro que quieres eliminar el bot "${botName}"?\nEsta acción es irreversible.`)) {
-                try { await fetch(`/delete-bot/${botId}`, { method: 'DELETE' }); } catch (error) { alert('No se pudo eliminar el bot.'); }
+                try { 
+                    await fetch(`/delete-bot/${botId}`, { method: 'DELETE' }); 
+                } catch (error) { 
+                    alert('No se pudo eliminar el bot.'); 
+                }
             }
         } else if (button.classList.contains('btn-edit')) {
             const currentPrompt = card.dataset.prompt || '';
@@ -304,30 +332,77 @@
 
     // --- Lógica de WebSocket y renderizado ---
     const socket = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`);
+    
+    socket.onopen = () => {
+        console.log('✅ WebSocket conectado');
+    };
+    
     socket.onmessage = (event) => {
         const message = JSON.parse(event.data);
+        console.log('📨 Mensaje WebSocket recibido:', message.type);
+        console.log('📦 Datos:', message.data);
+        
         const handler = {
-            'INIT': (data) => data.forEach(addOrUpdateBotCard),
-            'NEW_BOT': addOrUpdateBotCard,
-            'UPDATE_BOT': addOrUpdateBotCard,
+            'INIT': (data) => {
+                console.log(`🔄 Inicializando dashboard con ${data.length} bots`);
+                data.forEach((bot, index) => {
+                    console.log(`Bot ${index + 1}:`, bot);
+                    addOrUpdateBotCard(bot);
+                });
+            },
+            'NEW_BOT': (data) => {
+                console.log('➕ Nuevo bot recibido:', data);
+                addOrUpdateBotCard(data);
+            },
+            'UPDATE_BOT': (data) => {
+                console.log('🔄 Actualización de bot:', data);
+                addOrUpdateBotCard(data);
+            },
             'BOT_DELETED': (data) => {
+                console.log('🗑️ Bot eliminado:', data.id);
                 const cardToRemove = botsContainer.querySelector(`.bot-card[data-bot-id="${data.id}"]`);
-                if (cardToRemove) cardToRemove.remove();
+                if (cardToRemove) {
+                    cardToRemove.remove();
+                    console.log('✅ Tarjeta eliminada del DOM');
+                }
             }
         }[message.type];
-        if (handler) handler(message.data);
+        
+        if (handler) {
+            handler(message.data);
+        } else {
+            console.warn('⚠️ Tipo de mensaje no manejado:', message.type);
+        }
+    };
+    
+    socket.onerror = (error) => {
+        console.error('❌ Error en WebSocket:', error);
+    };
+    
+    socket.onclose = () => {
+        console.log('❌ WebSocket desconectado');
     };
 
     function addOrUpdateBotCard(botData) {
+        console.log('🔧 Procesando bot:', botData.id);
+        console.log('   - ownerEmail:', botData.ownerEmail);
+        console.log('   - currentUserEmail:', currentUserEmail);
+        
         if (botData.ownerEmail !== currentUserEmail) {
+            console.log('⚠️ Bot omitido (no pertenece al usuario actual)');
             return;
         }
 
         let card = botsContainer.querySelector(`.bot-card[data-bot-id="${botData.id}"]`);
-        if (!card) {
+        
+                if (!card) {
+            console.log('➕ Creando nueva tarjeta para bot:', botData.id);
             card = botCardTemplate.content.cloneNode(true).firstElementChild;
             botsContainer.appendChild(card);
+        } else {
+            console.log('🔄 Actualizando tarjeta existente para bot:', botData.id);
         }
+        
         card.dataset.botId = botData.id;
         card.dataset.prompt = botData.prompt;
         card.querySelector('.bot-name').textContent = botData.name;
@@ -355,13 +430,33 @@
         }
 
         switch (botData.runtimeStatus) {
-            case 'CONNECTED': card.classList.add('status-connected'); statusText.textContent = 'Conectado'; connectedIcon.style.display = 'block'; break;
-            case 'PENDING_QR': card.classList.add('status-pending'); statusText.textContent = 'Esperando QR'; qrImage.src = botData.qr; qrImage.style.display = 'block'; break;
-            case 'DISCONNECTED': card.classList.add('status-disconnected'); statusText.textContent = 'Desconectado'; break;
-            case 'DISABLED': card.classList.add('status-disabled'); statusText.textContent = 'Deshabilitado'; break;
-            default: card.classList.add('status-starting'); statusText.textContent = 'Iniciando...'; break;
+            case 'CONNECTED': 
+                card.classList.add('status-connected'); 
+                statusText.textContent = 'Conectado'; 
+                connectedIcon.style.display = 'block'; 
+                break;
+            case 'PENDING_QR': 
+                card.classList.add('status-pending'); 
+                statusText.textContent = 'Esperando QR'; 
+                qrImage.src = botData.qr; 
+                qrImage.style.display = 'block'; 
+                break;
+            case 'DISCONNECTED': 
+                card.classList.add('status-disconnected'); 
+                statusText.textContent = 'Desconectado'; 
+                break;
+            case 'DISABLED': 
+                card.classList.add('status-disabled'); 
+                statusText.textContent = 'Deshabilitado'; 
+                break;
+            default: 
+                card.classList.add('status-starting'); 
+                statusText.textContent = 'Iniciando...'; 
+                break;
         }
+        
+        console.log('✅ Tarjeta procesada exitosamente para bot:', botData.id);
     }
-  </script>
+</script>
 </body>
 </html>

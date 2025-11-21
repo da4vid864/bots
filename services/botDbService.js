@@ -2,6 +2,47 @@
 const pool = require('./db');
 
 /**
+ * Normalizar bot object para el frontend
+ */
+function normalizeBotData(bot) {
+    if (!bot) return null;
+    
+    return {
+        id: bot.id,
+        name: bot.name,
+        port: bot.port,
+        prompt: bot.prompt,
+        status: bot.status,
+        ownerEmail: bot.owner_email,  // Convertir a camelCase
+        createdAt: bot.created_at
+    };
+}
+
+/**
+ * Inicializar tabla de bots
+ */
+async function initBotTable() {
+    const createTableQuery = `
+    CREATE TABLE IF NOT EXISTS bots (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL,
+        port INTEGER UNIQUE NOT NULL,
+        prompt TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'enabled',
+        owner_email TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    `;
+    
+    try {
+        await pool.query(createTableQuery);
+        console.log('✅ Tabla bots inicializada');
+    } catch (error) {
+        console.error('❌ Error creando tabla bots:', error);
+    }
+}
+
+/**
  * Añade la configuración de un nuevo bot a la base de datos.
  */
 async function addBot(botConfig) {
@@ -32,7 +73,7 @@ async function updateBotPrompt(id, prompt) {
 async function getBotById(id) {
     const query = 'SELECT * FROM bots WHERE id = $1';
     const result = await pool.query(query, [id]);
-    return result.rows[0];
+    return normalizeBotData(result.rows[0]);
 }
 
 /**
@@ -41,25 +82,25 @@ async function getBotById(id) {
 async function getBotByIdAndOwner(id, ownerEmail) {
     const query = 'SELECT * FROM bots WHERE id = $1 AND owner_email = $2';
     const result = await pool.query(query, [id, ownerEmail]);
-    return result.rows[0];
+    return normalizeBotData(result.rows[0]);
 }
 
 /**
  * Obtiene todos los bots
  */
 async function getAllBots() {
-    const query = 'SELECT * FROM bots';
+    const query = 'SELECT * FROM bots ORDER BY created_at DESC';
     const result = await pool.query(query);
-    return result.rows;
+    return result.rows.map(bot => normalizeBotData(bot));
 }
 
 /**
  * Obtiene bots por owner
  */
 async function getBotsByOwner(ownerEmail) {
-    const query = 'SELECT * FROM bots WHERE owner_email = $1';
+    const query = 'SELECT * FROM bots WHERE owner_email = $1 ORDER BY created_at DESC';
     const result = await pool.query(query, [ownerEmail]);
-    return result.rows;
+    return result.rows.map(bot => normalizeBotData(bot));
 }
 
 /**

@@ -117,17 +117,47 @@ wss.on('connection', async (ws, req) => {
 
     // Si es admin, enviar información de bots
     if (user.role === 'admin') {
-        const allBots = await botDbService.getAllBots();
-        const botsData = allBots.map(bot => ({
-            ...bot,
-            runtimeStatus: getRuntimeStatus(bot)
-        }));
-        ws.send(JSON.stringify({ type: 'INIT', data: botsData }));
+        try {
+            console.log(`📊 Obteniendo bots para usuario: ${user.email}`);
+            const allBots = await botDbService.getAllBots();
+            console.log(`📦 Total de bots en BD: ${allBots.length}`);
+            
+            // Filtrar bots del usuario actual
+            const userBots = allBots.filter(bot => bot.ownerEmail === user.email);
+            console.log(`👤 Bots del usuario ${user.email}: ${userBots.length}`);
+            
+            const botsData = userBots.map(bot => {
+                const botData = {
+                    ...bot,
+                    runtimeStatus: getRuntimeStatus(bot)
+                };
+                console.log(`🤖 Bot preparado:`, {
+                    id: bot.id,
+                    name: bot.name,
+                    ownerEmail: bot.ownerEmail,
+                    status: bot.status,
+                    runtimeStatus: botData.runtimeStatus
+                });
+                return botData;
+            });
+            
+            console.log(`📤 Enviando ${botsData.length} bots via WebSocket`);
+            ws.send(JSON.stringify({ type: 'INIT', data: botsData }));
+            console.log('✅ Mensaje INIT enviado correctamente');
+        } catch (error) {
+            console.error('❌ Error obteniendo/enviando bots:', error);
+            console.error('Stack trace:', error.stack);
+        }
     }
 
     // Enviar leads calificados (ambos roles pueden verlos)
-    const qualifiedLeads = await leadDbService.getQualifiedLeads();
-    ws.send(JSON.stringify({ type: 'INIT_LEADS', data: qualifiedLeads }));
+    try {
+        const qualifiedLeads = await leadDbService.getQualifiedLeads();
+        console.log(`📤 Enviando ${qualifiedLeads.length} leads calificados`);
+        ws.send(JSON.stringify({ type: 'INIT_LEADS', data: qualifiedLeads }));
+    } catch (error) {
+        console.error('❌ Error enviando leads:', error);
+    }
 
     ws.on('message', async (message) => {
         try {
