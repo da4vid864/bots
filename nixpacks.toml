@@ -1,20 +1,12 @@
-[
-phases.setup
-]
+[phases.setup]
 nixPkgs = ["nodejs-18_x", "chromium"]
 
-[
-phases.install
-]
+[phases.install]
 cmds = ["npm ci --production"]
 
-[
-env
-]
+[env]
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
 PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium"
 
-[
-start
-]
+[start]
 cmd = "npm start"
