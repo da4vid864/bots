@@ -81,6 +81,7 @@ function initializeWhatsApp() {
         const client = new Client({
             authStrategy: new LocalAuth({ clientId: botConfig.id }),
             puppeteer: {
+                 executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
                 headless: 'new', // Modo headless moderno (más rápido)
                 args: [
                     '--no-sandbox',
