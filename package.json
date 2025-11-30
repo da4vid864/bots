@@ -1,6 +1,9 @@
 {
   "name": "whatsapp-bot-manager",
   "version": "1.0.0",
+   "engines": {
+    "node": ">=20.0.0"
+  },
   "description": "Dashboard to manage multiple WhatsApp bots with Google Auth.",
   "main": "server.js",
   "scripts": {

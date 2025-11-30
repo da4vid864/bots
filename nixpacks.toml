@@ -1,8 +1,13 @@
 [phases.setup]
-nixPkgs = ["nodejs-18_x", "chromium"]
+# Changed nodejs_20 to nodejs_22 to satisfy Vite requirements
+nixPkgs = ["nodejs_22", "chromium"]
 
 [phases.install]
-cmds = ["npm ci --production"]
+# Installs dependencies for root AND client folder
+cmds = ["npm ci", "cd client && npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]
 
 [env]
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
