@@ -93,7 +93,7 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
         await loadBotImages(botId);
         
         // Set up event handlers
-        setupEventHandlers(botId, socket, saveCreds, onStatusUpdate);
+        setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, DisconnectReason);
         
         return socket;
         
@@ -106,7 +106,7 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
 /**
  * Set up event handlers for Baileys socket
  */
-function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate) {
+function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, DisconnectReason) {
     const session = activeSessions.get(botId);
     if (!session) return;
     
