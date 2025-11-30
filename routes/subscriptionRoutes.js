@@ -8,12 +8,18 @@ const { requireAuth } = require('../auth/authMiddleware');
 router.get('/purchase/pro', async (req, res) => {
     console.log('🛒 [DEBUG] Iniciando flujo de compra...');
 
+    // Si el usuario NO está logueado, guardamos la intención y lo mandamos a loguear
     if (!req.user) {
         console.log('👤 [DEBUG] Usuario no logueado. Estableciendo cookie y redirigiendo a Google.');
+        
+        // Cookie de vida corta (10 mins) para recordar la intención
         res.cookie('redirect_to_checkout', 'true', { 
             httpOnly: true, 
-            maxAge: 1000 * 60 * 10 
+            maxAge: 1000 * 60 * 10,
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production'
         });
+        
         return res.redirect('/auth/google');
     }
 
@@ -22,12 +28,16 @@ router.get('/purchase/pro', async (req, res) => {
     try {
         const protocol = req.protocol;
         const host = req.get('host');
-        const successUrl = `${protocol}://${host}/dashboard?payment=success`;
-        const cancelUrl = `${protocol}://${host}/?payment=cancelled`;
+        // Aseguramos HTTPS en producción si estamos detrás de un proxy
+        const baseUrl = (process.env.NODE_ENV === 'production' ? 'https' : protocol) + '://' + host;
+        
+        const successUrl = `${baseUrl}/dashboard?payment=success`;
+        const cancelUrl = `${baseUrl}/dashboard?payment=cancelled`;
 
         // Verificar que tengamos las variables necesarias antes de llamar a Stripe
         if (!process.env.STRIPE_PRICE_ID_PRO) {
-            throw new Error('Falta la variable de entorno STRIPE_PRICE_ID_PRO');
+            console.error('❌ Falta STRIPE_PRICE_ID_PRO en variables de entorno');
+            return res.redirect('/dashboard?error=config_error');
         }
 
         const session = await subscriptionService.createCheckoutSession(
@@ -38,25 +48,22 @@ router.get('/purchase/pro', async (req, res) => {
 
         console.log(`✅ [DEBUG] Sesión de Stripe creada. URL: ${session.url}`);
         
-        // Redirigir a Stripe
+        // Redirigir a la página de pago de Stripe
         res.redirect(session.url);
 
     } catch (error) {
-        // AQUÍ VERÁS EL ERROR REAL EN LOS LOGS DE RAILWAY
         console.error('❌ [ERROR CRÍTICO] Falló la creación de sesión de Stripe:', error);
-        
-        // Redirigir mostrando el error en la URL para saber qué pasó
-        res.redirect(`/?error=payment_failed&details=${encodeURIComponent(error.message)}`);
+        res.redirect(`/dashboard?error=payment_init_failed`);
     }
 });
 
-// ... (resto del archivo igual) ...
 router.get('/portal', requireAuth, async (req, res) => {
-    // ... mismo código del portal ...
     try {
         const protocol = req.protocol;
         const host = req.get('host');
-        const returnUrl = `${protocol}://${host}/dashboard`;
+        const baseUrl = (process.env.NODE_ENV === 'production' ? 'https' : protocol) + '://' + host;
+        
+        const returnUrl = `${baseUrl}/dashboard`;
         const session = await subscriptionService.createBillingPortalSession(req.user.email, returnUrl);
         res.redirect(session.url);
     } catch (error) {
