@@ -48,8 +48,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = () => {
-    // Redirect to Google OAuth
-    window.location.href = '/auth/google';
+    // Redirect to Google OAuth - Using absolute URL based on environment
+    // In development, Vite proxy handles /auth/google -> http://localhost:3000/auth/google
+    // In production, it's served from same origin
+    window.location.href = `${window.location.origin}/auth/google`;
   };
 
   const logout = async () => {
