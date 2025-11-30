@@ -34,6 +34,8 @@ const server = http.createServer(app);
 
 const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
 
+// === TRUST PROXY (Importante para cookies en producción detrás de load balancer) ===
+app.set('trust proxy', 1);
 
 // === CONFIGURACIÓN DE MULTER ===
 const storage = multer.diskStorage({
@@ -75,9 +77,7 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'client/dist')));
   
   // Serve React app for all non-API routes (client-side routing)
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'client/dist/index.html'));
-  });
+  // IMPORTANTE: Esto debe ir AL FINAL, después de todas las rutas de API
 } else {
   // Serve static files in development
   app.use(express.static(path.join(__dirname, 'public')));
@@ -100,6 +100,7 @@ app.use((req, res, next) => {
 });
 
 // === RUTAS ===
+// Montamos las rutas de autenticación explícitamente
 app.use('/auth', authRoutes);
 app.use('/subs', subscriptionRoutes);
 
@@ -560,6 +561,14 @@ app.delete('/api/schedules/:id', requireAdmin, async (req, res) => {
         res.status(500).json({ message: 'Error cancelando horario' });
     }
 });
+
+
+// 4. Catch-All for Frontend Routing (MUST BE LAST)
+if (process.env.NODE_ENV === 'production') {
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, 'client/dist/index.html'));
+    });
+}
 
 // ==========================================
 // === INICIO SERVIDOR ===
