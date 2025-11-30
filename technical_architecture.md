@@ -4,20 +4,26 @@
 
 The WhatsApp Bot Manager is a sophisticated multi-tenant platform that enables businesses to deploy and manage multiple AI-powered WhatsApp bots through a centralized dashboard. The system combines intelligent lead capture, automated conversation management, and real-time sales team coordination to streamline customer engagement and lead qualification processes.
 
+**Migration Status**: ✅ **Phases 2, 3, and 4 Completed**
+- **Phase 2**: WhatsApp Baileys Integration with useMultiFileAuthState
+- **Phase 3**: Server-Sent Events (SSE) for Real-time Communication
+- **Phase 4**: React Frontend with Vite and Modern UI
+
 ## Technology Stack
 
 ### Core Platform
 - **Runtime**: Node.js 18.x
 - **Web Framework**: Express.js 4.18.3
-- **Template Engine**: EJS 3.1.9
-- **Real-time Communication**: WebSocket (ws 8.16.0)
-- **Process Management**: Node.js Child Processes
+- **Frontend Framework**: React 19.2.0 with Vite 7.2.4
+- **Real-time Communication**: Server-Sent Events (SSE)
+- **Process Management**: In-memory session management
 
 ### AI & Automation
 - **AI Service**: DeepSeek Chat API
-- **WhatsApp Integration**: whatsapp-web.js (pedroslopez fork)
+- **WhatsApp Integration**: @whiskeysockets/baileys (Official WhatsApp Web API)
 - **QR Code Generation**: qrcode 1.5.3
 - **File Upload Management**: Multer 2.0.2
+- **Session Persistence**: useMultiFileAuthState for secure session storage
 
 ### Data Layer
 - **Database**: PostgreSQL with pg 8.11.3
@@ -30,11 +36,13 @@ The WhatsApp Bot Manager is a sophisticated multi-tenant platform that enables b
 - **Session Security**: JWT tokens with configurable secrets
 - **Cookie Management**: cookie-parser 1.4.6
 - **Payment Processing**: Stripe integration for subscription management
+- **CORS Configuration**: Cross-origin resource sharing for React frontend
 
 ### Infrastructure
 - **Deployment Platform**: Railway.app
 - **Containerization**: Nixpacks
 - **Environment Management**: dotenv 16.4.5
+- **Frontend Build**: Vite with Tailwind CSS 4.1.17
 
 ## System Architecture
 
@@ -49,12 +57,14 @@ graph TB
     end
 
     subgraph "Application Layer"
-        DASH[Dashboard Server]
-        WS[WebSocket Server]
-        AUTH[Auth Service]
+        subgraph "REST API Server"
+            SERVER[Express Server]
+            AUTH[Auth Service]
+            SSE[SSE Controller]
+        end
         
         subgraph "Bot Management"
-            BM[Bot Manager]
+            BM[Baileys Manager]
             SCHED[Scheduler Service]
             SCHEDEXEC[Scheduler Executor]
         end
@@ -65,9 +75,10 @@ graph TB
             IMG[Bot Image Service]
         end
         
-        subgraph "User Roles"
-            ADMIN[Admin Dashboard]
-            VENDOR[Sales Panel]
+        subgraph "Frontend Layer"
+            REACT[React Frontend]
+            CONTEXT[Context State]
+            COMP[Components]
         end
     end
 
@@ -80,26 +91,25 @@ graph TB
         USERDB[User Tables]
         SUBDB[Subscription Tables]
         IMGDB[Image Tables]
+        AUTHSESS[Auth Sessions]
     end
 
-    subgraph "Bot Instances"
-        BOT1[Bot Instance 1]
-        BOT2[Bot Instance 2]
-        BOTN[Bot Instance N]
+    subgraph "Bot Sessions"
+        BOT1[Bot Session 1]
+        BOT2[Bot Session 2]
+        BOTN[Bot Session N]
     end
 
-    ADMIN --> DASH
-    VENDOR --> DASH
-    ADMIN --> WS
-    VENDOR --> WS
-    DASH --> BM
-    DASH --> AUTH
-    DASH --> SCHED
-    DASH --> SCHEDEXEC
-    DASH --> USER
-    DASH --> SUB
-    DASH --> IMG
-    WS --> BM
+    REACT --> SERVER
+    REACT --> SSE
+    SERVER --> BM
+    SERVER --> AUTH
+    SERVER --> SCHED
+    SERVER --> SCHEDEXEC
+    SERVER --> USER
+    SERVER --> SUB
+    SERVER --> IMG
+    SSE --> REACT
     BM --> BOT1
     BM --> BOT2
     BM --> BOTN
@@ -109,6 +119,7 @@ graph TB
     BOT2 --> DS
     AUTH --> GOOG
     BM --> DB
+    BM --> AUTHSESS
     SCHED --> DB
     SCHEDEXEC --> DB
     AUTH --> DB
@@ -127,25 +138,36 @@ graph TB
 
 ### Core Components
 
-#### 1. Dashboard Server ([`dashboardServer.js`](dashboardServer.js:1))
+#### 1. REST API Server ([`server.js`](server.js:1))
 - **Primary Responsibilities**:
   - HTTP request handling and routing with Express.js
-  - WebSocket server management for real-time communication
-  - Bot process orchestration using child processes
+  - Server-Sent Events (SSE) management for real-time communication
+  - Bot session orchestration using Baileys Manager
   - Role-based access control (Admin/Vendor)
   - Authentication middleware enforcement
   - Database initialization and connection pooling
+  - CORS configuration for React frontend integration
 
-#### 2. Bot Instance Manager ([`botInstance.js`](botInstance.js:1))
+#### 2. Baileys Manager ([`services/baileysManager.js`](services/baileysManager.js:1))
 - **Responsibilities**:
-  - WhatsApp client initialization and management with whatsapp-web.js
+  - WhatsApp client initialization and management with @whiskeysockets/baileys
+  - Session persistence using useMultiFileAuthState for secure storage
+  - QR code generation and real-time status updates via SSE
   - AI-powered message processing using DeepSeek API
   - Lead information extraction and qualification
-  - Real-time status reporting to dashboard via WebSocket
-  - Historical chat loading and processing
-  - Outgoing message handling from sales panel
+  - Bot image management and contextual image selection
+  - Dynamic pause/resume functionality without process restart
 
-#### 3. Service Layer
+#### 3. SSE Controller ([`controllers/sseController.js`](controllers/sseController.js:1))
+- **Responsibilities**:
+  - Server-Sent Events connection management
+  - User-specific event broadcasting based on email
+  - Real-time bot status updates and QR code delivery
+  - Lead notifications and message synchronization
+  - Connection health monitoring and automatic reconnection
+  - Event filtering for role-based data access
+
+#### 4. Service Layer
 - **Database Service** ([`services/db.js`](services/db.js:1)): PostgreSQL connection pooling and management
 - **Database Initialization** ([`services/initDb.js`](services/initDb.js:1)): Schema creation and table setup
 - **Bot Database Service** ([`services/botDbService.js`](services/botDbService.js:1)): Bot configuration and management
@@ -155,23 +177,27 @@ graph TB
 - **Scheduler Executor** ([`services/schedulerExecutor.js`](services/schedulerExecutor.js:1)): Scheduled task execution engine
 - **DeepSeek Service** ([`services/deepseekService.js`](services/deepseekService.js:1)): AI conversation handling with DeepSeek API
 - **Lead Extraction Service** ([`services/leadExtractionService.js`](services/leadExtractionService.js:1)): Intelligent contact information parsing
-- **Chat History Service** ([`services/chatHistoryService.js`](services/chatHistoryService.js:1)): Per-bot conversation history management
 
-#### 4. SaaS Platform Services
+#### 5. SaaS Platform Services
 - **User Service** ([`services/userService.js`](services/userService.js:1)): Team member management with database-driven roles and hybrid authentication system
 - **Subscription Service** ([`services/subscriptionService.js`](services/subscriptionService.js:1)): Freemium model with Stripe integration for payment processing and plan management
 - **Bot Image Service** ([`services/botImageService.js`](services/botImageService.js:1)): Media management for AI-powered image sending with keyword-based selection
 
-#### 4. Authentication Layer
+#### 6. Authentication Layer
 - **Auth Controller** ([`auth/authController.js`](auth/authController.js:1)): Google OAuth callback handling and JWT token generation
 - **Passport Configuration** ([`auth/passport.js`](auth/passport.js:1)): Google OAuth strategy setup
 - **Auth Middleware** ([`auth/authMiddleware.js`](auth/authMiddleware.js:1)): JWT validation and role-based access control
 - **Auth Routes** ([`routes/authRoutes.js`](routes/authRoutes.js:1)): Authentication endpoint routing
 
-#### 5. User Interface
-- **Admin Dashboard** ([`views/dashboard.ejs`](views/dashboard.ejs:1)): Bot management interface for administrators
-- **Sales Panel** ([`views/sales.ejs`](views/sales.ejs:1)): Lead management and messaging interface for vendors
-- **Public Assets** ([`public/style.css`](public/style.css:1)): Styling and frontend resources
+#### 7. React Frontend Architecture
+- **Main Application** ([`client/src/App.jsx`](client/src/App.jsx:1)): Root component with routing and provider setup
+- **Authentication Context** ([`client/src/context/AuthContext.jsx`](client/src/context/AuthContext.jsx:1)): User authentication state management
+- **Bots Context** ([`client/src/context/BotsContext.jsx`](client/src/context/BotsContext.jsx:1)): Bot and lead state management with SSE integration
+- **Dashboard Page** ([`client/src/pages/Dashboard.jsx`](client/src/pages/Dashboard.jsx:1)): Bot management interface for administrators
+- **Sales Panel** ([`client/src/pages/SalesPanel.jsx`](client/src/pages/SalesPanel.jsx:1)): Lead management and messaging interface for vendors
+- **Bot Card Component** ([`client/src/components/BotCard.jsx`](client/src/components/BotCard.jsx:1)): Individual bot management with QR display
+- **Chat Interface** ([`client/src/components/ChatInterface.jsx`](client/src/components/ChatInterface.jsx:1)): Real-time messaging with assigned leads
+- **Sidebar Navigation** ([`client/src/components/Sidebar.jsx`](client/src/components/Sidebar.jsx:1)): Role-based navigation menu
 
 ## Service Interactions & Data Flow
 
@@ -179,12 +205,13 @@ graph TB
 
 ```mermaid
 graph LR
-    DASH[Dashboard Server] --> DB[(PostgreSQL)]
-    DASH --> WS[WebSocket Server]
-    DASH --> BM[Bot Manager]
+    REACT[React Frontend] --> SERVER[Express Server]
+    REACT --> SSE[SSE Controller]
+    SERVER --> DB[(PostgreSQL)]
+    SERVER --> BM[Baileys Manager]
     
-    BM --> BOT1[Bot Instance 1]
-    BM --> BOT2[Bot Instance 2]
+    BM --> BOT1[Bot Session 1]
+    BM --> BOT2[Bot Session 2]
     
     BOT1 --> LEADDB[Lead Service]
     BOT1 --> DEEPSEEK[AI Service]
@@ -193,11 +220,11 @@ graph LR
     LEADDB --> DB
     SCHED[Scheduler] --> DB
     CONFIG[Config Service] --> DB
-    
-    WS --> DASH_CLIENT[Dashboard Client]
-    WS --> SALES_CLIENT[Sales Client]
-    
     AUTH[Auth Service] --> DB
+    
+    SSE --> REACT_CLIENT[React Client]
+    BM --> SSE
+    
     AUTH --> GOOGLE[Google OAuth]
 ```
 
@@ -207,42 +234,51 @@ graph LR
 sequenceDiagram
     participant U as User
     participant WA as WhatsApp
-    participant BI as Bot Instance
+    participant BM as Baileys Manager
     participant DS as DeepSeek AI
     participant LD as Lead Service
     participant EX as Extraction Service
-    participant WS as WebSocket
-    participant D as Dashboard
-    participant S as Sales Panel
+    participant SSE as SSE Controller
+    participant REACT as React Frontend
+    participant API as REST API
 
     U->>WA: Send Message
-    WA->>BI: Receive Message
-    BI->>LD: Get/Create Lead
-    BI->>EX: Extract Contact Info
+    WA->>BM: Receive Message via Baileys
+    BM->>LD: Get/Create Lead
+    BM->>EX: Extract Contact Info
     EX->>LD: Update Lead Data
-    BI->>DS: Process with AI
-    DS->>BI: AI Response
-    BI->>LD: Store Message
-    BI->>WA: Send Reply
-    BI->>WS: Status Update
-    WS->>D: Real-time Update
-    WS->>S: Real-time Update
+    BM->>DS: Process with AI
+    DS->>BM: AI Response
+    BM->>LD: Store Message
+    BM->>WA: Send Reply via Baileys
+    BM->>SSE: Status Update
+    SSE->>REACT: Real-time Update via SSE
     
     alt Lead Qualified
-        BI->>WS: New Qualified Lead
-        WS->>D: Lead Notification
-        WS->>S: Lead Notification
+        BM->>SSE: New Qualified Lead
+        SSE->>REACT: Lead Notification
     end
     
     alt Assigned Lead Message
         U->>WA: Send Message
-        WA->>BI: Receive Message
-        BI->>LD: Store Message
-        BI->>WS: Forward to Sales
-        WS->>S: Real-time Message
-        S->>WS: Vendor Reply
-        WS->>BI: Send to WhatsApp
-        BI->>WA: Deliver Message
+        WA->>BM: Receive Message
+        BM->>LD: Store Message
+        BM->>SSE: Forward to Sales
+        SSE->>REACT: Real-time Message
+        REACT->>API: Vendor Reply
+        API->>BM: Send to WhatsApp
+        BM->>WA: Deliver Message
+    end
+    
+    alt Bot Creation
+        REACT->>API: Create Bot Request
+        API->>BM: Initialize Baileys Session
+        BM->>SSE: QR Code Generated
+        SSE->>REACT: Display QR Code
+        U->>WA: Scan QR Code
+        WA->>BM: Connection Established
+        BM->>SSE: Connection Status
+        SSE->>REACT: Update Bot Status
     end
 ```
 
@@ -324,14 +360,20 @@ sequenceDiagram
 
 | Event Type | Source | Destination | Payload |
 |------------|--------|-------------|---------|
-| `INIT` | Dashboard Server | WebSocket Clients | Bot list, initial state |
-| `UPDATE_BOT` | Bot Instance | Dashboard | Bot status, QR codes |
-| `NEW_QUALIFIED_LEAD` | Bot Instance | Dashboard & Sales | Lead information |
-| `NEW_MESSAGE_FOR_SALES` | Bot Instance | Sales Panel | Message from assigned lead |
-| `LEAD_ASSIGNED` | Lead Service | Dashboard & Sales | Updated lead assignment |
-| `MESSAGE_SENT` | Dashboard Server | Sales Panel | Vendor message confirmation |
-| `SCHEDULE_CREATED` | Scheduler Service | Dashboard | New schedule details |
-| `BOT_FEATURES_UPDATED` | Config Service | Dashboard | Updated feature flags |
+| `CONNECTED` | SSE Controller | React Clients | Connection confirmation, client ID |
+| `INIT` | REST API | React Clients | Bot list, initial state for user |
+| `INIT_LEADS` | REST API | React Clients | Qualified leads list |
+| `QR_GENERATED` | Baileys Manager | React Dashboard | QR code data URL, bot ID |
+| `UPDATE_BOT` | Baileys Manager | React Dashboard | Bot status, runtime status, QR codes |
+| `NEW_BOT` | REST API | React Dashboard | New bot configuration and status |
+| `BOT_DELETED` | REST API | React Dashboard | Deleted bot ID |
+| `NEW_QUALIFIED_LEAD` | Baileys Manager | React Dashboard & Sales | Lead information, bot ID |
+| `LEAD_ASSIGNED` | Lead Service | React Dashboard & Sales | Updated lead assignment |
+| `NEW_MESSAGE_FOR_SALES` | Baileys Manager | React Sales Panel | Message from assigned lead, lead ID |
+| `MESSAGE_SENT` | REST API | React Sales Panel | Vendor message confirmation, lead ID |
+| `LEAD_MESSAGES` | REST API | React Sales Panel | Full message history for lead |
+| `SCHEDULE_CREATED` | Scheduler Service | React Dashboard | New schedule details |
+| `BOT_FEATURES_UPDATED` | Config Service | React Dashboard | Updated feature flags |
 
 ## Infrastructure & Deployment
 
@@ -531,46 +573,47 @@ CREATE TABLE schedules (
 
 ### Recent System Enhancements
 
-#### 1. Evolution to Comprehensive SaaS Platform
-- **Multi-Tenant Architecture**: Full SaaS platform with user management, team collaboration, and subscription tiers
-- **Freemium Business Model**: Free tier with 1 bot limit and unlimited Pro tier with Stripe integration
-- **Team Management**: Database-driven team management with hybrid role assignment (environment variables + database teams)
-- **Subscription Management**: Automated plan enforcement, payment processing, and billing portal integration
+#### 1. WhatsApp Baileys Integration (Phase 2)
+- **Official WhatsApp Web API**: Migrated from whatsapp-web.js to @whiskeysockets/baileys for improved reliability
+- **Session Management**: Secure session persistence using useMultiFileAuthState with bot-specific auth directories
+- **Enhanced Connection Handling**: Automatic reconnection, QR code generation, and connection state management
+- **Memory Optimization**: In-memory session management replacing child process architecture
+- **Message Processing**: Improved message handling with support for multiple message types (text, images, media)
 
-#### 2. Advanced Bot Capabilities
-- **Dynamic Pause/Resume**: Bot instances can be paused and resumed without process restart via real-time status control
-- **AI-Powered Image Selection**: Context-aware image sending based on conversation keywords and bot image libraries
-- **Enhanced Chat Processing**: Improved historical chat loading with memory optimization and duplicate detection
-- **Media Management**: Multer-based file upload system for bot images with keyword association
-- **Real-time Status Control**: Runtime status updates without bot process termination
+#### 2. Server-Sent Events Implementation (Phase 3)
+- **Real-time Communication**: Replaced WebSockets with SSE for simplified real-time updates
+- **User-specific Events**: Targeted event broadcasting based on user email for multi-tenant isolation
+- **Connection Management**: Automatic reconnection, health monitoring, and connection cleanup
+- **Event Filtering**: Role-based event delivery ensuring users only receive relevant data
+- **Performance Optimization**: Reduced overhead compared to WebSocket connections
 
-#### 3. PostgreSQL Database Migration & Enhancement
-- **Migration from SQLite**: Transitioned from file-based SQLite to robust PostgreSQL for better concurrency and scalability
-- **Connection Pooling**: Implemented efficient database connection management via [`services/db.js`](services/db.js:1)
-- **Schema Updates**: Converted all tables to PostgreSQL-compatible schema with proper foreign key constraints and SERIAL primary keys
-- **Data Integrity**: Added ON DELETE CASCADE for lead_messages to maintain referential integrity
-- **Extended Schema**: Added users, subscriptions, and bot_images tables for SaaS functionality
+#### 3. React Frontend Migration (Phase 4)
+- **Modern UI Framework**: Migrated from EJS templates to React 19 with Vite for faster development
+- **Component Architecture**: Modular component design with reusable BotCard, ChatInterface, and Sidebar components
+- **State Management**: Context-based state management with AuthContext and BotsContext for global state
+- **Real-time Integration**: SSE client integration with automatic reconnection and event handling
+- **Responsive Design**: Tailwind CSS for modern, mobile-responsive interface design
 
-#### 4. Enhanced Hybrid Role System
-- **Environment-Based Admins**: Primary administrators defined in ADMIN_EMAILS environment variable
-- **Database-Managed Teams**: Vendors and team members managed through User Service with activation controls
-- **Dynamic Role Resolution**: System checks environment variables first, then database for role assignment
-- **Team Management**: Admins can add, remove, and activate/deactivate team members via User Service
-- **Status Tracking**: Last login timestamps and active/inactive user status monitoring
+#### 4. REST API Architecture
+- **API-First Design**: Complete migration from server-rendered EJS views to RESTful API endpoints
+- **Authentication Flow**: JWT-based authentication with Google OAuth integration
+- **CORS Configuration**: Proper cross-origin setup for React frontend integration
+- **Error Handling**: Structured error responses and validation middleware
+- **File Upload**: Multer-based image upload with proper validation and storage
 
-#### 5. Advanced Lead Management
-- **Progressive Lead Qualification**: Multi-stage capture process (capturing → qualified → assigned)
-- **Intelligent Information Extraction**: AI-powered parsing of contact details from natural conversations
-- **Vendor Assignment System**: Leads can be assigned to specific vendors for follow-up
-- **Message Continuity**: Seamless handoff from bot to human sales representatives
-- **AI-Enhanced Interactions**: Context-aware responses with integrated media capabilities
+#### 5. Enhanced Bot Session Management
+- **Dynamic Status Control**: Real-time bot enable/disable without session restart
+- **QR Code Delivery**: Real-time QR code generation and delivery via SSE to specific users
+- **Image Management**: Context-aware image selection with keyword-based triggers
+- **Lead Extraction**: AI-powered contact information parsing from natural conversations
+- **Multi-tenant Isolation**: Secure session separation between different bot owners
 
-#### 6. Real-time Communication Enhancements
-- **WebSocket Authentication**: JWT-based authentication for WebSocket connections
-- **Role-specific Events**: Different event streams for admin dashboard vs sales panel
-- **Bi-directional Messaging**: Sales team can send messages directly through bot instances
-- **Live Status Updates**: Real-time bot status, lead notifications, and message synchronization
-- **Subscription Events**: Real-time plan limit enforcement and upgrade notifications
+#### 6. Real-time Communication Framework
+- **SSE Event Types**: Comprehensive event system for bot status, leads, messages, and system notifications
+- **Bi-directional Messaging**: Sales team can send messages through bot sessions to WhatsApp users
+- **Connection Health**: Automatic reconnection and status monitoring for both SSE and WhatsApp connections
+- **User-specific Broadcasting**: Events are filtered and delivered only to relevant users based on ownership
+- **State Synchronization**: Consistent view across all connected React clients with role-based data filtering
 
 ### Multi-Tenant Bot Architecture
 - **Isolated Instances**: Each bot runs in separate child processes with independent WhatsApp sessions

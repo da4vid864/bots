@@ -2,9 +2,8 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
-const WebSocket = require('ws');
+const sseController = require('./controllers/sseController');
 const path = require('path');
-const { fork } = require('child_process');
 const cookieParser = require('cookie-parser');
 const passport = require('passport');
 const cookie = require('cookie');
@@ -19,6 +18,7 @@ const botConfigService = require('./services/botConfigService');
 const schedulerService = require('./services/schedulerService');
 const userService = require('./services/userService');
 const botImageService = require('./services/botImageService');
+const baileysManager = require('./services/baileysManager');
 
 const { startSchedulerExecutor } = require('./services/schedulerExecutor');
 const authRoutes = require('./routes/authRoutes');
@@ -31,15 +31,9 @@ require('./auth/passport');
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
 
-// Mapa de procesos de bots activos: { botId: childProcess }
-const activeBots = new Map();
-
-// Mapa de clientes WebSocket conectados: Set de WebSocket
-const dashboardClients = new Set();
 
 // === CONFIGURACIÓN DE MULTER ===
 const storage = multer.diskStorage({
@@ -76,7 +70,18 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static files from React build in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'client/dist')));
+  
+  // Serve React app for all non-API routes (client-side routing)
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client/dist/index.html'));
+  });
+} else {
+  // Serve static files in development
+  app.use(express.static(path.join(__dirname, 'public')));
+}
 
 app.use(attachUser);
 
@@ -147,95 +152,29 @@ app.get('/api/sales', requireAuth, (req, res) => {
     });
 });
 
-// === WEBSOCKET (Resto del código original sin cambios) ===
-wss.on('connection', async (ws, req) => {
-    const cookies = cookie.parse(req.headers.cookie || '');
-    const token = cookies.auth_token;
-    
-    let user = null;
-    if (token) {
-        try {
-            user = jwt.verify(token, process.env.JWT_SECRET);
-        } catch (err) {
-            ws.close(1008, 'Token inválido');
-            return;
-        }
-    } else {
-        ws.close(1008, 'No autenticado');
-        return;
-    }
-    
-    if (user.role !== 'admin' && user.role !== 'vendor') {
-        ws.close(1008, 'No autorizado');
-        return;
-    }
-    
-    dashboardClients.add(ws);
-
-    if (user.role === 'admin') {
-        try {
-            const allBots = await botDbService.getAllBots();
-            const userBots = allBots.filter(bot => bot.ownerEmail === user.email);
-            
-            const botsData = userBots.map(bot => {
-                return {
-                    ...bot,
-                    runtimeStatus: getRuntimeStatus(bot)
-                };
-            });
-            
-            ws.send(JSON.stringify({ type: 'INIT', data: botsData }));
-        } catch (error) {
-            console.error('❌ Error obteniendo bots:', error);
-        }
-    }
-
-    try {
-        const qualifiedLeads = await leadDbService.getQualifiedLeads();
-        ws.send(JSON.stringify({ type: 'INIT_LEADS', data: qualifiedLeads }));
-    } catch (error) {}
-
-    ws.on('message', async (message) => {
-        try {
-            const data = JSON.parse(message);
-            if (data.type === 'ASSIGN_LEAD') await handleAssignLead(data.leadId, user.email);
-            if (data.type === 'SEND_MESSAGE') await handleSendMessage(data.leadId, data.message, user.email);
-            if (data.type === 'GET_LEAD_MESSAGES') await handleGetLeadMessages(ws, data.leadId);
-        } catch (error) {}
-    });
-
-    ws.on('close', () => {
-        dashboardClients.delete(ws);
-    });
-});
+// === SSE EVENTS ROUTE ===
+app.get('/api/events', requireAuth, sseController.eventsHandler);
 
 // === FUNCIÓN: Obtener estado ===
 function getRuntimeStatus(bot) {
     if (bot.status === 'disabled') return 'DISABLED';
     
-    const botProcess = activeBots.get(bot.id);
-    if (!botProcess) return 'DISCONNECTED';
-    
-    return 'STARTING'; 
+    const botStatus = baileysManager.getBotStatus(bot.id);
+    return botStatus;
 }
 
 function broadcastToDashboard(message) {
-    const messageStr = JSON.stringify(message);
-    dashboardClients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(messageStr);
-        }
-    });
+    sseController.broadcastEvent(message.type, message.data);
 }
 
 // === MANEJO DE MENSAJES DE BOTS ===
-async function handleBotMessage(botId, message) {
-    switch (message.type) {
+async function handleBotMessage(botId, type, data) {
+    switch (type) {
         case 'QR_GENERATED':
             const botWithQR = await botDbService.getBotById(botId);
             broadcastToDashboard({
                 type: 'UPDATE_BOT',
-                data: { ...botWithQR, runtimeStatus: 'PENDING_QR', qr: message.qr }
+                data: { ...botWithQR, runtimeStatus: 'PENDING_QR', qr: data.qr }
             });
             break;
         
@@ -250,7 +189,7 @@ async function handleBotMessage(botId, message) {
         case 'UPDATE_BOT':
             broadcastToDashboard({
                 type: 'UPDATE_BOT',
-                data: message 
+                data: data
             });
             break;
         
@@ -263,60 +202,43 @@ async function handleBotMessage(botId, message) {
             break;
 
         case 'NEW_QUALIFIED_LEAD':
-            broadcastToDashboard({ type: 'NEW_QUALIFIED_LEAD', data: message.lead });
+            broadcastToDashboard({ type: 'NEW_QUALIFIED_LEAD', data: data.lead });
             break;
 
         case 'NEW_MESSAGE_FOR_SALES':
-            broadcastToDashboard({ type: 'NEW_MESSAGE_FOR_SALES', data: message });
+            broadcastToDashboard({ type: 'NEW_MESSAGE_FOR_SALES', data: data });
             break;
     }
 }
 
 // === FUNCIÓN: Lanzar bot ===
-function launchBot(botConfig) {
-    if (activeBots.has(botConfig.id)) {
-        console.log(`⚠️ El bot ${botConfig.id} ya está en ejecución. Solo enviando configuración.`);
-        const existingProc = activeBots.get(botConfig.id);
-        existingProc.send({ 
-            type: 'SET_STATUS', 
-            status: botConfig.status 
-        });
-        return;
-    }
-
-    console.log(`🚀 Lanzando proceso para bot: ${botConfig.name} (Estado inicial: ${botConfig.status})`);
+async function launchBot(botConfig) {
+    console.log(`🚀 Inicializando Baileys para bot: ${botConfig.name} (Estado inicial: ${botConfig.status})`);
     
-    const botProcess = fork(path.join(__dirname, 'botInstance.js'), [], {
-        env: { ...process.env }
-    });
-
-    botProcess.send({ type: 'INIT', config: botConfig });
-
-    botProcess.on('message', (msg) => handleBotMessage(botConfig.id, msg));
-
-    botProcess.on('exit', async (code) => {
-        console.log(`❌ Bot ${botConfig.id} terminado con código ${code}`);
-        activeBots.delete(botConfig.id);
-        const exitedBot = await botDbService.getBotById(botConfig.id);
-        if (exitedBot) {
+    try {
+        await baileysManager.initializeBaileysConnection(botConfig, (type, data) => {
+            handleBotMessage(botConfig.id, type, data);
+        });
+        
+        // Set initial status
+        baileysManager.setBotStatus(botConfig.id, botConfig.status);
+        
+    } catch (error) {
+        console.error(`❌ Error inicializando bot ${botConfig.id}:`, error);
+        const bot = await botDbService.getBotById(botConfig.id);
+        if (bot) {
             broadcastToDashboard({
                 type: 'UPDATE_BOT',
-                data: { ...exitedBot, runtimeStatus: 'DISCONNECTED' }
+                data: { ...bot, runtimeStatus: 'DISCONNECTED' }
             });
         }
-    });
-
-    activeBots.set(botConfig.id, botProcess);
+    }
 }
 
 // === FUNCIÓN: Matar bot (Solo para eliminar) ===
-function stopBot(botId) {
-    const botProcess = activeBots.get(botId);
-    if (botProcess) {
-        console.log(`☠️ Matando proceso de bot ${botId}`);
-        botProcess.kill();
-        activeBots.delete(botId);
-    }
+async function stopBot(botId) {
+    console.log(`☠️ Desconectando sesión Baileys para bot ${botId}`);
+    await baileysManager.disconnectBot(botId);
 }
 
 // === API: DESHABILITAR BOT ===
@@ -329,12 +251,8 @@ app.post('/api/disable-bot/:id', requireAdmin, async (req, res) => {
 
     await botDbService.updateBotStatus(id, 'disabled');
     
-    const botProcess = activeBots.get(id);
-    if (botProcess) {
-        botProcess.send({ type: 'SET_STATUS', status: 'disabled' });
-    } else {
-        launchBot({ ...bot, status: 'disabled' });
-    }
+    // Set bot status in baileysManager
+    baileysManager.setBotStatus(id, 'disabled');
 
     res.json({ message: 'Bot deshabilitado (Pausado)' });
 });
@@ -349,12 +267,8 @@ app.post('/api/enable-bot/:id', requireAdmin, async (req, res) => {
 
     await botDbService.updateBotStatus(id, 'enabled');
     
-    const botProcess = activeBots.get(id);
-    if (botProcess) {
-        botProcess.send({ type: 'SET_STATUS', status: 'enabled' });
-    } else {
-        launchBot({ ...bot, status: 'enabled' });
-    }
+    // Set bot status in baileysManager
+    baileysManager.setBotStatus(id, 'enabled');
 
     res.json({ message: 'Bot habilitado (Reanudado)' });
 });
@@ -373,10 +287,12 @@ async function handleSendMessage(leadId, message, vendorEmail) {
         if (!lead) return;
 
         await leadDbService.addLeadMessage(leadId, vendorEmail, message);
-        const botProcess = activeBots.get(lead.bot_id);
-        if (botProcess) {
-            botProcess.send({ type: 'SEND_MESSAGE', to: lead.whatsapp_number, message });
+        
+        // Use baileysManager to send message
+        if (baileysManager.isBotReady(lead.bot_id)) {
+            await baileysManager.sendMessage(lead.bot_id, lead.whatsapp_number, message);
         }
+        
         broadcastToDashboard({
             type: 'MESSAGE_SENT',
             data: { leadId, sender: vendorEmail, message, timestamp: new Date().toISOString() }
@@ -384,17 +300,86 @@ async function handleSendMessage(leadId, message, vendorEmail) {
     } catch (error) { console.error('Error enviando mensaje:', error); }
 }
 
-async function handleGetLeadMessages(ws, leadId) {
+async function handleGetLeadMessages(userEmail, leadId) {
     try {
         const messages = await leadDbService.getLeadMessages(leadId, 1000);
         const lead = await leadDbService.getLeadById(leadId);
         
-        ws.send(JSON.stringify({
-            type: 'LEAD_MESSAGES',
-            data: { leadId, lead, messages, totalMessages: messages.length }
-        }));
+        sseController.sendEventToUser(userEmail, 'LEAD_MESSAGES', {
+            leadId, lead, messages, totalMessages: messages.length
+        });
     } catch (error) {}
 }
+
+// === API ENDPOINTS FOR LEAD OPERATIONS ===
+app.post('/api/assign-lead', requireAuth, async (req, res) => {
+    const { leadId } = req.body;
+    try {
+        await handleAssignLead(leadId, req.user.email);
+        res.json({ message: 'Lead assigned successfully' });
+    } catch (error) {
+        console.error('Error assigning lead:', error);
+        res.status(500).json({ message: 'Error assigning lead' });
+    }
+});
+
+app.post('/api/send-message', requireAuth, async (req, res) => {
+    const { leadId, message } = req.body;
+    try {
+        await handleSendMessage(leadId, message, req.user.email);
+        res.json({ message: 'Message sent successfully' });
+    } catch (error) {
+        console.error('Error sending message:', error);
+        res.status(500).json({ message: 'Error sending message' });
+    }
+});
+
+app.get('/api/lead-messages/:leadId', requireAuth, async (req, res) => {
+    const { leadId } = req.params;
+    try {
+        await handleGetLeadMessages(req.user.email, leadId);
+        res.json({ message: 'Lead messages request sent' });
+    } catch (error) {
+        console.error('Error getting lead messages:', error);
+        res.status(500).json({ message: 'Error getting lead messages' });
+    }
+});
+
+// === INITIAL DATA ENDPOINTS FOR SSE CLIENTS ===
+app.get('/api/initial-data', requireAuth, async (req, res) => {
+    try {
+        const user = req.user;
+        let botsData = [];
+        let leadsData = [];
+
+        if (user.role === 'admin') {
+            const allBots = await botDbService.getAllBots();
+            const userBots = allBots.filter(bot => bot.ownerEmail === user.email);
+            
+            botsData = userBots.map(bot => {
+                return {
+                    ...bot,
+                    runtimeStatus: getRuntimeStatus(bot)
+                };
+            });
+        }
+
+        try {
+            const qualifiedLeads = await leadDbService.getQualifiedLeads();
+            leadsData = qualifiedLeads;
+        } catch (error) {
+            console.error('Error getting qualified leads:', error);
+        }
+
+        sseController.sendEventToUser(user.email, 'INIT', { bots: botsData });
+        sseController.sendEventToUser(user.email, 'INIT_LEADS', { leads: leadsData });
+
+        res.json({ message: 'Initial data sent via SSE' });
+    } catch (error) {
+        console.error('Error sending initial data:', error);
+        res.status(500).json({ message: 'Error sending initial data' });
+    }
+});
 
 // === RESTO DE RUTAS API (CRUD BOTS, ETC) ===
 
@@ -453,8 +438,8 @@ app.post('/api/bot/:botId/images', requireAdmin, upload.single('image'), async (
 
     try {
         const image = await botImageService.addImage(botId, file.filename, file.originalname, keyword);
-        const botProcess = activeBots.get(botId);
-        if (botProcess) botProcess.send({ type: 'REFRESH_IMAGES' });
+        // Refresh images in baileysManager
+        baileysManager.refreshBotImages(botId);
         res.json(image);
     } catch (error) {
         res.status(500).json({ message: 'Error guardando imagen' });
@@ -475,8 +460,8 @@ app.delete('/api/images/:imageId', requireAdmin, async (req, res) => {
             const p = path.join(__dirname, 'public', 'uploads', deleted.filename);
             if (fs.existsSync(p)) fs.unlinkSync(p);
             
-            const botProcess = activeBots.get(deleted.bot_id);
-            if (botProcess) botProcess.send({ type: 'REFRESH_IMAGES' });
+            // Refresh images in baileysManager
+            baileysManager.refreshBotImages(deleted.bot_id);
         }
         res.json({ message: 'Eliminada' });
     } catch (error) { res.status(500).json({ message: 'Error' }); }
@@ -498,11 +483,8 @@ app.get('/api/bot/:id/features', requireAuth, async (req, res) => {
 app.patch('/api/bot/:id/features', requireAuth, async (req, res) => {
     try {
         const updated = await botConfigService.updateBotFeatures(req.params.id, req.body);
-        // Notificar al bot en tiempo real que su configuración cambió
-        const botProcess = activeBots.get(req.params.id);
-        if (botProcess) {
-            botProcess.send({ type: 'UPDATE_FEATURES', features: updated });
-        }
+        // Note: Feature updates are handled through the bot configuration in baileysManager
+        // The bot will use the updated configuration on next message processing
         res.json(updated);
     } catch (error) {
         console.error(error);
@@ -591,21 +573,16 @@ async function startServer() {
             
             await botDbService.updateBotStatus(botId, action === 'enable' ? 'enabled' : 'disabled');
             
-            const botProcess = activeBots.get(botId);
             const status = action === 'enable' ? 'enabled' : 'disabled';
             
-            if (botProcess) {
-                botProcess.send({ type: 'SET_STATUS', status });
-            } else if (action === 'enable') {
-                const bot = await botDbService.getBotById(botId);
-                launchBot(bot);
-            }
+            // Set bot status in baileysManager
+            baileysManager.setBotStatus(botId, status);
             
             broadcastToDashboard({
                 type: 'UPDATE_BOT',
-                data: { ...(await botDbService.getBotById(botId)), 
-                        status, 
-                        runtimeStatus: status === 'enabled' ? 'CONNECTED' : 'DISABLED' 
+                data: { ...(await botDbService.getBotById(botId)),
+                        status,
+                        runtimeStatus: status === 'enabled' ? 'CONNECTED' : 'DISABLED'
                       }
             });
         });
