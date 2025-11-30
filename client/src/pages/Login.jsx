@@ -1,8 +1,9 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
-  const { login, loading, error } = useAuth();
+  const { login, loading, error, user } = useAuth();
 
   const handlePurchase = () => {
     // Redirect to the purchase endpoint.
@@ -21,17 +22,26 @@ const Login = () => {
               <span className="font-bold text-xl text-gray-800">BotInteligente</span>
             </div>
             <div className="flex items-center space-x-4">
-              <button 
-                onClick={login}
-                className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
-              >
-                Log In
-              </button>
-              <button 
+              {user ? (
+                <Link
+                  to="/dashboard"
+                  className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <button
+                  onClick={login}
+                  className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+                >
+                  Log In
+                </button>
+              )}
+              <button
                 onClick={handlePurchase}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
               >
-                Get Started
+                {user ? 'Upgrade Plan' : 'Get Started'}
               </button>
             </div>
           </div>
@@ -58,12 +68,21 @@ const Login = () => {
               </button>
             </div>
             <div className="mt-3 rounded-md shadow sm:mt-0 sm:ml-3">
-              <button
-                onClick={login}
-                className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 md:py-4 md:text-lg md:px-10"
-              >
-                Live Demo
-              </button>
+              {user ? (
+                <Link
+                  to="/dashboard"
+                  className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 md:py-4 md:text-lg md:px-10"
+                >
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <button
+                  onClick={login}
+                  className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 md:py-4 md:text-lg md:px-10"
+                >
+                  Live Demo
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -162,12 +181,21 @@ const Login = () => {
                   </li>
                 </ul>
                 <div className="rounded-md shadow">
-                  <button
-                    onClick={login}
-                    className="flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 w-full"
-                  >
-                    Start for Free
-                  </button>
+                  {user ? (
+                    <Link
+                      to="/dashboard"
+                      className="flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 w-full"
+                    >
+                      Go to Dashboard
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={login}
+                      className="flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 w-full"
+                    >
+                      Start for Free
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

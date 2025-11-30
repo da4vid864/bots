@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useBots } from '../context/BotsContext';
 import { useAuth } from '../context/AuthContext';
 import BotCard from '../components/BotCard';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { bots, createBot, sseConnected } = useBots();
@@ -188,6 +188,9 @@ const Dashboard = () => {
                   {/* Aquí podrías conectar el estado real de la suscripción */}
                   PRO
                 </p>
+                <Link to="/pricing" className="text-sm text-blue-600 hover:text-blue-800 mt-1 inline-block">
+                  Ver planes
+                </Link>
               </div>
               <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center">
                 <span className="text-2xl">💎</span>

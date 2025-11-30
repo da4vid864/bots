@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/auth/status');
+      const response = await api.get('/api/auth/status', { timeout: 5000 });
       
       if (response.data.authenticated) {
         setUser(response.data.user);

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BotsProvider } from './context/BotsContext';
 import Sidebar from './components/Sidebar';
@@ -7,59 +8,79 @@ import Dashboard from './pages/Dashboard';
 import SalesPanel from './pages/SalesPanel';
 import './App.css';
 
-// Main App Content with Routing
-const AppContent = () => {
+const LoadingSpinner = () => (
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="text-center">
+      <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p className="text-gray-600">Loading...</p>
+    </div>
+  </div>
+);
+
+const ProtectedLayout = ({ children }) => {
   const { user, loading } = useAuth();
-  const [activePage, setActivePage] = useState('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
+  if (loading) return <LoadingSpinner />;
+  
   if (!user) {
-    return <Login />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Determine default page based on user role
-  const getDefaultPage = () => {
-    if (user.role === 'admin') return 'dashboard';
-    if (user.role === 'vendor') return 'sales';
+  const getActivePage = (path) => {
+    if (path.includes('sales')) return 'sales';
+    if (path.includes('bots')) return 'bots';
     return 'dashboard';
   };
 
-  const currentPage = activePage || getDefaultPage();
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'bots':
-        return <Dashboard />; // Bot management is part of dashboard
-      case 'sales':
-        return <SalesPanel />;
-      default:
-        return <Dashboard />;
+  const handlePageChange = (pageId) => {
+    switch(pageId) {
+      case 'sales': navigate('/sales'); break;
+      case 'bots': navigate('/dashboard'); break;
+      case 'dashboard': navigate('/dashboard'); break;
+      default: navigate('/dashboard');
     }
   };
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar activePage={currentPage} onPageChange={setActivePage} />
+      <Sidebar activePage={getActivePage(location.pathname)} onPageChange={handlePageChange} />
       <main className="flex-1 overflow-auto">
-        {renderPage()}
+        {children}
       </main>
     </div>
   );
 };
 
-// Main App Component with Providers
+const AppContent = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) return <LoadingSpinner />;
+
+  return (
+    <Routes>
+      <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
+      <Route path="/pricing" element={<Login />} />
+      
+      <Route path="/dashboard" element={
+        <ProtectedLayout>
+          <Dashboard />
+        </ProtectedLayout>
+      } />
+      
+      <Route path="/sales" element={
+        <ProtectedLayout>
+          <SalesPanel />
+        </ProtectedLayout>
+      } />
+
+      <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
+  );
+};
+
 function App() {
   return (
     <AuthProvider>
