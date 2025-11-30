@@ -44,7 +44,7 @@ const handleGoogleCallback = async (req, res) => {
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
 
-  // === 4. LÓGICA DE REDIRECCIÓN DE PAGO (LO NUEVO) ===
+  // === 4. LÓGICA DE REDIRECCIÓN DE PAGO ===
   
   // Verificamos si el usuario hizo clic en "Comprar" antes de loguearse
   if (req.cookies.redirect_to_checkout === 'true') {
@@ -53,28 +53,21 @@ const handleGoogleCallback = async (req, res) => {
     // Borramos la cookie para que no se quede pegada en el navegador
     res.clearCookie('redirect_to_checkout');
     
-    // Return JSON response for API
-    return res.json({
-      success: true,
-      redirectTo: '/subs/purchase/pro',
-      user: tokenPayload
-    });
+    // Redireccionamos a la ruta de compra (que ahora verá que el usuario está logueado)
+    return res.redirect('/subs/purchase/pro');
   }
 
-  // === 5. JSON Response for REST API ===
+  // === 5. REDIRECCIÓN NORMAL AL FRONTEND ===
   
   if (role === 'admin' || role === 'vendor') {
-    res.json({
-      success: true,
-      user: tokenPayload,
-      redirectTo: role === 'admin' ? '/api/dashboard' : '/api/sales'
-    });
+    // Redirigimos al frontend, React Router se encargará del resto
+    // Usamos las rutas que definimos en React (dashboard o sales)
+    const targetPath = role === 'admin' ? '/dashboard' : '/sales';
+    res.redirect(targetPath);
   } else {
     // Si el usuario no es admin, ni vendor
-    res.status(403).json({
-      success: false,
-      message: `Tu cuenta (${email}) no está autorizada para acceder a este sistema. Contacta al administrador para solicitar acceso.`
-    });
+    // Redirigimos al login con un error
+    res.redirect('/login?error=unauthorized');
   }
 };
 

@@ -4,6 +4,7 @@ let Boom;
 const path = require('path');
 const fs = require('fs');
 const QRCode = require('qrcode');
+const pino = require('pino'); // Added pino import
 
 // Dynamically import ESM modules
 async function loadBaileys() {
@@ -60,16 +61,17 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
         const { version, isLatest } = await fetchLatestBaileysVersion();
         console.log(`[${botId}] 📦 Usando Baileys v${version.join('.')}, latest: ${isLatest}`);
         
+        // Create pino logger instance
+        const logger = pino({ level: 'silent' });
+
         // Configure socket
         const socket = makeWASocket({
             version,
-            logger: {
-                level: 'silent' // Reduce logging noise
-            },
+            logger, // Pass the pino logger instance
             printQRInTerminal: false,
             auth: {
                 creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, { level: 'silent' }),
+                keys: makeCacheableSignalKeyStore(state.keys, logger), // Pass logger here too if needed by store
             },
             generateHighQualityLinkPreview: true,
             markOnlineOnConnect: true,
