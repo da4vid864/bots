@@ -1,13 +1,12 @@
 [phases.setup]
-nixPkgs = ["nodejs_20", "chromium"]
+# Changed nodejs_20 to nodejs_22 to satisfy Vite requirements
+nixPkgs = ["nodejs_22", "chromium"]
 
 [phases.install]
-# 1. We removed '--production' so that 'vite' (a dev dependency) is installed.
-# 2. We added 'cd client && npm ci' to ensure the frontend dependencies are installed too.
+# Installs dependencies for root AND client folder
 cmds = ["npm ci", "cd client && npm ci"]
 
 [phases.build]
-# Explicitly run your build script
 cmds = ["npm run build"]
 
 [env]
