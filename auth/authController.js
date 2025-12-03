@@ -69,19 +69,21 @@ const handleGoogleCallback = async (req, res) => {
     // === 5. REDIRECCIÓN NORMAL ===
     
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    const isProduction = process.env.NODE_ENV === 'production';
 
     if (role === 'admin' || role === 'vendor') {
       const targetPath = role === 'admin' ? '/dashboard' : '/sales';
-      res.redirect(`${frontendUrl}${targetPath}`);
+      res.redirect(isProduction ? targetPath : `${frontendUrl}${targetPath}`);
     } else {
       // Si el usuario no tiene rol asignado pero intentó loguearse
       // Podríamos redirigirlo a una página de "Pendiente de aprobación" o al Dashboard con permisos limitados
-      res.redirect(`${frontendUrl}/dashboard`);
+      res.redirect(isProduction ? '/dashboard' : `${frontendUrl}/dashboard`);
     }
   } catch (error) {
     console.error('Error en Auth Callback:', error);
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
-    res.redirect(`${frontendUrl}/login?error=auth_failed`);
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.redirect(isProduction ? '/login?error=auth_failed' : `${frontendUrl}/login?error=auth_failed`);
   }
 };
 
