@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import BotCard from '../components/BotCard';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import ScoringRulesManager from '../components/ScoringRulesManager';
 
 const Dashboard = () => {
   const { bots, createBot, sseConnected } = useBots();
@@ -305,7 +306,24 @@ const Dashboard = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {bots.map(bot => (
-              <BotCard key={bot.id} bot={bot} />
+              <div key={bot.id}>
+                <BotCard bot={bot} />
+                {user?.role === 'admin' && (
+                  <div className="mt-4">
+                    <details className="group">
+                      <summary className="flex justify-between items-center font-medium cursor-pointer list-none text-blue-600 hover:text-blue-800">
+                        <span>{t('dashboard.manage_scoring', 'Manage Scoring Rules')}</span>
+                        <span className="transition group-open:rotate-180">
+                          <svg fill="none" height="24" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
+                        </span>
+                      </summary>
+                      <div className="text-neutral-600 mt-3 group-open:animate-fadeIn">
+                        <ScoringRulesManager botId={bot.id} />
+                      </div>
+                    </details>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}

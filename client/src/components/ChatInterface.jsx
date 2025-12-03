@@ -3,6 +3,7 @@ import { useBots } from '../context/BotsContext';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import logo from '../assets/logo.png';
+import LeadScoreCard from './LeadScoreCard';
 
 const ChatInterface = () => {
   const { leads, selectedLead, setSelectedLead, leadMessages, assignLead, sendMessage, getLeadMessages } = useBots();
@@ -147,7 +148,7 @@ const ChatInterface = () => {
           <>
             {/* Chat Header */}
             <div className="p-4 border-b border-gray-200 bg-white">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-start">
                 <div className="flex items-center space-x-4">
                   <img src={logo} alt="Logo" className="h-8 w-8 object-contain" />
                   <div>
@@ -159,16 +160,25 @@ const ChatInterface = () => {
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
+                
+                <div className="flex flex-col items-end space-y-2">
                   <span className={`text-xs px-2 py-1 rounded-full ${
-                    selectedLead.assigned_to === user?.email 
-                      ? 'bg-green-100 text-green-800' 
+                    selectedLead.assigned_to === user?.email
+                      ? 'bg-green-100 text-green-800'
                       : 'bg-yellow-100 text-yellow-800'
                   }`}>
                     {getLeadStatusText(selectedLead)}
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Lead Score Card (Visible in Chat Header/Top Area) */}
+            <div className="px-4 pt-4 bg-gray-50">
+               <LeadScoreCard
+                  score={selectedLead.score || 0}
+                  tags={selectedLead.tags || []}
+               />
             </div>
 
             {/* Messages Area */}

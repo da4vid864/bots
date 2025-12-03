@@ -127,6 +127,30 @@ async function initializeDatabase() {
         `);
         console.log('✅ Tabla subscriptions verificada (NUEVA)');
 
+        // 9. Tabla de reglas de scoring
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS scoring_rules (
+                id SERIAL PRIMARY KEY,
+                bot_id TEXT NOT NULL,
+                keyword TEXT NOT NULL,
+                match_type TEXT DEFAULT 'contains',
+                points INTEGER DEFAULT 0,
+                response_message TEXT,
+                tag_to_add TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (bot_id) REFERENCES bots(id) ON DELETE CASCADE
+            );
+        `);
+        console.log('✅ Tabla scoring_rules verificada');
+
+        // 10. Migración de columnas para leads (score y tags)
+        await pool.query(`
+            ALTER TABLE leads
+            ADD COLUMN IF NOT EXISTS score INTEGER DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+        `);
+        console.log('✅ Columnas score y tags verificadas en leads');
+
         console.log('✅ Base de datos inicializada correctamente');
         return true;
     } catch (error) {

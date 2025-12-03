@@ -19,6 +19,7 @@ const schedulerService = require('./services/schedulerService');
 const userService = require('./services/userService');
 const botImageService = require('./services/botImageService');
 const baileysManager = require('./services/baileysManager');
+const scoringService = require('./services/scoringService');
 
 const { startSchedulerExecutor } = require('./services/schedulerExecutor');
 const authRoutes = require('./routes/authRoutes');
@@ -559,6 +560,45 @@ app.delete('/api/schedules/:id', requireAdmin, async (req, res) => {
         res.json({ message: 'Horario cancelado' });
     } catch (error) {
         res.status(500).json({ message: 'Error cancelando horario' });
+    }
+});
+// === SCORING RULES API ===
+app.get('/api/scoring-rules/:botId', requireAuth, async (req, res) => {
+    try {
+        const rules = await scoringService.getScoringRules(req.params.botId);
+        res.json(rules);
+    } catch (error) {
+        console.error('Error getting scoring rules:', error);
+        res.status(500).json({ message: 'Error getting scoring rules' });
+    }
+});
+
+app.post('/api/scoring-rules/:botId', requireAdmin, async (req, res) => {
+    try {
+        const rule = await scoringService.createScoringRule(req.params.botId, req.body);
+        res.json(rule);
+    } catch (error) {
+        console.error('Error creating scoring rule:', error);
+        res.status(500).json({ message: 'Error creating scoring rule' });
+    }
+});
+
+app.delete('/api/scoring-rules/:ruleId', requireAdmin, async (req, res) => {
+    try {
+        // We need botId to verify ownership or just pass it if service requires it
+        // The service deleteScoringRule takes (ruleId, botId)
+        // We'll get botId from query or body if needed, but let's check service implementation.
+        // Service: deleteScoringRule(ruleId, botId)
+        // We should probably pass botId in query string for safety or just trust admin.
+        // Let's assume we pass botId in query for now as it's safer.
+        const { botId } = req.query;
+        if (!botId) return res.status(400).json({ message: 'Bot ID required' });
+        
+        await scoringService.deleteScoringRule(req.params.ruleId, botId);
+        res.json({ message: 'Rule deleted' });
+    } catch (error) {
+        console.error('Error deleting scoring rule:', error);
+        res.status(500).json({ message: 'Error deleting scoring rule' });
     }
 });
 

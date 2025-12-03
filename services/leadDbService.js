@@ -18,7 +18,7 @@ async function getOrCreateLead(botId, whatsappNumber) {
 
         // Crear nuevo lead
         result = await pool.query(
-            'INSERT INTO leads (bot_id, whatsapp_number, status) VALUES ($1, $2, $3) RETURNING *',
+            'INSERT INTO leads (bot_id, whatsapp_number, status, score, tags) VALUES ($1, $2, $3, 0, \'{}\') RETURNING *',
             [botId, whatsappNumber, 'capturing']
         );
 
@@ -63,6 +63,17 @@ async function updateLeadInfo(leadId, data) {
         return result.rows[0];
     }
 
+    return await getLeadById(leadId);
+}
+
+/**
+ * Actualiza score y tags de un lead
+ */
+async function updateLeadScoreAndTags(leadId, scoreDelta, newTags) {
+    // Esta función es un wrapper conveniente, pero la lógica principal
+    // de cálculo está en scoringService.applyScoring.
+    // Aquí podríamos implementar lógica adicional si fuera necesario.
+    // Por ahora, scoringService maneja la actualización directa.
     return await getLeadById(leadId);
 }
 

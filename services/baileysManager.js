@@ -20,6 +20,7 @@ async function loadBaileys() {
 const { getChatReply } = require('./deepseekService');
 const { extractLeadInfo, generateFollowUpQuestion } = require('./leadExtractionService');
 const botImageService = require('./botImageService');
+const scoringService = require('./scoringService');
 const sseController = require('../controllers/sseController');
 const {
     getOrCreateLead,
@@ -206,6 +207,47 @@ async function handleIncomingMessage(botId, msg) {
         
         // Save user message to database
         await addLeadMessage(lead.id, 'user', userMessage);
+
+        // === SCORING & AUTOMATION START ===
+        let skipAiGeneration = false;
+        try {
+            // 1. Evaluate message
+            const evaluation = await scoringService.evaluateMessage(botId, userMessage);
+            
+            // 2. Apply scoring updates
+            if (evaluation.scoreDelta !== 0 || evaluation.tags.length > 0) {
+                lead = await scoringService.applyScoring(lead.id, evaluation);
+                console.log(`[${botId}] 🎯 Scoring aplicado: ${evaluation.scoreDelta} pts, Tags: ${evaluation.tags.join(', ')}`);
+            }
+
+            // 3. Send automated responses
+            if (evaluation.responses && evaluation.responses.length > 0) {
+                for (const responseText of evaluation.responses) {
+                    await sendMessage(botId, senderId, responseText);
+                    await addLeadMessage(lead.id, 'bot', responseText);
+                }
+                // If we sent an automated response, we might want to skip AI generation
+                // to avoid double replying. For now, we skip AI if any rule triggered a response.
+                skipAiGeneration = true;
+                console.log(`[${botId}] 🤖 Respuesta automática enviada, saltando IA.`);
+            }
+
+            // 4. Check for auto-qualification (e.g., score >= 50)
+            if (lead.score >= 50 && lead.status === 'capturing') {
+                lead = await qualifyLead(lead.id);
+                const qualMsg = "¡Felicidades! Has calificado para atención prioritaria. Un asesor revisará tu caso pronto.";
+                await sendMessage(botId, senderId, qualMsg);
+                await addLeadMessage(lead.id, 'bot', qualMsg);
+                
+                const botOwnerEmail = session.botConfig.ownerEmail;
+                sseController.sendEventToUser(botOwnerEmail, 'NEW_QUALIFIED_LEAD', { lead, botId });
+                return; // Stop processing
+            }
+
+        } catch (scoringError) {
+            console.error(`[${botId}] ❌ Error en scoring:`, scoringError);
+        }
+        // === SCORING & AUTOMATION END ===
         
         if (lead.status === 'assigned') {
             // Get bot owner email from session to send event to specific user
@@ -219,7 +261,7 @@ async function handleIncomingMessage(botId, msg) {
             return;
         }
         
-        if (lead.status === 'capturing') {
+        if (lead.status === 'capturing' && !skipAiGeneration) {
             // Lead extraction logic
             const extractedInfo = await extractLeadInfo(userMessage);
             if (Object.keys(extractedInfo).length > 0) {
