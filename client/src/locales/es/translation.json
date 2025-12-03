@@ -73,7 +73,39 @@
       "title": "Comienza tu automatización",
       "description": "Crea tu primer bot de WhatsApp para empezar a atender clientes y capturar leads automáticamente.",
       "button": "Crear Primer Bot"
+    },
+    "manage_products": "Gestionar Productos"
+  },
+  "products": {
+    "title": "Catálogo de Productos",
+    "add_product": "Agregar Producto",
+    "new_product": "Nuevo Producto",
+    "edit_product": "Editar Producto",
+    "sku": "SKU",
+    "name": "Nombre del Producto",
+    "description": "Descripción",
+    "price": "Precio",
+    "currency": "Moneda",
+    "image_url": "URL de Imagen",
+    "tags": "Etiquetas (separadas por coma)",
+    "stock_status": "Estado del Stock",
+    "create": "Crear Producto",
+    "no_products": "No se encontraron productos.",
+    "add_first": "Agrega tu primer producto",
+    "no_description": "Sin descripción disponible",
+    "confirm_delete": "¿Estás seguro de que quieres eliminar este producto?",
+    "status": {
+      "in_stock": "En Stock",
+      "out_of_stock": "Agotado",
+      "pre_order": "Preventa"
     }
+  },
+  "common": {
+    "loading": "Cargando...",
+    "cancel": "Cancelar",
+    "save_changes": "Guardar Cambios",
+    "edit": "Editar",
+    "delete": "Eliminar"
   },
   "sales_panel": {
     "title": "Panel de Ventas",

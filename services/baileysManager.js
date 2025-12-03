@@ -21,6 +21,7 @@ const { getChatReply } = require('./deepseekService');
 const { extractLeadInfo, generateFollowUpQuestion } = require('./leadExtractionService');
 const botImageService = require('./botImageService');
 const scoringService = require('./scoringService');
+const productService = require('./productService');
 const sseController = require('../controllers/sseController');
 const {
     getOrCreateLead,
@@ -87,11 +88,13 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
             isReady: false,
             isPaused: botConfig.status === 'disabled',
             availableImages: [],
+            availableProducts: [],
             saveCreds
         });
         
-        // Load bot images
+        // Load bot images and products
         await loadBotImages(botId);
+        await loadBotProducts(botId);
         
         // Set up event handlers
         setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, DisconnectReason);
@@ -280,14 +283,27 @@ async function handleIncomingMessage(botId, msg) {
             
             // Generate response with images
             const followUpQuestion = await generateFollowUpQuestion(lead);
-            let promptWithImages = session.botConfig.prompt;
+            let promptWithContext = session.botConfig.prompt;
             
             if (session.availableImages.length > 0) {
                 const keywords = session.availableImages.map(img => img.keyword).join(', ');
-                promptWithImages += `\n\n[INSTRUCCIÓN DEL SISTEMA DE IMÁGENES]:
+                promptWithContext += `\n\n[INSTRUCCIÓN DEL SISTEMA DE IMÁGENES]:
                 Tienes acceso a imágenes visuales sobre los siguientes temas: [${keywords}].
                 Si el usuario pregunta explícitamente por alguno de estos temas o si crees que una imagen ayudaría a vender mejor,
                 DEBES incluir la etiqueta [ENVIAR_IMAGEN: palabra_clave] al final de tu respuesta.`;
+            }
+
+            if (session.availableProducts && session.availableProducts.length > 0) {
+                const productList = session.availableProducts
+                    .map(p => `[SKU: ${p.sku}] ${p.name} - ${p.price} ${p.currency}`)
+                    .join('\n');
+                
+                promptWithContext += `\n\n[INSTRUCCIÓN DEL SISTEMA DE PRODUCTOS]:
+                Tienes acceso a los siguientes productos:
+                ${productList}
+                
+                Si el usuario pregunta por uno de estos productos o muestra interés claro, usa la etiqueta $$ SEND_PRODUCT: SKU $$ para enviarlo.
+                No inventes productos que no estén en la lista.`;
             }
             
             // Get message history
@@ -300,7 +316,7 @@ async function handleIncomingMessage(botId, msg) {
             }));
             
             let botReply;
-            const aiResponse = await getChatReply(userMessage, history, promptWithImages);
+            const aiResponse = await getChatReply(userMessage, history, promptWithContext);
             
             if (followUpQuestion) {
                 botReply = `${aiResponse}\n\n${followUpQuestion}`;
@@ -322,6 +338,21 @@ async function handleIncomingMessage(botId, msg) {
                 // Clean image tag from text
                 botReply = botReply.replace(match[0], '').trim();
             }
+
+            // Product handling
+            const productTagRegex = /\$\$\s*SEND_PRODUCT:\s*([\w-]+)\s*\$\$/i;
+            const productMatch = botReply.match(productTagRegex);
+            let productToSend = null;
+
+            if (productMatch) {
+                const sku = productMatch[1].trim();
+                console.log(`[${botId}] 🛍️ IA solicitó producto con SKU: "${sku}"`);
+                
+                productToSend = session.availableProducts.find(p => p.sku === sku);
+                
+                // Clean product tag from text
+                botReply = botReply.replace(productMatch[0], '').trim();
+            }
             
             if (botReply) {
                 await sendMessage(botId, senderId, botReply);
@@ -337,6 +368,34 @@ async function handleIncomingMessage(botId, msg) {
                     }
                 } catch (imgError) {
                     console.error(`[${botId}] ❌ Error enviando imagen:`, imgError);
+                }
+            }
+
+            if (productToSend) {
+                try {
+                    const caption = `*${productToSend.name}*\n\n${productToSend.description}\n\n💰 Precio: ${productToSend.price} ${productToSend.currency}`;
+                    
+                    if (productToSend.image_url) {
+                        await session.socket.sendMessage(senderId, {
+                            image: { url: productToSend.image_url },
+                            caption: caption
+                        });
+                    } else {
+                        await sendMessage(botId, senderId, caption);
+                    }
+                    
+                    await addLeadMessage(lead.id, 'bot', `[Producto enviado: ${productToSend.sku}]`);
+                    
+                    // Lead Scoring Integration
+                    await scoringService.applyScoring(lead.id, {
+                        scoreDelta: 10,
+                        tags: ['interested_in_product', `product_${productToSend.sku}`],
+                        responses: []
+                    });
+                    console.log(`[${botId}] 🎯 Scoring aplicado por envío de producto: +10 pts`);
+                    
+                } catch (prodError) {
+                    console.error(`[${botId}] ❌ Error enviando producto:`, prodError);
                 }
             }
         }
@@ -369,6 +428,21 @@ async function loadBotImages(botId) {
         console.log(`[${botId}] 🖼️ Imágenes cargadas en memoria: ${session.availableImages.length}`);
     } catch (error) {
         console.error(`[${botId}] ❌ Error cargando imágenes:`, error);
+    }
+}
+
+/**
+ * Load bot products
+ */
+async function loadBotProducts(botId) {
+    const session = activeSessions.get(botId);
+    if (!session) return;
+    
+    try {
+        session.availableProducts = await productService.getProductsByBot(botId);
+        console.log(`[${botId}] 🛍️ Productos cargados en memoria: ${session.availableProducts.length}`);
+    } catch (error) {
+        console.error(`[${botId}] ❌ Error cargando productos:`, error);
     }
 }
 
@@ -501,4 +575,5 @@ module.exports = {
     getBotStatus,
     isBotReady,
     disconnectBot,
+    loadBaileys
 };

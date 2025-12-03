@@ -20,6 +20,7 @@ const userService = require('./services/userService');
 const botImageService = require('./services/botImageService');
 const baileysManager = require('./services/baileysManager');
 const scoringService = require('./services/scoringService');
+const productService = require('./services/productService');
 
 const { startSchedulerExecutor } = require('./services/schedulerExecutor');
 const authRoutes = require('./routes/authRoutes');
@@ -599,6 +600,47 @@ app.delete('/api/scoring-rules/:ruleId', requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error deleting scoring rule:', error);
         res.status(500).json({ message: 'Error deleting scoring rule' });
+    }
+});
+
+// === PRODUCT CATALOG API ===
+app.get('/api/products/:botId', requireAuth, async (req, res) => {
+    try {
+        const products = await productService.getProductsByBot(req.params.botId);
+        res.json(products);
+    } catch (error) {
+        console.error('Error getting products:', error);
+        res.status(500).json({ message: 'Error getting products' });
+    }
+});
+
+app.post('/api/products/:botId', requireAdmin, async (req, res) => {
+    try {
+        const product = await productService.addProduct(req.params.botId, req.body);
+        res.json(product);
+    } catch (error) {
+        console.error('Error creating product:', error);
+        res.status(500).json({ message: 'Error creating product' });
+    }
+});
+
+app.put('/api/products/:id', requireAdmin, async (req, res) => {
+    try {
+        const product = await productService.updateProduct(req.params.id, req.body);
+        res.json(product);
+    } catch (error) {
+        console.error('Error updating product:', error);
+        res.status(500).json({ message: 'Error updating product' });
+    }
+});
+
+app.delete('/api/products/:id', requireAdmin, async (req, res) => {
+    try {
+        await productService.deleteProduct(req.params.id);
+        res.json({ message: 'Product deleted' });
+    } catch (error) {
+        console.error('Error deleting product:', error);
+        res.status(500).json({ message: 'Error deleting product' });
     }
 });
 

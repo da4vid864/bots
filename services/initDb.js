@@ -143,7 +143,27 @@ async function initializeDatabase() {
         `);
         console.log('✅ Tabla scoring_rules verificada');
 
-        // 10. Migración de columnas para leads (score y tags)
+        // 10. Tabla de productos
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS products (
+                id SERIAL PRIMARY KEY,
+                bot_id TEXT NOT NULL,
+                sku TEXT NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT,
+                price DECIMAL(10,2),
+                currency TEXT DEFAULT 'MXN',
+                image_url TEXT,
+                tags TEXT[],
+                stock_status TEXT DEFAULT 'in_stock',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(bot_id, sku),
+                FOREIGN KEY (bot_id) REFERENCES bots(id) ON DELETE CASCADE
+            );
+        `);
+        console.log('✅ Tabla products verificada');
+
+        // 11. Migración de columnas para leads (score y tags)
         await pool.query(`
             ALTER TABLE leads
             ADD COLUMN IF NOT EXISTS score INTEGER DEFAULT 0,
