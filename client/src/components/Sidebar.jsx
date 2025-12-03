@@ -1,16 +1,19 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const Sidebar = ({ activePage, onPageChange }) => {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
 
   const navigationItems = [
     ...(user?.role === 'admin' ? [
-      { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-      { id: 'bots', label: 'Bot Management', icon: '🤖' },
+      { id: 'dashboard', label: t('sidebar.dashboard'), icon: '📊' },
+      { id: 'bots', label: t('sidebar.bot_management'), icon: '🤖' },
     ] : []),
     ...(user?.role === 'vendor' || user?.role === 'admin' ? [
-      { id: 'sales', label: 'Sales Panel', icon: '💬' },
+      { id: 'sales', label: t('sidebar.sales_panel'), icon: '💬' },
     ] : []),
   ];
 
@@ -18,10 +21,13 @@ const Sidebar = ({ activePage, onPageChange }) => {
     <div className="w-64 bg-gray-800 text-white h-screen flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-gray-700">
-        <h1 className="text-xl font-bold">WhatsApp Bot Manager</h1>
+        <h1 className="text-xl font-bold">{t('sidebar.title')}</h1>
         <div className="mt-2 text-sm text-gray-300">
-          <p>Welcome, {user?.name || user?.email}</p>
+          <p>{t('sidebar.welcome', { name: user?.name || user?.email })}</p>
           <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
+        </div>
+        <div className="mt-4">
+          <LanguageSwitcher />
         </div>
       </div>
 
@@ -49,13 +55,13 @@ const Sidebar = ({ activePage, onPageChange }) => {
       {/* Footer */}
       <div className="p-4 border-t border-gray-700">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-400">Status: Online</span>
+          <span className="text-gray-400">{t('sidebar.status_online')}</span>
           <button
             onClick={logout}
             className="text-gray-300 hover:text-white transition-colors flex items-center space-x-2"
           >
             <span>🚪</span>
-            <span>Logout</span>
+            <span>{t('sidebar.logout')}</span>
           </button>
         </div>
       </div>

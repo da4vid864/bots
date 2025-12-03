@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useBots } from '../context/BotsContext';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
+import logo from '../assets/logo.png';
 
 const ChatInterface = () => {
   const { leads, selectedLead, setSelectedLead, leadMessages, assignLead, sendMessage, getLeadMessages } = useBots();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [messageInput, setMessageInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
@@ -56,9 +59,9 @@ const ChatInterface = () => {
   };
 
   const getLeadStatusText = (lead) => {
-    if (lead.assigned_to === user?.email) return 'Assigned to you';
-    if (lead.assigned_to) return `Assigned to ${lead.assigned_to}`;
-    return 'Unassigned';
+    if (lead.assigned_to === user?.email) return t('chat.status.assigned_to_you');
+    if (lead.assigned_to) return t('chat.status.assigned_to_other', { name: lead.assigned_to });
+    return t('chat.status.unassigned');
   };
 
   const formatMessageTime = (timestamp) => {
@@ -75,8 +78,8 @@ const ChatInterface = () => {
       {/* Leads Sidebar */}
       <div className="w-1/3 border-r border-gray-200">
         <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-800">Qualified Leads</h2>
-          <p className="text-sm text-gray-600">{leads.length} leads</p>
+          <h2 className="text-lg font-semibold text-gray-800">{t('chat.qualified_leads')}</h2>
+          <p className="text-sm text-gray-600">{t('chat.leads_count', { count: leads.length })}</p>
         </div>
         
         <div className="overflow-y-auto h-[calc(100vh-200px)]">
@@ -89,7 +92,7 @@ const ChatInterface = () => {
               onClick={() => handleSelectLead(lead)}
             >
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-medium text-gray-800">{lead.name || 'Unknown'}</h3>
+                <h3 className="font-medium text-gray-800">{lead.name || t('chat.unknown')}</h3>
                 <span className="text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-700">
                   {lead.lead_score || 0}%
                 </span>
@@ -100,7 +103,7 @@ const ChatInterface = () => {
               </p>
               
               <p className="text-xs text-gray-500 mb-2">
-                Bot: {lead.bot_name || lead.bot_id}
+                {t('chat.bot_label', { name: lead.bot_name || lead.bot_id })}
               </p>
               
               <div className="flex justify-between items-center">
@@ -117,14 +120,14 @@ const ChatInterface = () => {
                     disabled={loading}
                     className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded disabled:opacity-50"
                   >
-                    Assign to me
+                    {t('chat.assign_to_me')}
                   </button>
                 )}
               </div>
               
               {lead.last_message && (
                 <p className="text-xs text-gray-500 mt-2 truncate">
-                  Last: {lead.last_message}
+                  {t('chat.last_message', { message: lead.last_message })}
                 </p>
               )}
             </div>
@@ -132,7 +135,7 @@ const ChatInterface = () => {
           
           {leads.length === 0 && (
             <div className="p-8 text-center text-gray-500">
-              <p>No qualified leads available</p>
+              <p>{t('chat.no_leads')}</p>
             </div>
           )}
         </div>
@@ -145,13 +148,16 @@ const ChatInterface = () => {
             {/* Chat Header */}
             <div className="p-4 border-b border-gray-200 bg-white">
               <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold text-gray-800">
-                    {selectedLead.name || 'Unknown'}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    📱 {selectedLead.whatsapp_number}
-                  </p>
+                <div className="flex items-center space-x-4">
+                  <img src={logo} alt="Logo" className="h-8 w-8 object-contain" />
+                  <div>
+                    <h3 className="font-semibold text-gray-800">
+                      {selectedLead.name || t('chat.unknown')}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      📱 {selectedLead.whatsapp_number}
+                    </p>
+                  </div>
                 </div>
                 <div className="text-right">
                   <span className={`text-xs px-2 py-1 rounded-full ${
@@ -169,8 +175,8 @@ const ChatInterface = () => {
             <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
               {currentLeadMessages.length === 0 ? (
                 <div className="text-center text-gray-500 mt-8">
-                  <p>No messages yet</p>
-                  <p className="text-sm">Start the conversation!</p>
+                  <p>{t('chat.no_messages')}</p>
+                  <p className="text-sm">{t('chat.start_conversation')}</p>
                 </div>
               ) : (
                 currentLeadMessages.map((message, index) => (
@@ -196,7 +202,7 @@ const ChatInterface = () => {
                         }`}
                       >
                         {formatMessageTime(message.timestamp)}
-                        {message.sender === user?.email && ' • You'}
+                        {message.sender === user?.email && t('chat.you')}
                       </p>
                     </div>
                   </div>
@@ -213,7 +219,7 @@ const ChatInterface = () => {
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Type your message..."
+                  placeholder={t('chat.type_message')}
                   disabled={loading || selectedLead.assigned_to !== user?.email}
                   className="flex-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                 />
@@ -222,12 +228,12 @@ const ChatInterface = () => {
                   disabled={loading || !messageInput.trim() || selectedLead.assigned_to !== user?.email}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md disabled:opacity-50"
                 >
-                  Send
+                  {t('chat.send')}
                 </button>
               </div>
               {selectedLead.assigned_to !== user?.email && (
                 <p className="text-xs text-yellow-600 mt-2">
-                  This lead is assigned to {selectedLead.assigned_to}. You cannot send messages.
+                  {t('chat.assigned_error', { name: selectedLead.assigned_to })}
                 </p>
               )}
             </div>
@@ -235,8 +241,8 @@ const ChatInterface = () => {
         ) : (
           <div className="flex-1 flex items-center justify-center text-gray-500">
             <div className="text-center">
-              <p className="text-lg mb-2">Select a lead to start chatting</p>
-              <p className="text-sm">Choose a lead from the sidebar to view and send messages</p>
+              <p className="text-lg mb-2">{t('chat.select_lead_title')}</p>
+              <p className="text-sm">{t('chat.select_lead_subtitle')}</p>
             </div>
           </div>
         )}

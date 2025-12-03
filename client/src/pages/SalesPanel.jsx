@@ -2,10 +2,12 @@ import React from 'react';
 import { useBots } from '../context/BotsContext';
 import { useAuth } from '../context/AuthContext';
 import ChatInterface from '../components/ChatInterface';
+import { useTranslation } from 'react-i18next';
 
 const SalesPanel = () => {
   const { leads, sseConnected } = useBots();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const assignedLeads = leads.filter(lead => lead.assigned_to === user?.email).length;
   const totalLeads = leads.length;
@@ -17,8 +19,8 @@ const SalesPanel = () => {
       <div className="bg-white border-b border-gray-200 p-6">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Sales Panel</h1>
-            <p className="text-gray-600">Manage and interact with qualified leads</p>
+            <h1 className="text-3xl font-bold text-gray-800">{t('sales_panel.title')}</h1>
+            <p className="text-gray-600">{t('sales_panel.subtitle')}</p>
           </div>
           <div className="flex items-center space-x-4">
             <div className={`flex items-center space-x-2 ${
@@ -28,7 +30,7 @@ const SalesPanel = () => {
                 sseConnected ? 'bg-green-500' : 'bg-red-500'
               }`}></div>
               <span className="text-sm">
-                {sseConnected ? 'Real-time Connected' : 'Disconnected'}
+                {sseConnected ? t('sales_panel.status.connected') : t('sales_panel.status.disconnected')}
               </span>
             </div>
           </div>
@@ -39,7 +41,7 @@ const SalesPanel = () => {
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Leads</p>
+                <p className="text-sm font-medium text-blue-700">{t('sales_panel.stats.total_leads')}</p>
                 <p className="text-2xl font-bold text-blue-800">{totalLeads}</p>
               </div>
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -51,7 +53,7 @@ const SalesPanel = () => {
           <div className="bg-green-50 p-4 rounded-lg border border-green-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Assigned to You</p>
+                <p className="text-sm font-medium text-green-700">{t('sales_panel.stats.assigned_to_you')}</p>
                 <p className="text-2xl font-bold text-green-800">{assignedLeads}</p>
               </div>
               <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -63,7 +65,7 @@ const SalesPanel = () => {
           <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-yellow-700">Unassigned</p>
+                <p className="text-sm font-medium text-yellow-700">{t('sales_panel.stats.unassigned')}</p>
                 <p className="text-2xl font-bold text-yellow-800">{unassignedLeads}</p>
               </div>
               <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
@@ -88,36 +90,36 @@ const SalesPanel = () => {
             <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">💬</span>
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">No Leads Available</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">{t('sales_panel.empty_state.title')}</h3>
             <p className="text-gray-600 mb-4">
-              Qualified leads will appear here automatically when users interact with your WhatsApp bots.
+              {t('sales_panel.empty_state.description')}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-left max-w-2xl mx-auto">
               <div className="bg-white p-4 rounded border border-gray-200">
                 <div className="flex items-center space-x-2 mb-2">
                   <span className="text-green-500">✅</span>
-                  <span className="font-medium">Bot Interactions</span>
+                  <span className="font-medium">{t('sales_panel.empty_state.interactions_title')}</span>
                 </div>
                 <p className="text-gray-600 text-xs">
-                  Users must interact with your WhatsApp bots to generate qualified leads.
+                  {t('sales_panel.empty_state.interactions_desc')}
                 </p>
               </div>
               <div className="bg-white p-4 rounded border border-gray-200">
                 <div className="flex items-center space-x-2 mb-2">
                   <span className="text-blue-500">🤖</span>
-                  <span className="font-medium">Lead Qualification</span>
+                  <span className="font-medium">{t('sales_panel.empty_state.qualification_title')}</span>
                 </div>
                 <p className="text-gray-600 text-xs">
-                  Bots automatically qualify leads based on conversation patterns and user intent.
+                  {t('sales_panel.empty_state.qualification_desc')}
                 </p>
               </div>
               <div className="bg-white p-4 rounded border border-gray-200">
                 <div className="flex items-center space-x-2 mb-2">
                   <span className="text-purple-500">🚀</span>
-                  <span className="font-medium">Real-time Updates</span>
+                  <span className="font-medium">{t('sales_panel.empty_state.updates_title')}</span>
                 </div>
                 <p className="text-gray-600 text-xs">
-                  New leads appear instantly via real-time connection to the server.
+                  {t('sales_panel.empty_state.updates_desc')}
                 </p>
               </div>
             </div>

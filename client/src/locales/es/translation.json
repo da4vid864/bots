@@ -1,0 +1,101 @@
+{
+  "sidebar": {
+    "title": "Gestor de Bots WhatsApp",
+    "welcome": "Bienvenido, {{name}}",
+    "dashboard": "Panel de Control",
+    "bot_management": "Gestión de Bots",
+    "sales_panel": "Panel de Ventas",
+    "status_online": "Estado: En línea",
+    "logout": "Cerrar Sesión"
+  },
+  "chat": {
+    "qualified_leads": "Leads Calificados",
+    "leads_count": "{{count}} leads",
+    "unknown": "Desconocido",
+    "bot_label": "Bot: {{name}}",
+    "status": {
+      "assigned_to_you": "Asignado a ti",
+      "assigned_to_other": "Asignado a {{name}}",
+      "unassigned": "Sin asignar"
+    },
+    "assign_to_me": "Asignarme",
+    "last_message": "Último: {{message}}",
+    "no_leads": "No hay leads calificados disponibles",
+    "no_messages": "No hay mensajes aún",
+    "start_conversation": "¡Inicia la conversación!",
+    "type_message": "Escribe tu mensaje...",
+    "send": "Enviar",
+    "assigned_error": "Este lead está asignado a {{name}}. No puedes enviar mensajes.",
+    "select_lead_title": "Selecciona un lead para chatear",
+    "select_lead_subtitle": "Elige un lead de la barra lateral para ver y enviar mensajes",
+    "you": " • Tú"
+  },
+  "dashboard": {
+    "notifications": {
+      "subscription_success_title": "¡Suscripción Activada!",
+      "subscription_success_message": "Gracias por suscribirte al plan Pro. Disfruta de todas las funcionalidades.",
+      "payment_cancelled_title": "Pago Cancelado",
+      "payment_cancelled_message": "El proceso de pago fue cancelado. No se ha realizado ningún cobro.",
+      "error_title": "Error",
+      "error_message": "Hubo un problema procesando tu solicitud."
+    },
+    "title": "Panel de Control",
+    "welcome": "Bienvenido, {{name}}",
+    "status": {
+      "connected": "Conectado",
+      "disconnected": "Desconectado"
+    },
+    "new_bot_button": "+ Nuevo Bot",
+    "stats": {
+      "total_bots": "Total Bots",
+      "active_bots": "Bots Activos",
+      "current_plan": "Plan Actual",
+      "view_plans": "Ver planes"
+    },
+    "create_bot": {
+      "title": "Configurar Nuevo Bot",
+      "name_label": "Nombre del Bot",
+      "name_placeholder": "Ej: Asistente de Ventas",
+      "id_label": "ID Único",
+      "id_placeholder": "ej: bot-ventas-01",
+      "prompt_label": "Prompt del Sistema (IA)",
+      "prompt_placeholder": "Instrucciones para la IA (ej: Eres un vendedor amable...)",
+      "submit_creating": "Creando...",
+      "submit": "Crear Bot",
+      "cancel": "Cancelar",
+      "validation_error": "Por favor completa todos los campos",
+      "creation_error": "Error al crear el bot. Inténtalo de nuevo."
+    },
+    "my_bots": "Mis Bots",
+    "bots_count": "{{count}} bot",
+    "bots_count_plural": "{{count}} bots",
+    "empty_state": {
+      "title": "Comienza tu automatización",
+      "description": "Crea tu primer bot de WhatsApp para empezar a atender clientes y capturar leads automáticamente.",
+      "button": "Crear Primer Bot"
+    }
+  },
+  "sales_panel": {
+    "title": "Panel de Ventas",
+    "subtitle": "Gestiona e interactúa con leads calificados",
+    "status": {
+      "connected": "Conectado en Tiempo Real",
+      "disconnected": "Desconectado"
+    },
+    "stats": {
+      "total_leads": "Total Leads",
+      "assigned_to_you": "Asignados a Ti",
+      "unassigned": "Sin Asignar"
+    },
+    "empty_state": {
+      "title": "No Hay Leads Disponibles",
+      "description": "Los leads calificados aparecerán aquí automáticamente cuando los usuarios interactúen con tus bots de WhatsApp.",
+      "interactions_title": "Interacciones del Bot",
+      "interactions_desc": "Los usuarios deben interactuar con tus bots de WhatsApp para generar leads calificados.",
+      "qualification_title": "Calificación de Leads",
+      "qualification_desc": "Los bots califican automáticamente los leads basándose en patrones de conversación e intención del usuario.",
+      "updates_title": "Actualizaciones en Tiempo Real",
+      "updates_desc": "Los nuevos leads aparecen instantáneamente a través de la conexión en tiempo real con el servidor."
+    }
+  }
+}

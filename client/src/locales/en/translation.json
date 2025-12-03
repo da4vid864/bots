@@ -1,0 +1,101 @@
+{
+  "sidebar": {
+    "title": "WhatsApp Bot Manager",
+    "welcome": "Welcome, {{name}}",
+    "dashboard": "Dashboard",
+    "bot_management": "Bot Management",
+    "sales_panel": "Sales Panel",
+    "status_online": "Status: Online",
+    "logout": "Logout"
+  },
+  "chat": {
+    "qualified_leads": "Qualified Leads",
+    "leads_count": "{{count}} leads",
+    "unknown": "Unknown",
+    "bot_label": "Bot: {{name}}",
+    "status": {
+      "assigned_to_you": "Assigned to you",
+      "assigned_to_other": "Assigned to {{name}}",
+      "unassigned": "Unassigned"
+    },
+    "assign_to_me": "Assign to me",
+    "last_message": "Last: {{message}}",
+    "no_leads": "No qualified leads available",
+    "no_messages": "No messages yet",
+    "start_conversation": "Start the conversation!",
+    "type_message": "Type your message...",
+    "send": "Send",
+    "assigned_error": "This lead is assigned to {{name}}. You cannot send messages.",
+    "select_lead_title": "Select a lead to start chatting",
+    "select_lead_subtitle": "Choose a lead from the sidebar to view and send messages",
+    "you": " • You"
+  },
+  "dashboard": {
+    "notifications": {
+      "subscription_success_title": "Subscription Activated!",
+      "subscription_success_message": "Thanks for subscribing to the Pro plan. Enjoy all features.",
+      "payment_cancelled_title": "Payment Cancelled",
+      "payment_cancelled_message": "The payment process was cancelled. No charge has been made.",
+      "error_title": "Error",
+      "error_message": "There was a problem processing your request."
+    },
+    "title": "Control Panel",
+    "welcome": "Welcome, {{name}}",
+    "status": {
+      "connected": "Connected",
+      "disconnected": "Disconnected"
+    },
+    "new_bot_button": "+ New Bot",
+    "stats": {
+      "total_bots": "Total Bots",
+      "active_bots": "Active Bots",
+      "current_plan": "Current Plan",
+      "view_plans": "View plans"
+    },
+    "create_bot": {
+      "title": "Configure New Bot",
+      "name_label": "Bot Name",
+      "name_placeholder": "Ex: Sales Assistant",
+      "id_label": "Unique ID",
+      "id_placeholder": "ex: sales-bot-01",
+      "prompt_label": "System Prompt (AI)",
+      "prompt_placeholder": "Instructions for the AI (ex: You are a friendly salesperson...)",
+      "submit_creating": "Creating...",
+      "submit": "Create Bot",
+      "cancel": "Cancel",
+      "validation_error": "Please complete all fields",
+      "creation_error": "Error creating bot. Please try again."
+    },
+    "my_bots": "My Bots",
+    "bots_count": "{{count}} bot",
+    "bots_count_plural": "{{count}} bots",
+    "empty_state": {
+      "title": "Start your automation",
+      "description": "Create your first WhatsApp bot to start serving customers and capturing leads automatically.",
+      "button": "Create First Bot"
+    }
+  },
+  "sales_panel": {
+    "title": "Sales Panel",
+    "subtitle": "Manage and interact with qualified leads",
+    "status": {
+      "connected": "Real-time Connected",
+      "disconnected": "Disconnected"
+    },
+    "stats": {
+      "total_leads": "Total Leads",
+      "assigned_to_you": "Assigned to You",
+      "unassigned": "Unassigned"
+    },
+    "empty_state": {
+      "title": "No Leads Available",
+      "description": "Qualified leads will appear here automatically when users interact with your WhatsApp bots.",
+      "interactions_title": "Bot Interactions",
+      "interactions_desc": "Users must interact with your WhatsApp bots to generate qualified leads.",
+      "qualification_title": "Lead Qualification",
+      "qualification_desc": "Bots automatically qualify leads based on conversation patterns and user intent.",
+      "updates_title": "Real-time Updates",
+      "updates_desc": "New leads appear instantly via real-time connection to the server."
+    }
+  }
+}

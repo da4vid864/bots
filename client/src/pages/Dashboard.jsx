@@ -3,10 +3,12 @@ import { useBots } from '../context/BotsContext';
 import { useAuth } from '../context/AuthContext';
 import BotCard from '../components/BotCard';
 import { useSearchParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const Dashboard = () => {
   const { bots, createBot, sseConnected } = useBots();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [searchParams] = useSearchParams();
@@ -25,22 +27,22 @@ const Dashboard = () => {
     if (paymentStatus === 'success') {
       setNotification({
         type: 'success',
-        title: '¡Suscripción Activada!',
-        message: 'Gracias por suscribirte al plan Pro. Disfruta de todas las funcionalidades.'
+        title: t('dashboard.notifications.subscription_success_title'),
+        message: t('dashboard.notifications.subscription_success_message')
       });
       // Limpiar URL param opcionalmente
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (paymentStatus === 'cancelled') {
       setNotification({
         type: 'info',
-        title: 'Pago Cancelado',
-        message: 'El proceso de pago fue cancelado. No se ha realizado ningún cobro.'
+        title: t('dashboard.notifications.payment_cancelled_title'),
+        message: t('dashboard.notifications.payment_cancelled_message')
       });
     } else if (searchParams.get('error')) {
        setNotification({
         type: 'error',
-        title: 'Error',
-        message: 'Hubo un problema procesando tu solicitud.'
+        title: t('dashboard.notifications.error_title'),
+        message: t('dashboard.notifications.error_message')
       });
     }
     
@@ -54,7 +56,7 @@ const Dashboard = () => {
   const handleCreateBot = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.id || !formData.prompt) {
-      alert('Por favor completa todos los campos');
+      alert(t('dashboard.create_bot.validation_error'));
       return;
     }
 
@@ -65,7 +67,7 @@ const Dashboard = () => {
       setShowCreateForm(false);
     } catch (error) {
       console.error('Error creando bot:', error);
-      alert('Error al crear el bot. Inténtalo de nuevo.');
+      alert(t('dashboard.create_bot.creation_error'));
     } finally {
       setCreateLoading(false);
     }
@@ -131,8 +133,8 @@ const Dashboard = () => {
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Panel de Control</h1>
-            <p className="text-gray-600">Bienvenido, {user?.name || user?.email}</p>
+            <h1 className="text-3xl font-bold text-gray-800">{t('dashboard.title')}</h1>
+            <p className="text-gray-600">{t('dashboard.welcome', { name: user?.name || user?.email })}</p>
           </div>
           <div className="flex items-center space-x-4">
             <div className={`flex items-center space-x-2 ${
@@ -142,14 +144,14 @@ const Dashboard = () => {
                 sseConnected ? 'bg-green-500' : 'bg-red-500'
               }`}></div>
               <span className="text-sm font-medium">
-                {sseConnected ? 'Conectado' : 'Desconectado'}
+                {sseConnected ? t('dashboard.status.connected') : t('dashboard.status.disconnected')}
               </span>
             </div>
             <button
               onClick={() => setShowCreateForm(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors"
             >
-              + Nuevo Bot
+              {t('dashboard.new_bot_button')}
             </button>
           </div>
         </div>
@@ -159,7 +161,7 @@ const Dashboard = () => {
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Bots</p>
+                <p className="text-sm font-medium text-gray-600">{t('dashboard.stats.total_bots')}</p>
                 <p className="text-3xl font-bold text-gray-800">{totalBots}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
@@ -171,7 +173,7 @@ const Dashboard = () => {
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Bots Activos</p>
+                <p className="text-sm font-medium text-gray-600">{t('dashboard.stats.active_bots')}</p>
                 <p className="text-3xl font-bold text-green-600">{connectedBots}</p>
               </div>
               <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
@@ -183,13 +185,13 @@ const Dashboard = () => {
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Plan Actual</p>
+                <p className="text-sm font-medium text-gray-600">{t('dashboard.stats.current_plan')}</p>
                 <p className="text-3xl font-bold text-gray-800">
                   {/* Aquí podrías conectar el estado real de la suscripción */}
                   PRO
                 </p>
                 <Link to="/pricing" className="text-sm text-blue-600 hover:text-blue-800 mt-1 inline-block">
-                  Ver planes
+                  {t('dashboard.stats.view_plans')}
                 </Link>
               </div>
               <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center">
@@ -204,13 +206,13 @@ const Dashboard = () => {
       {showCreateForm && (
         <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 transform transition-all">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Configurar Nuevo Bot</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">{t('dashboard.create_bot.title')}</h2>
             
             <form onSubmit={handleCreateBot}>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nombre del Bot
+                    {t('dashboard.create_bot.name_label')}
                   </label>
                   <input
                     type="text"
@@ -218,14 +220,14 @@ const Dashboard = () => {
                     value={formData.name}
                     onChange={handleInputChange}
                     className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Ej: Asistente de Ventas"
+                    placeholder={t('dashboard.create_bot.name_placeholder')}
                     required
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ID Único
+                    {t('dashboard.create_bot.id_label')}
                   </label>
                   <input
                     type="text"
@@ -233,14 +235,14 @@ const Dashboard = () => {
                     value={formData.id}
                     onChange={handleInputChange}
                     className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="ej: bot-ventas-01"
+                    placeholder={t('dashboard.create_bot.id_placeholder')}
                     required
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Prompt del Sistema (IA)
+                    {t('dashboard.create_bot.prompt_label')}
                   </label>
                   <textarea
                     name="prompt"
@@ -248,7 +250,7 @@ const Dashboard = () => {
                     onChange={handleInputChange}
                     rows="4"
                     className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                    placeholder="Instrucciones para la IA (ej: Eres un vendedor amable...)"
+                    placeholder={t('dashboard.create_bot.prompt_placeholder')}
                     required
                   />
                 </div>
@@ -260,14 +262,14 @@ const Dashboard = () => {
                   disabled={createLoading}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-4 rounded-lg font-medium disabled:opacity-50 transition-colors"
                 >
-                  {createLoading ? 'Creando...' : 'Crear Bot'}
+                  {createLoading ? t('dashboard.create_bot.submit_creating') : t('dashboard.create_bot.submit')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowCreateForm(false)}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 px-4 rounded-lg font-medium transition-colors"
                 >
-                  Cancelar
+                  {t('dashboard.create_bot.cancel')}
                 </button>
               </div>
             </form>
@@ -278,9 +280,9 @@ const Dashboard = () => {
       {/* Bots Grid */}
       <div>
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Mis Bots</h2>
+          <h2 className="text-2xl font-bold text-gray-800">{t('dashboard.my_bots')}</h2>
           <span className="bg-gray-100 text-gray-600 py-1 px-3 rounded-full text-sm font-medium">
-            {totalBots} {totalBots === 1 ? 'bot' : 'bots'}
+            {totalBots === 1 ? t('dashboard.bots_count', { count: totalBots }) : t('dashboard.bots_count_plural', { count: totalBots })}
           </span>
         </div>
 
@@ -289,15 +291,15 @@ const Dashboard = () => {
             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-4xl">✨</span>
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Comienza tu automatización</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">{t('dashboard.empty_state.title')}</h3>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              Crea tu primer bot de WhatsApp para empezar a atender clientes y capturar leads automáticamente.
+              {t('dashboard.empty_state.description')}
             </p>
             <button
               onClick={() => setShowCreateForm(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium shadow-md transition-all hover:shadow-lg transform hover:-translate-y-0.5"
             >
-              Crear Primer Bot
+              {t('dashboard.empty_state.button')}
             </button>
           </div>
         ) : (
