@@ -6,8 +6,8 @@ const AuthContext = createContext();
 
 // Axios configuration for API calls
 const api = axios.create({
-  baseURL: '/', // Use relative URLs with Vite proxy
-  withCredentials: true, // Important for cookies
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/',
+  withCredentials: true,
 });
 
 export const useAuth = () => {

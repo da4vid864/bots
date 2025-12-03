@@ -9,17 +9,17 @@ export default defineConfig({
     port: 3001,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'https://botinteligente.com.mx',
         changeOrigin: true,
         secure: false,
       },
       '/auth': {
-        target: 'http://localhost:8080',
+        target: 'https://botinteligente.com.mx',
         changeOrigin: true,
         secure: false,
       },
       '/subs': {
-        target: 'http://localhost:8080',
+        target: 'https://botinteligente.com.mx',
         changeOrigin: true,
         secure: false,
       }
