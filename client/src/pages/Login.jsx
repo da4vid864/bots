@@ -1,281 +1,210 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logo from '../assets/logo.png';
 
 const Login = () => {
   const { login, loading, error, user } = useAuth();
 
   const handlePurchase = () => {
-    // Redirect to the purchase endpoint.
-    // The backend will handle authentication if the user is not logged in.
     window.location.href = '/subs/purchase/pro';
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center">
-              <span className="text-2xl mr-2">🤖</span>
-              <span className="font-bold text-xl text-gray-800">BotInteligente</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              {user ? (
-                <Link
-                  to="/dashboard"
-                  className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
-                >
-                  Dashboard
-                </Link>
-              ) : (
-                <button
-                  onClick={login}
-                  className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
-                >
-                  Log In
-                </button>
-              )}
-              <button
-                onClick={handlePurchase}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      {/* Barra de navegación */}
+      <nav className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <img
+              src={logo}
+              alt="BotInteligente"
+              className="h-9 w-auto"
+            />
+            <span className="font-semibold text-lg tracking-tight">
+              BotInteligente
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            {user && (
+              <Link
+                to="/dashboard"
+                className="text-sm font-medium text-slate-200 hover:text-white transition-colors"
               >
-                {user ? 'Upgrade Plan' : 'Get Started'}
+                Panel
+              </Link>
+            )}
+
+            {!user && (
+              <button
+                onClick={login}
+                disabled={loading}
+                className="text-sm font-medium text-slate-200 hover:text-white transition-colors disabled:opacity-60"
+              >
+                {loading ? 'Conectando…' : 'Iniciar sesión'}
               </button>
-            </div>
+            )}
+
+            <button
+              onClick={handlePurchase}
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
+            >
+              {user ? 'Mejorar plan' : 'Probar Pro'}
+            </button>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <div className="bg-white overflow-hidden">
-        <div className="max-w-7xl mx-auto pt-16 pb-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center">
-          <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
-            <span className="block">Automate your sales with</span>
-            <span className="block text-blue-600">Intelligent WhatsApp Bots</span>
-          </h1>
-          <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-            Capture leads, qualify customers, and close sales 24/7. Our AI-powered bots handle the conversation so you can focus on growing your business.
-          </p>
-          <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
-            <div className="rounded-md shadow">
-              <button
-                onClick={handlePurchase}
-                className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 md:py-4 md:text-lg md:px-10"
-              >
-                Start Free Trial
-              </button>
-            </div>
-            <div className="mt-3 rounded-md shadow sm:mt-0 sm:ml-3">
-              {user ? (
-                <Link
-                  to="/dashboard"
-                  className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 md:py-4 md:text-lg md:px-10"
-                >
-                  Go to Dashboard
-                </Link>
-              ) : (
+      {/* Contenido principal */}
+      <main className="flex-1">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-16">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Columna izquierda: texto / hero */}
+            <div>
+              <span className="inline-flex items-center rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-300 ring-1 ring-inset ring-blue-500/30">
+                Plataforma de automatización para WhatsApp
+              </span>
+
+              <h1 className="mt-6 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white">
+                Automatiza tus conversaciones
+                <span className="block text-blue-400">
+                  con bots inteligentes en WhatsApp
+                </span>
+              </h1>
+
+              <p className="mt-4 text-sm sm:text-base text-slate-300 max-w-xl">
+                BotInteligente conecta tu negocio con tus clientes las 24/7.
+                Captura leads, responde preguntas frecuentes y cierra ventas de forma
+                automática con asistentes impulsados por IA.
+              </p>
+
+              {/* CTA principal */}
+              <div className="mt-8 flex flex-col sm:flex-row sm:items-center gap-3">
                 <button
-                  onClick={login}
-                  className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 md:py-4 md:text-lg md:px-10"
+                  onClick={handlePurchase}
+                  className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-3 text-sm sm:text-base font-semibold text-white shadow-lg shadow-blue-500/30 hover:bg-blue-500 transition-colors"
                 >
-                  Live Demo
+                  Comenzar prueba gratuita
                 </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Feature Grid */}
-      <div className="py-12 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-base text-blue-600 font-semibold tracking-wide uppercase">Features</h2>
-            <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-              Everything you need to scale
-            </p>
-          </div>
-
-          <div className="mt-10">
-            <div className="space-y-10 md:space-y-0 md:grid md:grid-cols-3 md:gap-x-8 md:gap-y-10">
-              {/* Feature 1 */}
-              <div className="relative">
-                <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-blue-500 text-white text-2xl">
-                  ⚡
-                </div>
-                <p className="ml-16 text-lg leading-6 font-medium text-gray-900">Instant Setup</p>
-                <p className="mt-2 ml-16 text-base text-gray-500">
-                  Connect your WhatsApp number via QR code and start automating in seconds. No coding required.
-                </p>
+                {user ? (
+                  <Link
+                    to="/dashboard"
+                    className="inline-flex items-center justify-center rounded-lg border border-slate-700 px-6 py-3 text-sm sm:text-base font-medium text-slate-100 hover:bg-slate-900/60 transition-colors"
+                  >
+                    Ir al panel
+                  </Link>
+                ) : (
+                  <button
+                    onClick={login}
+                    disabled={loading}
+                    className="inline-flex items-center justify-center rounded-lg border border-slate-700 px-6 py-3 text-sm sm:text-base font-medium text-slate-100 hover:bg-slate-900/60 transition-colors disabled:opacity-60"
+                  >
+                    {loading ? 'Conectando…' : 'Ver demo en vivo'}
+                  </button>
+                )}
               </div>
 
-              {/* Feature 2 */}
-              <div className="relative">
-                <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-blue-500 text-white text-2xl">
-                  🧠
+              {/* Beneficios rápidos */}
+              <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-slate-300">
+                <div className="border border-slate-800 rounded-lg p-3">
+                  <p className="font-semibold text-white text-sm">Implementación rápida</p>
+                  <p className="mt-1 text-xs">
+                    Conecta tu número de WhatsApp en minutos y empieza a automatizar.
+                  </p>
                 </div>
-                <p className="ml-16 text-lg leading-6 font-medium text-gray-900">AI Powered</p>
-                <p className="mt-2 ml-16 text-base text-gray-500">
-                  Our bots understand context and intent, providing natural responses that convert leads into customers.
-                </p>
-              </div>
-
-              {/* Feature 3 */}
-              <div className="relative">
-                <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-blue-500 text-white text-2xl">
-                  📊
+                <div className="border border-slate-800 rounded-lg p-3">
+                  <p className="font-semibold text-white text-sm">Bots con IA</p>
+                  <p className="mt-1 text-xs">
+                    Respuestas naturales, contextuales y entrenadas para tu negocio.
+                  </p>
                 </div>
-                <p className="ml-16 text-lg leading-6 font-medium text-gray-900">Real-time Analytics</p>
-                <p className="mt-2 ml-16 text-base text-gray-500">
-                  Track performance, monitor conversations, and gain insights with our comprehensive dashboard.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Pricing Section */}
-      <div className="bg-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-              Simple, transparent pricing
-            </h2>
-            <p className="mt-4 text-xl text-gray-500">
-              Choose the plan that fits your business needs
-            </p>
-          </div>
-
-          <div className="mt-10 max-w-lg mx-auto grid gap-5 lg:grid-cols-2 lg:max-w-none">
-            {/* Free Plan */}
-            <div className="flex flex-col rounded-lg shadow-lg overflow-hidden border border-gray-200">
-              <div className="px-6 py-8 bg-white sm:p-10 sm:pb-6">
-                <div>
-                  <h3 className="inline-flex px-4 py-1 rounded-full text-sm font-semibold tracking-wide uppercase bg-gray-100 text-gray-800">
-                    Starter
-                  </h3>
-                </div>
-                <div className="mt-4 flex items-baseline text-6xl font-extrabold text-gray-900">
-                  Free
-                </div>
-                <p className="mt-5 text-lg text-gray-500">
-                  Perfect for testing and small businesses just getting started.
-                </p>
-              </div>
-              <div className="flex-1 flex flex-col justify-between px-6 pt-6 pb-8 bg-gray-50 space-y-6 sm:p-10 sm:pt-6">
-                <ul className="space-y-4">
-                  <li className="flex items-start">
-                    <div className="flex-shrink-0 text-green-500">✓</div>
-                    <p className="ml-3 text-base text-gray-700">1 Active Bot</p>
-                  </li>
-                  <li className="flex items-start">
-                    <div className="flex-shrink-0 text-green-500">✓</div>
-                    <p className="ml-3 text-base text-gray-700">100 Leads/month</p>
-                  </li>
-                  <li className="flex items-start">
-                    <div className="flex-shrink-0 text-green-500">✓</div>
-                    <p className="ml-3 text-base text-gray-700">Basic Automation</p>
-                  </li>
-                </ul>
-                <div className="rounded-md shadow">
-                  {user ? (
-                    <Link
-                      to="/dashboard"
-                      className="flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 w-full"
-                    >
-                      Go to Dashboard
-                    </Link>
-                  ) : (
-                    <button
-                      onClick={login}
-                      className="flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 w-full"
-                    >
-                      Start for Free
-                    </button>
-                  )}
+                <div className="border border-slate-800 rounded-lg p-3">
+                  <p className="font-semibold text-white text-sm">Analítica en tiempo real</p>
+                  <p className="mt-1 text-xs">
+                    Mira leads, embudos de conversación y rendimiento de cada bot.
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Pro Plan */}
-            <div className="flex flex-col rounded-lg shadow-lg overflow-hidden border-2 border-blue-500 relative">
-              <div className="absolute top-0 right-0 -mr-1 -mt-1 w-32 h-32 overflow-hidden">
-                <div className="absolute top-0 right-0 -mr-1 -mt-1 w-32 h-32 bg-blue-600 transform rotate-45 translate-x-16 -translate-y-16"></div>
-              </div>
-              <div className="px-6 py-8 bg-white sm:p-10 sm:pb-6">
-                <div>
-                  <h3 className="inline-flex px-4 py-1 rounded-full text-sm font-semibold tracking-wide uppercase bg-blue-100 text-blue-600">
-                    Pro
-                  </h3>
-                </div>
-                <div className="mt-4 flex items-baseline text-6xl font-extrabold text-gray-900">
-                  $29
-                  <span className="ml-1 text-2xl font-medium text-gray-500">/mo</span>
-                </div>
-                <p className="mt-5 text-lg text-gray-500">
-                  For growing businesses that need power and flexibility.
+            {/* Columna derecha: card de acceso */}
+            <div className="w-full max-w-md mx-auto">
+              <div className="bg-slate-900/70 border border-slate-800 rounded-2xl shadow-xl p-6 sm:p-8">
+                <h2 className="text-xl font-semibold text-white">
+                  Accede a tu cuenta
+                </h2>
+                <p className="mt-2 text-sm text-slate-300">
+                  Usa tu cuenta para configurar bots, flujos de conversación y ver
+                  resultados en tiempo real.
                 </p>
-              </div>
-              <div className="flex-1 flex flex-col justify-between px-6 pt-6 pb-8 bg-gray-50 space-y-6 sm:p-10 sm:pt-6">
-                <ul className="space-y-4">
-                  <li className="flex items-start">
-                    <div className="flex-shrink-0 text-green-500">✓</div>
-                    <p className="ml-3 text-base text-gray-700"><strong>Unlimited</strong> Bots</p>
-                  </li>
-                  <li className="flex items-start">
-                    <div className="flex-shrink-0 text-green-500">✓</div>
-                    <p className="ml-3 text-base text-gray-700"><strong>Unlimited</strong> Leads</p>
-                  </li>
-                  <li className="flex items-start">
-                    <div className="flex-shrink-0 text-green-500">✓</div>
-                    <p className="ml-3 text-base text-gray-700">AI Image Generation</p>
-                  </li>
-                  <li className="flex items-start">
-                    <div className="flex-shrink-0 text-green-500">✓</div>
-                    <p className="ml-3 text-base text-gray-700">Advanced Analytics</p>
-                  </li>
-                  <li className="flex items-start">
-                    <div className="flex-shrink-0 text-green-500">✓</div>
-                    <p className="ml-3 text-base text-gray-700">Priority Support</p>
-                  </li>
-                </ul>
-                <div className="rounded-md shadow">
+
+                <div className="mt-6 space-y-4">
+                  {/* Botón principal de login */}
+                  <button
+                    onClick={login}
+                    disabled={loading}
+                    className="w-full inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 hover:bg-blue-500 transition-colors disabled:opacity-60"
+                  >
+                    {loading ? 'Iniciando sesión…' : 'Iniciar sesión / Registrarse'}
+                  </button>
+
+                  {/* Opción Pro directa */}
                   <button
                     onClick={handlePurchase}
-                    className="flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 w-full"
+                    className="w-full inline-flex items-center justify-center rounded-lg border border-blue-500/60 px-4 py-3 text-sm font-semibold text-blue-100 hover:bg-blue-500/10 transition-colors"
                   >
-                    Upgrade to Pro
+                    Ir directo al plan Pro
                   </button>
+
+                  {/* Info plan Starter */}
+                  <div className="mt-4 rounded-lg bg-slate-900 border border-slate-800 p-4 text-xs text-slate-300">
+                    <p className="font-semibold text-white text-sm">
+                      Plan Starter (Gratis)
+                    </p>
+                    <ul className="mt-2 space-y-1">
+                      <li>• 1 bot activo</li>
+                      <li>• 100 leads al mes</li>
+                      <li>• Automatizaciones básicas</li>
+                    </ul>
+                    <p className="mt-3 text-[11px] text-slate-400">
+                      Siempre puedes actualizar a Pro para bots y leads ilimitados,
+                      analítica avanzada e IA mejorada.
+                    </p>
+                  </div>
                 </div>
+
+                {user && (
+                  <div className="mt-6 text-xs text-green-400 bg-green-500/5 border border-green-500/40 rounded-lg px-3 py-2">
+                    Sesión iniciada como: <span className="font-semibold">{user.email || user.name || 'usuario'}</span>
+                    <p className="text-[11px] text-green-200/80 mt-1">
+                      Ve al panel para gestionar tus bots y conversaciones.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-800 text-white">
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <span className="text-2xl mr-2">🤖</span>
-              <span className="font-bold text-xl">BotInteligente</span>
-            </div>
-            <p className="text-gray-400 text-sm">
-              &copy; 2024 BotInteligente. All rights reserved.
-            </p>
+      {/* Footer simple */}
+      <footer className="border-t border-slate-800 bg-slate-950">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
+          <p>&copy; {new Date().getFullYear()} BotInteligente. Todos los derechos reservados.</p>
+          <div className="mt-2 sm:mt-0 flex items-center space-x-4">
+            <span className="hover:text-slate-300 cursor-pointer">Términos</span>
+            <span className="hover:text-slate-300 cursor-pointer">Privacidad</span>
           </div>
         </div>
       </footer>
 
-      {/* Error Toast */}
+      {/* Toast de error */}
       {error && (
-        <div className="fixed bottom-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-lg z-50">
-          <p className="font-bold">Error</p>
-          <p>{error}</p>
+        <div className="fixed bottom-4 right-4 bg-red-900/90 text-red-50 border border-red-500/70 px-4 py-3 rounded-lg shadow-xl text-sm max-w-xs z-50">
+          <p className="font-semibold text-red-100">Error al iniciar sesión</p>
+          <p className="mt-1">{error}</p>
         </div>
       )}
     </div>
