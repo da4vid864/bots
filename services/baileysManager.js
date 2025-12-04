@@ -325,7 +325,7 @@ async function handleIncomingMessage(botId, msg) {
             }
             
             // Image handling
-            const imageTagRegex = /\$\$\s*ENVIAR_IMAGEN:\s*([\s\S]+?)\s*\$\$/i;
+            const imageTagRegex = /\[ENVIAR_IMAGEN:\s*([^\]]+)\]/i;
             const match = botReply.match(imageTagRegex);
             let imageToSend = null;
             
