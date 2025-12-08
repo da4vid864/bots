@@ -327,13 +327,13 @@ async function handleIncomingMessage(botId, msg) {
             // Image handling
             const imageTagRegex = /\[ENVIAR_IMAGEN:\s*([^\]]+)\]/i;
             const match = botReply.match(imageTagRegex);
-            let imageToSend = null;
+            let imageMedia = null;
             
             if (match) {
                 const keyword = match[1].trim().toLowerCase();
                 console.log(`[${botId}] 🖼️ IA solicitó imagen con keyword: "${keyword}"`);
                 
-                imageToSend = session.availableImages.find(img => img.keyword === keyword);
+                imageMedia = await botImageService.getImageMedia(keyword, botId);
                 
                 // Clean image tag from text
                 botReply = botReply.replace(match[0], '').trim();
@@ -359,13 +359,10 @@ async function handleIncomingMessage(botId, msg) {
                 await addLeadMessage(lead.id, 'bot', botReply);
             }
             
-            if (imageToSend) {
+            if (imageMedia) {
                 try {
-                    const imagePath = path.join(__dirname, '..', 'public', 'uploads', imageToSend.filename);
-                    if (fs.existsSync(imagePath)) {
-                        await sendImage(botId, senderId, imagePath, imageToSend.original_name);
-                        await addLeadMessage(lead.id, 'bot', `[Imagen enviada: ${imageToSend.original_name}]`);
-                    }
+                    await sendImage(botId, senderId, imageMedia);
+                    await addLeadMessage(lead.id, 'bot', `[Imagen enviada: ${imageMedia.caption}]`);
                 } catch (imgError) {
                     console.error(`[${botId}] ❌ Error enviando imagen:`, imgError);
                 }
@@ -483,17 +480,14 @@ async function sendMessage(botId, to, message) {
 /**
  * Send image message
  */
-async function sendImage(botId, to, imagePath, caption = '') {
+async function sendImage(botId, to, mediaObject) {
     const session = activeSessions.get(botId);
     if (!session || !session.socket || !session.isReady) {
         throw new Error(`Bot ${botId} no está listo para enviar imágenes`);
     }
     
     try {
-        await session.socket.sendMessage(to, {
-            image: { url: imagePath },
-            caption: caption
-        });
+        await session.socket.sendMessage(to, mediaObject);
         console.log(`[${botId}] ✅ Imagen enviada a ${to}`);
     } catch (error) {
         console.error(`[${botId}] ❌ Error enviando imagen:`, error);

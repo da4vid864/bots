@@ -1,5 +1,7 @@
 // services/botImageService.js
 const pool = require('./db');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Guarda la referencia de una imagen en la base de datos
@@ -50,6 +52,38 @@ async function getImageByKeyword(botId, keyword) {
 }
 
 /**
+ * Obtiene el objeto de medios listo para Baileys
+ * @param {string} keyword - Palabra clave de la imagen
+ * @param {string} botId - ID del bot
+ * @returns {Promise<Object|null>} Objeto con url y caption, o null si no existe
+ */
+async function getImageMedia(keyword, botId) {
+    try {
+        const image = await getImageByKeyword(botId, keyword);
+        
+        if (!image) {
+            console.log(`[BotImageService] Imagen no encontrada en BD para keyword: ${keyword}`);
+            return null;
+        }
+
+        const imagePath = path.join(__dirname, '..', 'public', 'uploads', image.filename);
+        
+        if (!fs.existsSync(imagePath)) {
+            console.error(`[BotImageService] Archivo físico no encontrado: ${imagePath}`);
+            return null;
+        }
+
+        return {
+            image: { url: imagePath },
+            caption: image.original_name
+        };
+    } catch (error) {
+        console.error('[BotImageService] Error obteniendo media de imagen:', error);
+        return null;
+    }
+}
+
+/**
  * Elimina una imagen de la base de datos
  */
 async function deleteImage(id) {
@@ -62,4 +96,4 @@ async function deleteImage(id) {
     }
 }
 
-module.exports = { addImage, getImagesByBot, getImageByKeyword, deleteImage };
+module.exports = { addImage, getImagesByBot, getImageByKeyword, deleteImage, getImageMedia };
