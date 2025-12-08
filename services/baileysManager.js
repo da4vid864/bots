@@ -17,7 +17,7 @@ async function loadBaileys() {
     return { baileys, Boom };
 }
 
-const { getChatReply } = require('./deepseekService');
+const { getChatReply, detectUserIntent } = require('./deepseekService');
 const { extractLeadInfo, generateFollowUpQuestion } = require('./leadExtractionService');
 const botImageService = require('./botImageService');
 const scoringService = require('./scoringService');
@@ -213,6 +213,47 @@ async function handleIncomingMessage(botId, msg) {
 
         // === SCORING & AUTOMATION START ===
         let skipAiGeneration = false;
+
+        // === INTENT DETECTION START ===
+        try {
+            const isImageIntent = await detectUserIntent(userMessage);
+            if (isImageIntent) {
+                console.log(`[${botId}] [Intent] Image request fulfilled via AI.`);
+                
+                let imageMedia = null;
+                const caption = "¡Mira el producto! 📦\n*Precio: $XX | Stock: Disponible*";
+
+                // Try to find relevant image from session
+                if (session.availableImages && session.availableImages.length > 0) {
+                    // Simple keyword matching
+                    const matchedImage = session.availableImages.find(img =>
+                        userMessage.toLowerCase().includes(img.keyword.toLowerCase())
+                    );
+                    const imageToUse = matchedImage || session.availableImages[0];
+                    
+                    if (imageToUse) {
+                         imageMedia = await botImageService.getImageMedia(imageToUse.keyword, botId);
+                         if (imageMedia) {
+                             imageMedia.caption = caption;
+                         }
+                    }
+                }
+
+                if (imageMedia) {
+                    await sendImage(botId, senderId, imageMedia);
+                } else {
+                    // Placeholder
+                    await sendMessage(botId, senderId, caption + "\nhttps://via.placeholder.com/300");
+                }
+                
+                await addLeadMessage(lead.id, 'bot', caption);
+                skipAiGeneration = true;
+            }
+        } catch (intentError) {
+            console.error(`[${botId}] ⚠️ Error in intent detection:`, intentError);
+        }
+        // === INTENT DETECTION END ===
+
         try {
             // 1. Evaluate message
             const evaluation = await scoringService.evaluateMessage(botId, userMessage);

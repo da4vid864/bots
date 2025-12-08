@@ -87,23 +87,6 @@ const Login = () => {
                 >
                   Comenzar prueba gratuita
                 </button>
-
-                {user ? (
-                  <Link
-                    to="/dashboard"
-                    className="inline-flex items-center justify-center rounded-lg border border-slate-700 px-6 py-3 text-sm sm:text-base font-medium text-slate-100 hover:bg-slate-900/60 transition-colors"
-                  >
-                    Ir al panel
-                  </Link>
-                ) : (
-                  <button
-                    onClick={login}
-                    disabled={loading}
-                    className="inline-flex items-center justify-center rounded-lg border border-slate-700 px-6 py-3 text-sm sm:text-base font-medium text-slate-100 hover:bg-slate-900/60 transition-colors disabled:opacity-60"
-                  >
-                    {loading ? 'Conectando…' : 'Ver demo en vivo'}
-                  </button>
-                )}
               </div>
 
               {/* Beneficios rápidos */}
