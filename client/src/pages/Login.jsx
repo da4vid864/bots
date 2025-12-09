@@ -4,6 +4,24 @@ import { useAuth } from '../context/AuthContext';
 import { Helmet } from 'react-helmet';
 import logo from '../assets/logo.png';
 
+// Material Design Icons
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
+import FlashOnIcon from '@mui/icons-material/FlashOn';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
+import LockIcon from '@mui/icons-material/Lock';
+import PersonIcon from '@mui/icons-material/Person';
+import FemaleIcon from '@mui/icons-material/Female';
+import BusinessIcon from '@mui/icons-material/Business';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import RemoveIcon from '@mui/icons-material/Remove';
+import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
+
 const Login = () => {
   const { login, loading, error, user } = useAuth();
   const navigate = useNavigate();
@@ -19,94 +37,6 @@ const Login = () => {
       navigate('/dashboard');
     }
   }, [user, navigate]);
-
-  // SVG Icon Components
-  const RocketIcon = () => (
-    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-      <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 013 18h5a1 1 0 001-1v-4h4a1 1 0 00.894-1.447l-7-14a1 1 0 00-1.787.013L6.292 7H4a1 1 0 00-.82 1.573l7 10A1 1 0 008 18h5a1 1 0 001-1v-4h4a1 1 0 00.894-1.447l-7-14a1 1 0 00-1.787.013L11.3 1.046z" clipRule="evenodd" />
-    </svg>
-  );
-
-  const CheckIcon = () => (
-    <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 8.586l6.293-6.293a1 1 0 011.414 0z" clipRule="evenodd" />
-    </svg>
-  );
-
-  const ClockIcon = () => (
-    <svg className="w-4 h-4 text-amber-200" fill="currentColor" viewBox="0 0 20 20">
-      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-8a1 1 0 00-1-1H7a1 1 0 000 2h1a1 1 0 001-1z" clipRule="evenodd" />
-    </svg>
-  );
-
-  const MessageIcon = () => (
-    <svg className="w-12 h-12 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-      <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H5l-3 3v-9a2 2 0 012-2z" />
-      <path d="M15 7a2 2 0 012 2v4a2 2 0 01-2 2H5l-3 3v-9a2 2 0 012-2z" />
-    </svg>
-  );
-
-  const LightningIcon = () => (
-    <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-      <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3z" />
-      <path d="M5.5 5.5A.5.5 0 015 5h4a.5.5 0 01.5.5v1a1 1 0 01-1 1H6a1 1 0 01-1-1V5z" />
-      <path d="M7 13V7h2v6H7z" />
-    </svg>
-  );
-
-  const RobotIcon = () => (
-    <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-      <path fillRule="evenodd" d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3z" />
-      <path d="M5.5 5.5A.5.5 0 015 5h4a.5.5 0 01.5.5v1a1 1 0 01-1 1H6a1 1 0 01-1-1V5z" />
-      <path d="M13 7a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V7a2 2 0 012-2h2z" />
-    </svg>
-  );
-
-  const AnalyticsIcon = () => (
-    <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-      <path fillRule="evenodd" d="M3 3a1 1 0 000 2h14a1 1 0 100-2H3zm0 4a1 1 0 100 2h14a1 1 0 100-2H3zm0 4a1 1 0 100 2h14a1 1 0 100-2H3z" clipRule="evenodd" />
-    </svg>
-  );
-
-  const LockIcon = () => (
-    <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H7a2 2 0 01-2-2V9zm2 2v5h6v-5H7z" clipRule="evenodd" />
-    </svg>
-  );
-
-  const UserMaleIcon = () => (
-    <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
-      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6z" />
-      <path d="M3 14a7 7 0 0114 0H3z" />
-    </svg>
-  );
-
-  const UserFemaleIcon = () => (
-    <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
-      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6z" />
-      <path d="M13 13a3 3 0 11-6 0 3 3 0 016 0z" clipRule="evenodd" />
-    </svg>
-  );
-
-  const UserBusinessIcon = () => (
-    <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
-      <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0z" />
-      <path fillRule="evenodd" d="M3 3a1 1 0 000 2h14a1 1 0 100-2H3z" clipRule="evenodd" />
-      <path d="M5 3a1 1 0 100 2h10a1 1 0 100-2H5zm0 4a1 1 0 100 2h14a1 1 0 100-2H5z" />
-    </svg>
-  );
-
-  const HeartIcon = () => (
-    <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-      <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.313l-5.172-5.172a4 4 0 010-5.656z" clipRule="evenodd" />
-    </svg>
-  );
-
-  const ArrowRightIcon = () => (
-    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-      <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-    </svg>
-  );
 
   const faqs = [
     {
@@ -140,40 +70,40 @@ const Login = () => {
       name: 'Carlos Mendoza',
       company: 'MendozaTech',
       text: 'Pasamos de 20 a 500 leads mensuales en 2 meses. BotInteligente es un game changer.',
-      avatar: <UserMaleIcon />
+      avatar: <PersonIcon className="w-10 h-10" />
     },
     {
       name: 'María González',
       company: 'Ventas Premium MX',
       text: 'El bot maneja el 80% de mis consultas. Ahora enfoco en cerrar ventas, no en responder mensajes.',
-      avatar: <UserFemaleIcon />
+      avatar: <FemaleIcon className="w-10 h-10" />
     },
     {
       name: 'Juan López',
       company: 'E-Commerce Store',
       text: 'ROI de 350% en 3 meses. Mejor inversión que hice para mi negocio.',
-      avatar: <UserBusinessIcon />
+      avatar: <BusinessIcon className="w-10 h-10" />
     }
   ];
 
   const features = [
     {
-      icon: <LightningIcon />,
+      icon: <FlashOnIcon className="w-8 h-8 text-blue-400" />,
       title: 'Setup en 5 minutos',
       desc: 'Conecta WhatsApp y empieza. Sin código, sin IT, sin estrés.'
     },
     {
-      icon: <RobotIcon />,
+      icon: <SmartToyIcon className="w-8 h-8 text-blue-400" />,
       title: 'IA entrenada para ti',
       desc: 'Tu bot aprende tu negocio. Respuestas que parecen humanas.'
     },
     {
-      icon: <AnalyticsIcon />,
+      icon: <AnalyticsIcon className="w-8 h-8 text-blue-400" />,
       title: 'Analítica que importa',
       desc: 'Ve cuántos leads capturas, cuántos conviertes, dónde optimizar.'
     },
     {
-      icon: <LockIcon />,
+      icon: <LockIcon className="w-8 h-8 text-blue-400" />,
       title: '100% Seguro',
       desc: 'GDPR compliant, encriptación end-to-end, tus datos, tú controlas.'
     }
@@ -223,7 +153,7 @@ const Login = () => {
               <div className="space-y-8">
                 <div className="space-y-4">
                   <div className="inline-flex items-center rounded-full bg-blue-500/10 px-4 py-1 text-xs font-semibold text-blue-400 ring-1 ring-blue-500/20">
-                    <RocketIcon />
+                    <RocketLaunchIcon className="w-4 h-4" />
                     <span className="ml-1">Nuevo: Prueba 14 días GRATIS</span>
                   </div>
 
@@ -247,7 +177,7 @@ const Login = () => {
                   >
                     <span className="flex items-center justify-center space-x-2">
                       <span>Comenzar Prueba Gratuita</span>
-                      <ArrowRightIcon />
+                      <ArrowForwardIcon className="w-5 h-5" />
                     </span>
                     <div className="absolute inset-0 rounded-xl bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
                   </button>
@@ -264,22 +194,22 @@ const Login = () => {
                 {/* Trust Indicators */}
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 pt-4 text-sm text-slate-400">
                   <div className="flex items-center space-x-2">
-                    <CheckIcon />
+                    <CheckCircleIcon className="w-4 h-4 text-green-400" />
                     <span>Sin tarjeta de crédito</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <CheckIcon />
+                    <CheckCircleIcon className="w-4 h-4 text-green-400" />
                     <span>Cancela en cualquier momento</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <CheckIcon />
+                    <CheckCircleIcon className="w-4 h-4 text-green-400" />
                     <span>5 minutos de setup</span>
                   </div>
                 </div>
 
                 {/* Urgencia/Escasez */}
                 <div className="inline-flex items-center bg-amber-500/10 border border-amber-500/30 px-4 py-2 rounded-lg">
-                  <ClockIcon />
+                  <AccessTimeIcon className="w-4 h-4 text-amber-200" />
                   <p className="ml-2 text-sm text-amber-200">
                     <span className="font-bold">Oferta limitada:</span> Últimos 10 spots gratuitos de setup personalizado
                   </p>
@@ -290,7 +220,7 @@ const Login = () => {
               <div className="relative h-96 sm:h-96 lg:h-full lg:min-h-96 bg-gradient-to-br from-slate-900/50 to-slate-950 rounded-2xl border border-slate-800 p-8 flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-cyan-600/10 opacity-50"></div>
                 <div className="relative z-10 text-center space-y-4">
-                  <MessageIcon />
+                  <ChatBubbleIcon className="w-12 h-12 text-blue-400" />
                   <h3 className="text-xl font-bold text-white">Tu Bot Inteligente</h3>
                   <p className="text-sm text-slate-400">Responde en segundos, convierte leads</p>
                   <div className="pt-4 space-y-2 text-left text-sm">
@@ -397,21 +327,19 @@ const Login = () => {
                 </div>
                 <ul className="space-y-3 text-sm">
                   <li className="flex items-center space-x-3">
-                    <CheckIcon />
+                    <CheckCircleIcon className="w-4 h-4 text-green-400" />
                     <span>1 bot activo</span>
                   </li>
                   <li className="flex items-center space-x-3">
-                    <CheckIcon />
+                    <CheckCircleIcon className="w-4 h-4 text-green-400" />
                     <span>100 leads/mes</span>
                   </li>
                   <li className="flex items-center space-x-3">
-                    <CheckIcon />
+                    <CheckCircleIcon className="w-4 h-4 text-green-400" />
                     <span>Respuestas básicas con IA</span>
                   </li>
                   <li className="flex items-center space-x-3">
-                    <svg className="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
+                    <CloseIcon className="w-4 h-4 text-slate-600" />
                     <span className="text-slate-500">Analítica avanzada</span>
                   </li>
                 </ul>
@@ -439,23 +367,23 @@ const Login = () => {
                 </div>
                 <ul className="space-y-3 text-sm">
                   <li className="flex items-center space-x-3">
-                    <CheckIcon />
+                    <CheckCircleIcon className="w-4 h-4 text-green-400" />
                     <span className="text-white">Bots y leads ilimitados</span>
                   </li>
                   <li className="flex items-center space-x-3">
-                    <CheckIcon />
+                    <CheckCircleIcon className="w-4 h-4 text-green-400" />
                     <span className="text-white">IA avanzada y personalizada</span>
                   </li>
                   <li className="flex items-center space-x-3">
-                    <CheckIcon />
+                    <CheckCircleIcon className="w-4 h-4 text-green-400" />
                     <span className="text-white">Analítica en tiempo real</span>
                   </li>
                   <li className="flex items-center space-x-3">
-                    <CheckIcon />
+                    <CheckCircleIcon className="w-4 h-4 text-green-400" />
                     <span className="text-white">Soporte prioritario 24/7</span>
                   </li>
                   <li className="flex items-center space-x-3">
-                    <CheckIcon />
+                    <CheckCircleIcon className="w-4 h-4 text-green-400" />
                     <span className="text-white">Integración con CRM</span>
                   </li>
                 </ul>
@@ -463,7 +391,7 @@ const Login = () => {
                   onClick={handlePurchase}
                   className="w-full py-3 rounded-lg font-bold text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-colors transform hover:scale-105 active:scale-95"
                 >
-                  Prueba 14 días Gratis <ArrowRightIcon />
+                  Prueba 14 días Gratis <ArrowForwardIcon className="w-5 h-5 inline" />
                 </button>
                 <p className="text-center text-xs text-slate-400">Sin tarjeta requerida. Cancela cuando quieras.</p>
               </div>
@@ -489,7 +417,7 @@ const Login = () => {
                   >
                     <span>{faq.q}</span>
                     <span className="text-xl text-blue-400">
-                      {openFaq === idx ? '−' : '+'}
+                      {openFaq === idx ? <RemoveIcon /> : <AddIcon />}
                     </span>
                   </button>
                   {openFaq === idx && (
@@ -512,7 +440,7 @@ const Login = () => {
               </h2>
               <p className="text-lg text-slate-400">
                 14 días gratis. Sin tarjeta. Sin compromiso. Empieza ahora.
-            </p>
+              </p>
             </div>
             <button
               onClick={handlePurchase}
@@ -520,7 +448,7 @@ const Login = () => {
             >
               <span className="flex items-center space-x-2">
                 <span>Comienza tu Prueba Gratuita</span>
-                <ArrowRightIcon />
+                <ArrowForwardIcon className="w-5 h-5" />
               </span>
               <div className="absolute inset-0 rounded-xl bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
             </button>
@@ -574,7 +502,7 @@ const Login = () => {
             <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row items-center justify-between text-sm text-slate-500">
               <p>&copy; {new Date().getFullYear()} BotInteligente. Todos los derechos reservados.</p>
               <p className="flex items-center">
-                <HeartIcon />
+                <FavoriteIcon className="w-4 h-4 text-red-500" />
                 <span className="ml-1">Hecho con amor en México</span>
               </p>
             </div>
