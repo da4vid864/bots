@@ -58,40 +58,43 @@ const Login = () => {
     <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
       <path fillRule="evenodd" d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3z" />
       <path d="M5.5 5.5A.5.5 0 015 5h4a.5.5 0 01.5.5v1a1 1 0 01-1 1H6a1 1 0 01-1-1V5z" />
-      <path d="M13 7a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V7a2 2 0 012-2h2z" />
+      <path d="M13 7a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V7a2 2 0 012-2h2z" />
     </svg>
   );
 
   const AnalyticsIcon = () => (
     <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-      <path fillRule="evenodd" d="M3 3a1 1 0 000 2h14a1 1 0 100-2H3zm0 4a1 1 0 100 2h14a1 1 0 100-2H3zm0 4a1 1 0 100 2h14a1 1 0 100-2H3zm0 4a1 1 0 100 2h14a1 1 0 100-2H3z" clipRule="evenodd" />
+      <path fillRule="evenodd" d="M3 3a1 1 0 000 2h14a1 1 0 100-2H3zm0 4a1 1 0 100 2h14a1 1 0 100-2H3zm0 4a1 1 0 100 2h14a1 1 0 100-2H3z" clipRule="evenodd" />
     </svg>
   );
 
   const LockIcon = () => (
     <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2h4a2 2 0 012 2v5a2 2 0 01-2 2H7a2 2 0 01-2-2V9zm2 2v5h6v-5H7z" clipRule="evenodd" />
+      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H7a2 2 0 01-2-2V9zm2 2v5h6v-5H7z" clipRule="evenodd" />
     </svg>
   );
 
   const UserMaleIcon = () => (
     <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
-      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zM3 14a7 7 0 0114 0H3z" clipRule="evenodd" />
+      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6z" />
+      <path d="M3 14a7 7 0 0114 0H3z" />
     </svg>
   );
 
   const UserFemaleIcon = () => (
     <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
       <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6z" />
+      <path d="M13 13a3 3 0 11-6 0 3 3 0 016 0z" clipRule="evenodd" />
     </svg>
   );
 
   const UserBusinessIcon = () => (
-  <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
-    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0z" />
-  <path fillRule="evenodd" d="M3 3a1 1 0 000 2h14a1 1 0 100-2H3z" clipRule="evenodd" />
-  <path d="M5 3a1 1 0 000 2h10a1 1 0 000-2H5zm0 4a1 1 0 100 2h14a1 1 0 100-2H5z" />
-  </svg>);
+    <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
+      <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path fillRule="evenodd" d="M3 3a1 1 0 000 2h14a1 1 0 100-2H3z" clipRule="evenodd" />
+      <path d="M5 3a1 1 0 100 2h10a1 1 0 100-2H5zm0 4a1 1 0 100 2h14a1 1 0 100-2H5z" />
+    </svg>
+  );
 
   const HeartIcon = () => (
     <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
@@ -510,7 +513,7 @@ const Login = () => {
               <p className="text-lg text-slate-400">
                 14 días gratis. Sin tarjeta. Sin compromiso. Empieza ahora.
             </p>
-
+            </div>
             <button
               onClick={handlePurchase}
               className="group relative inline-flex items-center px-10 py-4 rounded-xl font-bold text-lg text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 active:scale-95"
