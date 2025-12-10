@@ -22,8 +22,7 @@ const handleGoogleCallback = async (req, res) => {
           console.log(`Nuevo usuario detectado: ${email}. Creando cuenta Free.`);
           // Crear usuario con rol 'vendor' (o 'user') por defecto
           dbUser = await userService.createUser(email, 'vendor', 'system');
-          // Crear suscripción Free por defecto con límites permanentes
-          // Free Tier: 1 bot, 100 leads/mes, sin tarjeta requerida
+          // Crear suscripción Free por defecto
           await subscriptionService.getOrCreateSubscription(email);
       }
 
@@ -57,20 +56,19 @@ const handleGoogleCallback = async (req, res) => {
     
     // Verificamos si hay intención de compra (Trial)
     if (req.cookies.redirect_to_checkout === 'true') {
-      console.log(`💰 Usuario ${email} tiene cookie de compra. Iniciando 14-día trial sin tarjeta...`);
+      console.log(`💰 Usuario ${email} tiene cookie de compra. Activando Trial...`);
       res.clearCookie('redirect_to_checkout');
       
-      // Activar Trial automáticamente (14 días sin tarjeta requerida)
+      // Activar Trial automáticamente
       try {
-          const trialResult = await subscriptionService.activateProTrial(email);
-          console.log(`✅ Pro Trial activado para ${email}. Vence el ${trialResult.trial_ends_at}`);
+          await subscriptionService.activateProTrial(email);
           // Redirigir al dashboard con mensaje de éxito
           const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
           const isProduction = process.env.NODE_ENV === 'production';
-          const target = isProduction ? '/dashboard?trial=started' : `${frontendUrl}/dashboard?trial=started`;
+          const target = isProduction ? '/dashboard?payment=success' : `${frontendUrl}/dashboard?payment=success`;
           return res.redirect(target);
       } catch (err) {
-          console.error("❌ Error activando trial automático:", err);
+          console.error("Error activando trial automático:", err);
           // Fallback al dashboard normal si falla
       }
     }

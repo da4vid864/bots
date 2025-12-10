@@ -1,9 +1,24 @@
 // services/botConfigService.js
 const pool = require('./db');
 
+/**
+ * @typedef {Object} BotFeatures
+ * @property {string} bot_id - The unique identifier of the bot.
+ * @property {boolean} scheduling_enabled - Whether scheduling functionality is enabled.
+ * @property {boolean} auto_response_enabled - Whether automated responses are enabled.
+ * @property {boolean} lead_capture_enabled - Whether lead capture functionality is enabled.
+ * @property {boolean} working_hours_enabled - Whether working hours restrictions are enabled.
+ * @property {string} working_hours_start - Start time of working hours (e.g., '09:00').
+ * @property {string} working_hours_end - End time of working hours (e.g., '18:00').
+ * @property {Date} [updated_at] - Timestamp of the last update.
+ */
 
 /**
- * Obtener las funcionalidades de un bot (crea registro si no existe)
+ * Retrieves the features configuration for a specific bot.
+ * Creates a default configuration if one does not exist.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @returns {Promise<BotFeatures>} The bot features configuration.
  */
 async function getBotFeatures(botId) {
     try {
@@ -43,7 +58,13 @@ async function getBotFeatures(botId) {
 }
 
 /**
- * Actualizar una funcionalidad específica de un bot
+ * Updates a specific feature configuration for a bot.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @param {string} featureName - The name of the feature to update.
+ * @param {boolean|string} value - The new value for the feature.
+ * @returns {Promise<BotFeatures>} The updated bot features configuration.
+ * @throws {Error} If the feature name is invalid or the update fails.
  */
 async function updateBotFeature(botId, featureName, value) {
     const validFeatures = [
@@ -89,7 +110,18 @@ async function updateBotFeature(botId, featureName, value) {
 }
 
 /**
- * Actualizar múltiples funcionalidades a la vez
+ * Updates multiple features for a bot simultaneously.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @param {Object} features - Object containing the features to update.
+ * @param {boolean} [features.schedulingEnabled] - Enable/disable scheduling.
+ * @param {boolean} [features.autoResponseEnabled] - Enable/disable auto-response.
+ * @param {boolean} [features.leadCaptureEnabled] - Enable/disable lead capture.
+ * @param {boolean} [features.workingHoursEnabled] - Enable/disable working hours.
+ * @param {string} [features.workingHoursStart] - Working hours start time.
+ * @param {string} [features.workingHoursEnd] - Working hours end time.
+ * @returns {Promise<BotFeatures>} The updated bot features configuration.
+ * @throws {Error} If the update fails.
  */
 async function updateBotFeatures(botId, features) {
     try {
@@ -158,7 +190,11 @@ async function updateBotFeatures(botId, features) {
 }
 
 /**
- * Crear registro de features cuando se crea un bot
+ * Creates initial feature configuration for a new bot.
+ * If configuration already exists, does nothing.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @returns {Promise<BotFeatures>} The bot features configuration.
  */
 async function createBotFeatures(botId) {
     try {
@@ -175,7 +211,10 @@ async function createBotFeatures(botId) {
 }
 
 /**
- * Eliminar funcionalidades de un bot
+ * Deletes the feature configuration for a bot.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @returns {Promise<void>}
  */
 async function deleteBotFeatures(botId) {
     try {

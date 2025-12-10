@@ -33,12 +33,36 @@ const {
     getLeadById
 } = require('./leadDbService');
 
-// In-memory Map for active sessions: Map<botId, socket>
+/**
+ * @typedef {Object} BotSession
+ * @property {Object} socket - The Baileys socket instance.
+ * @property {Object} botConfig - Configuration for the bot.
+ * @property {boolean} isReady - Whether the bot is ready to send/receive messages.
+ * @property {boolean} isPaused - Whether the bot is paused.
+ * @property {Array} availableImages - List of images available for the bot.
+ * @property {Array} availableProducts - List of products available for the bot.
+ * @property {Function} saveCreds - Function to save session credentials.
+ */
+
+/**
+ * In-memory Map for active sessions.
+ * @type {Map<string, BotSession>}
+ */
 const activeSessions = new Map();
 
 
 /**
- * Initialize Baileys connection for a bot
+ * Initialize Baileys connection for a bot.
+ * Sets up the socket, authentication, and event handlers.
+ * 
+ * @param {Object} botConfig - The configuration object for the bot.
+ * @param {string} botConfig.id - The unique identifier of the bot.
+ * @param {string} botConfig.name - The name of the bot.
+ * @param {string} botConfig.ownerEmail - The email of the bot owner.
+ * @param {string} botConfig.status - The current status of the bot ('enabled' or 'disabled').
+ * @param {Function} onStatusUpdate - Callback function to handle status updates.
+ * @returns {Promise<Object>} The initialized Baileys socket.
+ * @throws {Error} If initialization fails.
  */
 async function initializeBaileysConnection(botConfig, onStatusUpdate) {
     const { id: botId, name: botName } = botConfig;
@@ -108,7 +132,14 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
 }
 
 /**
- * Set up event handlers for Baileys socket
+ * Set up event handlers for Baileys socket.
+ * Handles connection updates, credential updates, and incoming messages.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @param {Object} socket - The Baileys socket instance.
+ * @param {Function} saveCreds - Function to save credentials.
+ * @param {Function} onStatusUpdate - Callback for status updates.
+ * @param {Object} DisconnectReason - Baileys disconnect reason enum.
  */
 function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, DisconnectReason) {
     const session = activeSessions.get(botId);
@@ -188,7 +219,11 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
 }
 
 /**
- * Handle incoming messages
+ * Handle incoming messages.
+ * Processes user messages, lead capture, intent detection, and automated responses.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @param {Object} msg - The incoming message object.
  */
 async function handleIncomingMessage(botId, msg) {
     const session = activeSessions.get(botId);
@@ -444,7 +479,10 @@ async function handleIncomingMessage(botId, msg) {
 }
 
 /**
- * Extract message content from different message types
+ * Extract message content from different message types.
+ * 
+ * @param {Object} message - The message object from Baileys.
+ * @returns {string|null} The text content of the message, or null if not found.
  */
 function getMessageContent(message) {
     if (message.conversation) return message.conversation;
@@ -455,7 +493,10 @@ function getMessageContent(message) {
 }
 
 /**
- * Load bot images
+ * Load bot images into the session.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @returns {Promise<void>}
  */
 async function loadBotImages(botId) {
     const session = activeSessions.get(botId);
@@ -470,7 +511,10 @@ async function loadBotImages(botId) {
 }
 
 /**
- * Load bot products
+ * Load bot products into the session.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @returns {Promise<void>}
  */
 async function loadBotProducts(botId) {
     const session = activeSessions.get(botId);
@@ -485,7 +529,10 @@ async function loadBotProducts(botId) {
 }
 
 /**
- * Load existing chats and messages
+ * Load existing chats and messages (Placeholder).
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @returns {Promise<void>}
  */
 async function loadExistingChats(botId) {
     const session = activeSessions.get(botId);
@@ -501,7 +548,13 @@ async function loadExistingChats(botId) {
 }
 
 /**
- * Send text message
+ * Send text message.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @param {string} to - The recipient's JID (phone number + @s.whatsapp.net).
+ * @param {string} message - The text message to send.
+ * @returns {Promise<void>}
+ * @throws {Error} If the bot is not ready or fails to send.
  */
 async function sendMessage(botId, to, message) {
     const session = activeSessions.get(botId);
@@ -519,7 +572,13 @@ async function sendMessage(botId, to, message) {
 }
 
 /**
- * Send image message
+ * Send image message.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @param {string} to - The recipient's JID.
+ * @param {Object} mediaObject - The media object containing image data/url and caption.
+ * @returns {Promise<void>}
+ * @throws {Error} If the bot is not ready or fails to send.
  */
 async function sendImage(botId, to, mediaObject) {
     const session = activeSessions.get(botId);
@@ -537,7 +596,10 @@ async function sendImage(botId, to, mediaObject) {
 }
 
 /**
- * Set bot status (enabled/disabled)
+ * Set bot status (enabled/disabled).
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @param {string} status - The new status ('enabled' or 'disabled').
  */
 function setBotStatus(botId, status) {
     const session = activeSessions.get(botId);
@@ -556,7 +618,11 @@ function setBotStatus(botId, status) {
 }
 
 /**
- * Refresh bot images
+ * Refresh bot images.
+ * Reloads the available images from the database.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @returns {Promise<void>}
  */
 async function refreshBotImages(botId) {
     console.log(`[${botId}] 🔄 Recargando imágenes`);
@@ -564,7 +630,10 @@ async function refreshBotImages(botId) {
 }
 
 /**
- * Get bot session status
+ * Get bot session status.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @returns {string} Status ('DISCONNECTED', 'DISABLED', 'STARTING', 'CONNECTED').
  */
 function getBotStatus(botId) {
     const session = activeSessions.get(botId);
@@ -576,7 +645,10 @@ function getBotStatus(botId) {
 }
 
 /**
- * Check if bot is connected and ready
+ * Check if bot is connected and ready.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @returns {boolean} True if the bot is ready and not paused.
  */
 function isBotReady(botId) {
     const session = activeSessions.get(botId);
@@ -584,7 +656,10 @@ function isBotReady(botId) {
 }
 
 /**
- * Disconnect and remove bot session
+ * Disconnect and remove bot session.
+ * 
+ * @param {string} botId - The unique identifier of the bot.
+ * @returns {Promise<void>}
  */
 async function disconnectBot(botId) {
     const session = activeSessions.get(botId);

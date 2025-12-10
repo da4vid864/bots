@@ -1,9 +1,18 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { useAuth } from './AuthContext';
 
-// Create Bots Context
+/**
+ * Context for managing bots and leads data.
+ * @type {React.Context}
+ */
 const BotsContext = createContext();
 
+/**
+ * Custom hook to use the BotsContext.
+ * @returns {object} The context value containing bots, leads, and associated methods.
+ * @throws {Error} If used outside of a BotsProvider.
+ */
 export const useBots = () => {
   const context = useContext(BotsContext);
   if (!context) {
@@ -12,6 +21,14 @@ export const useBots = () => {
   return context;
 };
 
+/**
+ * Provider component for BotsContext.
+ * Manages state for bots, leads, and real-time updates via SSE.
+ *
+ * @param {object} props - Component props.
+ * @param {React.ReactNode} props.children - Child components.
+ * @returns {JSX.Element} The provider component.
+ */
 export const BotsProvider = ({ children }) => {
   const [bots, setBots] = useState([]);
   const [leads, setLeads] = useState([]);
@@ -21,70 +38,15 @@ export const BotsProvider = ({ children }) => {
   const [eventSource, setEventSource] = useState(null);
   const { user, isAuthenticated } = useAuth();
 
-  // Initialize SSE connection when user is authenticated
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      initializeSSE();
-    } else {
-      if (eventSource) {
-        eventSource.close();
-        setEventSource(null);
-        setSseConnected(false);
-      }
-    }
-
-    return () => {
-      if (eventSource) {
-        eventSource.close();
-      }
-    };
-  }, [isAuthenticated, user]);
-
-  const initializeSSE = () => {
-    if (eventSource) {
-      eventSource.close();
-    }
-
-    const es = new EventSource('/api/events', {
-      withCredentials: true,
-    });
-
-    es.onopen = () => {
-      console.log('🔗 SSE Connection established');
-      setSseConnected(true);
-      
-      // Request initial data after connection
-      fetch('/api/initial-data', {
-        credentials: 'include',
-      }).catch(console.error);
-    };
-
-    es.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        handleSSEEvent(data);
-      } catch (error) {
-        console.error('Error parsing SSE event:', error);
-      }
-    };
-
-    es.onerror = (error) => {
-      console.error('❌ SSE Connection error:', error);
-      setSseConnected(false);
-      
-      // Attempt reconnection after 5 seconds
-      setTimeout(() => {
-        if (isAuthenticated) {
-          console.log('🔄 Attempting SSE reconnection...');
-          initializeSSE();
-        }
-      }, 5000);
-    };
-
-    setEventSource(es);
-  };
-
-  const handleSSEEvent = (event) => {
+  /**
+   * Handles incoming SSE events and updates state accordingly.
+   * Wrapped in useCallback to be a stable dependency.
+   *
+   * @param {object} event - The SSE event object.
+   * @param {string} event.type - The type of event (e.g., 'INIT', 'UPDATE_BOT').
+   * @param {any} event.data - The payload data associated with the event.
+   */
+  const handleSSEEvent = useCallback((event) => {
     const { type, data } = event;
 
     switch (type) {
@@ -152,9 +114,76 @@ export const BotsProvider = ({ children }) => {
       default:
         console.log('Unhandled SSE event:', type, data);
     }
-  };
+  }, []);
 
-  // API functions for bot operations
+  /**
+   * Initializes Server-Sent Events (SSE) connection for real-time updates.
+   * Handles connection events, messages, and errors.
+   */
+  const initializeSSE = useCallback(() => {
+    const es = new EventSource('/api/events', {
+      withCredentials: true,
+    });
+
+    es.onopen = () => {
+      console.log('🔗 SSE Connection established');
+      setSseConnected(true);
+
+      // Request initial data after connection
+      fetch('/api/initial-data', {
+        credentials: 'include',
+      }).catch(console.error);
+    };
+
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleSSEEvent(data);
+      } catch (error) {
+        console.error('Error parsing SSE event:', error);
+      }
+    };
+
+    es.onerror = (error) => {
+      console.error('❌ SSE Connection error:', error);
+      setSseConnected(false);
+      es.close();
+      // Auto-reconnection is handled by browser for simple drops, 
+      // or we rely on useEffect to re-establish if auth state changes or on mount.
+    };
+
+    setEventSource(es);
+    return es;
+  }, [handleSSEEvent]);
+
+  /**
+   * Effect hook to initialize SSE connection when user is authenticated.
+   * Cleans up connection on unmount or logout.
+   */
+  useEffect(() => {
+    let es = null;
+
+    if (isAuthenticated && user) {
+      es = initializeSSE();
+    }
+
+    return () => {
+      if (es) {
+        es.close();
+      } else if (eventSource) {
+        eventSource.close();
+      }
+      setSseConnected(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user, initializeSSE]);
+
+  /**
+   * Creates a new bot.
+   * @param {object} botData - The data for the new bot.
+   * @returns {Promise<object>} The created bot object.
+   * @throws {Error} If creation fails.
+   */
   const createBot = async (botData) => {
     try {
       const response = await fetch('/api/create-bot', {
@@ -174,6 +203,13 @@ export const BotsProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Edits an existing bot's prompt.
+   * @param {string|number} botId - The ID of the bot to edit.
+   * @param {string} prompt - The new prompt for the bot.
+   * @returns {Promise<object>} The updated bot object.
+   * @throws {Error} If update fails.
+   */
   const editBot = async (botId, prompt) => {
     try {
       const response = await fetch(`/api/edit-bot/${botId}`, {
@@ -193,6 +229,12 @@ export const BotsProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Deletes a bot.
+   * @param {string|number} botId - The ID of the bot to delete.
+   * @returns {Promise<object>} Response from the server.
+   * @throws {Error} If deletion fails.
+   */
   const deleteBot = async (botId) => {
     try {
       const response = await fetch(`/api/delete-bot/${botId}`, {
@@ -208,6 +250,12 @@ export const BotsProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Enables a bot.
+   * @param {string|number} botId - The ID of the bot to enable.
+   * @returns {Promise<object>} The enabled bot object.
+   * @throws {Error} If enabling fails.
+   */
   const enableBot = async (botId) => {
     try {
       const response = await fetch(`/api/enable-bot/${botId}`, {
@@ -223,6 +271,12 @@ export const BotsProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Disables a bot.
+   * @param {string|number} botId - The ID of the bot to disable.
+   * @returns {Promise<object>} The disabled bot object.
+   * @throws {Error} If disabling fails.
+   */
   const disableBot = async (botId) => {
     try {
       const response = await fetch(`/api/disable-bot/${botId}`, {
@@ -239,6 +293,13 @@ export const BotsProvider = ({ children }) => {
   };
 
   // Lead operations
+
+  /**
+   * Assigns a lead to the current user.
+   * @param {string|number} leadId - The ID of the lead to assign.
+   * @returns {Promise<object>} The updated lead object.
+   * @throws {Error} If assignment fails.
+   */
   const assignLead = async (leadId) => {
     try {
       const response = await fetch('/api/assign-lead', {
@@ -258,6 +319,13 @@ export const BotsProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Sends a message to a lead.
+   * @param {string|number} leadId - The ID of the lead to send message to.
+   * @param {string} message - The message content.
+   * @returns {Promise<object>} The sent message object.
+   * @throws {Error} If sending fails.
+   */
   const sendMessage = async (leadId, message) => {
     try {
       const response = await fetch('/api/send-message', {
@@ -277,6 +345,12 @@ export const BotsProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Retrieves messages for a specific lead.
+   * @param {string|number} leadId - The ID of the lead.
+   * @returns {Promise<Array>} Array of message objects.
+   * @throws {Error} If retrieval fails.
+   */
   const getLeadMessages = async (leadId) => {
     try {
       const response = await fetch(`/api/lead-messages/${leadId}`, {
@@ -316,3 +390,7 @@ export const BotsProvider = ({ children }) => {
 };
 
 export default BotsContext;
+
+BotsProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};

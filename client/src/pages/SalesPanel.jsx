@@ -4,11 +4,32 @@ import { useAuth } from '../context/AuthContext';
 import ChatInterface from '../components/ChatInterface';
 import { useTranslation } from 'react-i18next';
 
+/**
+ * Main sales dashboard page.
+ * Displays an overview of leads, connection status, and the chat interface for lead interaction.
+ *
+ * @component
+ * @returns {JSX.Element} The rendered SalesPanel page.
+ */
 const SalesPanel = () => {
+  /**
+   * Consumes BotsContext for leads data and SSE connection status.
+   * @type {object}
+   * @property {Array} leads - List of all leads.
+   * @property {boolean} sseConnected - Status of the real-time event source connection.
+   */
   const { leads, sseConnected } = useBots();
+
+  /**
+   * Consumes AuthContext for current user information.
+   * @type {object}
+   * @property {object} user - The currently authenticated user.
+   */
   const { user } = useAuth();
+
   const { t } = useTranslation();
 
+  // Calculated statistics derived from leads state
   const assignedLeads = leads.filter(lead => lead.assigned_to === user?.email).length;
   const totalLeads = leads.length;
   const unassignedLeads = leads.filter(lead => !lead.assigned_to).length;

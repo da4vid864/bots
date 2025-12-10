@@ -1,15 +1,36 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
+/**
+ * Component to display a lead's score and associated tags.
+ * Visualizes the score with a progress bar and color coding.
+ *
+ * @component
+ * @param {object} props - Component props.
+ * @param {number} [props.score=0] - The lead's score (0-100).
+ * @param {string[]} [props.tags=[]] - Array of tags associated with the lead.
+ * @returns {JSX.Element} The rendered LeadScoreCard component.
+ */
 const LeadScoreCard = ({ score = 0, tags = [] }) => {
   const { t } = useTranslation();
 
+  /**
+   * Determines the background color class based on the score.
+   * @param {number} score - The lead score.
+   * @returns {string} Tailwind CSS class for background color.
+   */
   const getScoreColor = (score) => {
     if (score < 30) return 'bg-red-500';
     if (score < 70) return 'bg-yellow-500';
     return 'bg-green-500';
   };
 
+  /**
+   * Determines the text color class based on the score.
+   * @param {number} score - The lead score.
+   * @returns {string} Tailwind CSS class for text color.
+   */
   const getScoreTextColor = (score) => {
     if (score < 30) return 'text-red-600';
     if (score < 70) return 'text-yellow-600';
@@ -58,3 +79,8 @@ const LeadScoreCard = ({ score = 0, tags = [] }) => {
 };
 
 export default LeadScoreCard;
+
+LeadScoreCard.propTypes = {
+  score: PropTypes.number,
+  tags: PropTypes.arrayOf(PropTypes.string),
+};

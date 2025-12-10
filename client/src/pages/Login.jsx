@@ -4,6 +4,103 @@ import { useAuth } from '../context/AuthContext';
 import { Helmet } from 'react-helmet';
 import logo from '../assets/logo.png';
 
+// Material Design Icons as SVG Components
+const RocketIcon = () => (
+  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M9.19 6.35c-2.04 2.29-3.44 5.58-3.57 5.89L2 10.69l4.05-4.05c.47-.47 1.15-.68 1.81-.55l1.33.26zM11.71 8.85c-2.78 1.81-4.73 4.49-5.09 5.04l-3.62-3.62c.55-.36 3.23-2.31 5.04-5.09l4.67 4.67zm8.24 2.51l-2.09-.41c-.66-.13-1.34.08-1.81.55l-4.05 4.05 1.55-3.62c.31-.13 3.59-1.53 5.89-3.57l.51 4.05zm-6.6 3.61l-4.67-4.67c1.81-2.78 4.49-4.73 5.04-5.09l3.62 3.62c-.36.55-2.31 3.23-5.09 5.04l1.1 1.1zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+  </svg>
+);
+
+const ClockIcon = () => (
+  <svg className="w-4 h-4 text-amber-200" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+  </svg>
+);
+
+const MessageIcon = () => (
+  <svg className="w-12 h-12 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12zm-9-4h2v2h-2zm0-6h2v4h-2z"/>
+  </svg>
+);
+
+const LightningIcon = () => (
+  <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M7 2v11h3v9l7-12h-4l4-8z"/>
+  </svg>
+);
+
+const RobotIcon = () => (
+  <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M20 9V7c0-1.1-.9-2-2-2h-3c0-1.66-1.34-3-3-3S9 3.34 9 5H6c-1.1 0-2 .9-2 2v2c-1.66 0-3 1.34-3 3s1.34 3 3 3v4c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4c1.66 0 3-1.34 3-3s-1.34-3-3-3zM7.5 11.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5S9.83 13 9 13s-1.5-.67-1.5-1.5zM16 17H8v-2h8v2zm-1-4c-.83 0-1.5-.67-1.5-1.5S14.17 10 15 10s1.5.67 1.5 1.5S15.83 13 15 13z"/>
+  </svg>
+);
+
+const AnalyticsIcon = () => (
+  <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-5h2v5zm4 0h-2v-3h2v3zm0-5h-2v-2h2v2zm4 5h-2v-4h2v4zm0-6h-2V7h2v5z"/>
+  </svg>
+);
+
+const LockIcon = () => (
+  <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+  </svg>
+);
+
+const UserMaleIcon = () => (
+  <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+  </svg>
+);
+
+const UserFemaleIcon = () => (
+  <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M12 6c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2m0 10c2.7 0 5.8 1.29 6 2H6c.23-.72 3.31-2 6-2m0-12C9.79 4 8 5.79 8 8s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+  </svg>
+);
+
+const UserBusinessIcon = () => (
+  <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+  </svg>
+);
+
+const HeartIcon = () => (
+  <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+  </svg>
+);
+
+const ArrowRightIcon = () => (
+  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+  </svg>
+);
+
+const AddIcon = () => (
+  <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+  </svg>
+);
+
+const RemoveIcon = () => (
+  <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M19 13H5v-2h14v2z"/>
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg className="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+  </svg>
+);
+
 const Login = () => {
   const { login, loading, error, user } = useAuth();
   const navigate = useNavigate();
@@ -20,103 +117,6 @@ const Login = () => {
       navigate('/dashboard');
     }
   }, [user, navigate]);
-
-  // Material Design Icons as SVG Components
-  const RocketIcon = () => (
-    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M9.19 6.35c-2.04 2.29-3.44 5.58-3.57 5.89L2 10.69l4.05-4.05c.47-.47 1.15-.68 1.81-.55l1.33.26zM11.71 8.85c-2.78 1.81-4.73 4.49-5.09 5.04l-3.62-3.62c.55-.36 3.23-2.31 5.04-5.09l4.67 4.67zm8.24 2.51l-2.09-.41c-.66-.13-1.34.08-1.81.55l-4.05 4.05 1.55-3.62c.31-.13 3.59-1.53 5.89-3.57l.51 4.05zm-6.6 3.61l-4.67-4.67c1.81-2.78 4.49-4.73 5.04-5.09l3.62 3.62c-.36.55-2.31 3.23-5.09 5.04l1.1 1.1zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-    </svg>
-  );
-
-  const CheckIcon = () => (
-    <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-    </svg>
-  );
-
-  const ClockIcon = () => (
-    <svg className="w-4 h-4 text-amber-200" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-    </svg>
-  );
-
-  const MessageIcon = () => (
-    <svg className="w-12 h-12 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12zm-9-4h2v2h-2zm0-6h2v4h-2z"/>
-    </svg>
-  );
-
-  const LightningIcon = () => (
-    <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M7 2v11h3v9l7-12h-4l4-8z"/>
-    </svg>
-  );
-
-  const RobotIcon = () => (
-    <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M20 9V7c0-1.1-.9-2-2-2h-3c0-1.66-1.34-3-3-3S9 3.34 9 5H6c-1.1 0-2 .9-2 2v2c-1.66 0-3 1.34-3 3s1.34 3 3 3v4c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4c1.66 0 3-1.34 3-3s-1.34-3-3-3zM7.5 11.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5S9.83 13 9 13s-1.5-.67-1.5-1.5zM16 17H8v-2h8v2zm-1-4c-.83 0-1.5-.67-1.5-1.5S14.17 10 15 10s1.5.67 1.5 1.5S15.83 13 15 13z"/>
-    </svg>
-  );
-
-  const AnalyticsIcon = () => (
-    <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-5h2v5zm4 0h-2v-3h2v3zm0-5h-2v-2h2v2zm4 5h-2v-4h2v4zm0-6h-2V7h2v5z"/>
-    </svg>
-  );
-
-  const LockIcon = () => (
-    <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-    </svg>
-  );
-
-  const UserMaleIcon = () => (
-    <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-    </svg>
-  );
-
-  const UserFemaleIcon = () => (
-    <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 6c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2m0 10c2.7 0 5.8 1.29 6 2H6c.23-.72 3.31-2 6-2m0-12C9.79 4 8 5.79 8 8s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-    </svg>
-  );
-
-  const UserBusinessIcon = () => (
-    <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
-    </svg>
-  );
-
-  const HeartIcon = () => (
-    <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-    </svg>
-  );
-
-  const ArrowRightIcon = () => (
-    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
-    </svg>
-  );
-
-  const AddIcon = () => (
-    <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-    </svg>
-  );
-
-  const RemoveIcon = () => (
-    <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M19 13H5v-2h14v2z"/>
-    </svg>
-  );
-
-  const CloseIcon = () => (
-    <svg className="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-    </svg>
-  );
 
   const faqs = [
     {

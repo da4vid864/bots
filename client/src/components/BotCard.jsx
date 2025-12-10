@@ -1,6 +1,25 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import { useBots } from '../context/BotsContext';
 
+/**
+ * Component to display and manage a single bot instance.
+ * Allows enabling/disabling, editing the prompt, and deleting the bot.
+ * Displays connection status and QR code if pending authentication.
+ *
+ * @component
+ * @param {object} props - Component props
+ * @param {object} props.bot - The bot object containing details like id, name, status, etc.
+ * @param {number|string} props.bot.id - Unique identifier for the bot.
+ * @param {string} props.bot.name - Name of the bot.
+ * @param {string} props.bot.status - Current configured status ('enabled' or 'disabled').
+ * @param {string} [props.bot.runtimeStatus] - Current runtime status (e.g., 'CONNECTED', 'PENDING_QR').
+ * @param {string} [props.bot.qr] - Base64 encoded QR code image if status is 'PENDING_QR'.
+ * @param {string} [props.bot.prompt] - System prompt for the bot.
+ * @param {number|string} [props.bot.port] - Port number the bot is running on.
+ * @param {string} [props.bot.ownerEmail] - Email of the bot owner.
+ * @returns {JSX.Element} The rendered BotCard component.
+ */
 const BotCard = ({ bot }) => {
   const { enableBot, disableBot, deleteBot, editBot } = useBots();
   const [isEditing, setIsEditing] = useState(false);
@@ -162,6 +181,19 @@ const BotCard = ({ bot }) => {
       </div>
     </div>
   );
+};
+
+BotCard.propTypes = {
+  bot: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    name: PropTypes.string.isRequired,
+    status: PropTypes.string.isRequired,
+    runtimeStatus: PropTypes.string,
+    qr: PropTypes.string,
+    prompt: PropTypes.string,
+    port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    ownerEmail: PropTypes.string,
+  }).isRequired,
 };
 
 export default BotCard;

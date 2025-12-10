@@ -2,8 +2,19 @@
 const axios = require('axios');
 
 /**
- * Usa la IA para extraer información del mensaje del usuario
- * Retorna un objeto con los campos detectados
+ * @typedef {Object} ExtractedLeadInfo
+ * @property {string} [name] - Extracted full name of the lead.
+ * @property {string} [email] - Extracted email address of the lead.
+ * @property {string} [location] - Extracted location or city of the lead.
+ * @property {string} [phone] - Extracted phone number (different from WhatsApp number).
+ */
+
+/**
+ * Uses AI to extract contact information from the user's message.
+ * Returns an object with the detected fields.
+ * 
+ * @param {string} message - The message text from the user.
+ * @returns {Promise<ExtractedLeadInfo>} The extracted information object.
  */
 async function extractLeadInfo(message) {
     try {
@@ -59,7 +70,14 @@ NO incluyas explicaciones, solo el JSON.`;
 }
 
 /**
- * Genera una pregunta inteligente para solicitar información faltante
+ * Generates an intelligent follow-up question to request missing information.
+ * Prioritizes missing fields in the order: name, email, location.
+ * 
+ * @param {Object} lead - The lead object to analyze.
+ * @param {string} [lead.name] - The lead's name.
+ * @param {string} [lead.email] - The lead's email.
+ * @param {string} [lead.location] - The lead's location.
+ * @returns {Promise<string|null>} A follow-up question or null if all information is present.
  */
 async function generateFollowUpQuestion(lead) {
     const missingFields = [];
