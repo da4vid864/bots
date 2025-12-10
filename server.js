@@ -4,6 +4,7 @@ const express = require('express');
 const http = require('http');
 const sseController = require('./controllers/sseController');
 const path = require('path');
+const compression = require('compression');
 const cookieParser = require('cookie-parser');
 const passport = require('passport');
 const cookie = require('cookie');
@@ -33,6 +34,12 @@ require('./auth/passport');
 
 const app = express();
 const server = http.createServer(app);
+
+// Tweak server timeouts to be slightly higher than SSE heartbeat to avoid premature socket closes
+// keepAliveTimeout: how long to keep a socket alive when idle (ms)
+// headersTimeout: how long to wait for the entire headers (must be > keepAliveTimeout)
+server.keepAliveTimeout = 65000; // 65s
+server.headersTimeout = 70000; // 70s
 
 const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
 
@@ -72,6 +79,17 @@ app.use(cors({
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+}));
+
+// Compression: exclude SSE endpoints and requests that accept text/event-stream
+app.use(compression({
+    filter: (req, res) => {
+        try {
+            if (req.headers && req.headers.accept && req.headers.accept.includes('text/event-stream')) return false;
+            if (req.path && req.path.startsWith('/api/events')) return false;
+        } catch (e) {}
+        return compression.filter(req, res);
+    }
 }));
 
 // Serve static files from React build in production

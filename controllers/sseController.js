@@ -19,17 +19,32 @@ function eventsHandler(req, res) {
     res.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Connection': 'keep-alive',
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
         'Access-Control-Allow-Origin': process.env.FRONTEND_URL || 'http://localhost:3001',
         'Access-Control-Allow-Credentials': 'true'
     });
+
+    // Try to flush headers immediately (works in Node/Express)
+    if (typeof res.flushHeaders === 'function') {
+        try { res.flushHeaders(); } catch (e) { /* ignore */ }
+    }
+
+    // Ensure socket stays alive for SSE
+    if (req.socket) {
+        try {
+            req.socket.setKeepAlive(true);
+            req.socket.setTimeout(0);
+        } catch (e) {}
+    }
 
     // Create client object
     const clientId = generateClientId();
     const client = {
         id: clientId,
         response: res,
-        userEmail: req.user.email
+        userEmail: req.user.email,
+        heartbeat: null
     };
 
     // Add client to connected clients array
@@ -38,28 +53,47 @@ function eventsHandler(req, res) {
     console.log(`🔗 SSE Client connected: ${clientId} for user: ${req.user.email}`);
     console.log(`📊 Total connected SSE clients: ${connectedClients.length}`);
 
-    // Send initial connection event
-    res.write(`data: ${JSON.stringify({ type: 'CONNECTED', data: { clientId, message: 'SSE connection established' } })}\n\n`);
+    // Send initial connection event and a retry suggestion
+    try {
+        res.write(`retry: 10000\n\n`);
+        res.write(`data: ${JSON.stringify({ type: 'CONNECTED', data: { clientId, message: 'SSE connection established' } })}\n\n`);
+    } catch (e) {
+        console.error('❌ Error writing initial SSE data:', e);
+    }
+
+    // Heartbeat: send a comment every 25s to keep connection alive
+    const hb = setInterval(() => {
+        try {
+            // Comment line is ignored by browsers but keeps proxies from closing
+            client.response.write(`: heartbeat ${Date.now()}\n\n`);
+        } catch (error) {
+            console.error(`❌ SSE heartbeat error for client ${clientId}:`, error);
+        }
+    }, 25000);
+
+    client.heartbeat = hb;
 
     // Handle client disconnect
     req.on('close', () => {
         console.log(`🔌 SSE Client disconnected: ${clientId}`);
-        
+        clearInterval(hb);
+
         // Remove client from connected clients
-        const index = connectedClients.findIndex(client => client.id === clientId);
+        const index = connectedClients.findIndex(c => c.id === clientId);
         if (index !== -1) {
             connectedClients.splice(index, 1);
         }
-        
+
         console.log(`📊 Remaining SSE clients: ${connectedClients.length}`);
     });
 
     // Handle client errors
     req.on('error', (error) => {
         console.error(`❌ SSE Client error (${clientId}):`, error);
-        
+        clearInterval(hb);
+
         // Remove client from connected clients
-        const index = connectedClients.findIndex(client => client.id === clientId);
+        const index = connectedClients.findIndex(c => c.id === clientId);
         if (index !== -1) {
             connectedClients.splice(index, 1);
         }
