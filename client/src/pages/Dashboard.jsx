@@ -8,22 +8,6 @@ import ScoringRulesManager from '../components/ScoringRulesManager';
 import ProductManager from '../components/ProductManager';
 import axios from 'axios';
 
-// Material Design Icons
-import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import WarningIcon from '@mui/icons-material/Warning';
-import InfoIcon from '@mui/icons-material/Info';
-import ErrorIcon from '@mui/icons-material/Error';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
-import FlashOnIcon from '@mui/icons-material/FlashOn';
-import DiamondIcon from '@mui/icons-material/Diamond';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import StarsIcon from '@mui/icons-material/Stars';
-import InventoryIcon from '@mui/icons-material/Inventory';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-
 const Dashboard = () => {
   const { bots, createBot, sseConnected } = useBots();
   const { user } = useAuth();
@@ -42,6 +26,91 @@ const Dashboard = () => {
     id: '',
     prompt: ''
   });
+
+  // Iconos SVG embebidos
+  const AddIcon = () => (
+    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+    </svg>
+  );
+
+  const CloseIcon = () => (
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+    </svg>
+  );
+
+  const CheckCircleIcon = () => (
+    <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+    </svg>
+  );
+
+  const WarningIcon = () => (
+    <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+    </svg>
+  );
+
+  const InfoIcon = () => (
+    <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+    </svg>
+  );
+
+  const ErrorIcon = () => (
+    <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+    </svg>
+  );
+
+  const SmartToyIcon = () => (
+    <svg className="w-6 h-6 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M20 9V7c0-1.1-.9-2-2-2h-3c0-1.66-1.34-3-3-3S9 3.34 9 5H6c-1.1 0-2 .9-2 2v2c-1.66 0-3 1.34-3 3s1.34 3 3 3v4c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4c1.66 0 3-1.34 3-3s-1.34-3-3-3zM7.5 11.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5S9.83 13 9 13s-1.5-.67-1.5-1.5zM16 17H8v-2h8v2zm-1-4c-.83 0-1.5-.67-1.5-1.5S14.17 10 15 10s1.5.67 1.5 1.5S15.83 13 15 13z"/>
+    </svg>
+  );
+
+  const FlashOnIcon = () => (
+    <svg className="w-6 h-6 text-green-400" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M7 2v11h3v9l7-12h-4l4-8z"/>
+    </svg>
+  );
+
+  const DiamondIcon = () => (
+    <svg className="w-6 h-6 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 2L5 12l7 10 7-10z"/>
+    </svg>
+  );
+
+  const ExpandMoreIcon = () => (
+    <svg className="w-5 h-5 text-slate-400" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/>
+    </svg>
+  );
+
+  const ExpandLessIcon = () => (
+    <svg className="w-5 h-5 text-slate-400" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>
+    </svg>
+  );
+
+  const StarsIcon = () => (
+    <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L12 15.45 7.77 18l1.12-4.81-3.73-3.23 4.92-.42L12 5l1.92 4.53 4.92.42-3.73 3.23L16.23 18z"/>
+    </svg>
+  );
+
+  const InventoryIcon = () => (
+    <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z"/>
+    </svg>
+  );
+
+  const AutoAwesomeIcon = () => (
+    <svg className="w-10 h-10 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/>
+    </svg>
+  );
 
   // Obtener información de suscripción
   useEffect(() => {
@@ -186,9 +255,9 @@ const Dashboard = () => {
         }`}>
           <div className="flex items-start">
             <div className="flex-shrink-0 pt-0.5">
-              {notification.type === 'success' && <CheckCircleIcon className="w-5 h-5 text-green-400" />}
-              {notification.type === 'error' && <ErrorIcon className="w-5 h-5 text-red-400" />}
-              {notification.type === 'info' && <InfoIcon className="w-5 h-5 text-blue-400" />}
+              {notification.type === 'success' && <CheckCircleIcon />}
+              {notification.type === 'error' && <ErrorIcon />}
+              {notification.type === 'info' && <InfoIcon />}
             </div>
             <div className="ml-3 flex-1">
               <h3 className={`text-sm font-semibold ${
@@ -208,7 +277,7 @@ const Dashboard = () => {
               onClick={() => setNotification(null)}
               className="ml-4 flex-shrink-0 text-slate-400 hover:text-slate-300"
             >
-              <CloseIcon className="w-4 h-4" />
+              <CloseIcon />
             </button>
           </div>
         </div>
@@ -219,7 +288,7 @@ const Dashboard = () => {
         <div className="mb-6 rounded-xl bg-gradient-to-r from-amber-900/30 to-amber-800/20 border border-amber-500/30 p-4">
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <WarningIcon className="w-5 h-5 text-amber-400" />
+              <WarningIcon />
             </div>
             <div className="ml-3 flex-1">
               <h3 className="text-sm font-semibold text-amber-100">
@@ -267,8 +336,8 @@ const Dashboard = () => {
               onClick={() => setShowCreateForm(true)}
               className="group inline-flex items-center px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-blue-500/20"
             >
-              <AddIcon className="w-5 h-5 mr-2" />
-              {t('dashboard.new_bot_button')}
+              <AddIcon />
+              <span className="ml-2">{t('dashboard.new_bot_button')}</span>
             </button>
           </div>
         </div>
@@ -283,7 +352,7 @@ const Dashboard = () => {
                 <p className="text-3xl font-black text-white">{totalBots}</p>
               </div>
               <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <SmartToyIcon className="w-6 h-6 text-blue-400" />
+                <SmartToyIcon />
               </div>
             </div>
             <div className="mt-4">
@@ -307,7 +376,7 @@ const Dashboard = () => {
                 <p className="text-3xl font-black text-green-400">{connectedBots}</p>
               </div>
               <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <FlashOnIcon className="w-6 h-6 text-green-400" />
+                <FlashOnIcon />
               </div>
             </div>
             <div className="mt-4">
@@ -351,7 +420,7 @@ const Dashboard = () => {
                 </Link>
               </div>
               <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <DiamondIcon className="w-6 h-6 text-purple-400" />
+                <DiamondIcon />
               </div>
             </div>
           </div>
@@ -371,7 +440,7 @@ const Dashboard = () => {
                 onClick={() => setShowCreateForm(false)}
                 className="text-slate-400 hover:text-white transition-colors"
               >
-                <CloseIcon className="w-5 h-5" />
+                <CloseIcon />
               </button>
             </div>
             
@@ -452,8 +521,8 @@ const Dashboard = () => {
             <p className="text-slate-400 text-sm">Gestiona todos tus bots de WhatsApp en un solo lugar</p>
           </div>
           <div className="inline-flex items-center px-4 py-2 rounded-full bg-slate-800/50 text-slate-300">
-            <SmartToyIcon className="w-4 h-4 mr-2" />
-            <span className="text-sm font-medium">
+            <SmartToyIcon />
+            <span className="ml-2 text-sm font-medium">
               {totalBots === 1 ? t('dashboard.bots_count', { count: totalBots }) : t('dashboard.bots_count_plural', { count: totalBots })}
             </span>
           </div>
@@ -462,7 +531,7 @@ const Dashboard = () => {
         {totalBots === 0 ? (
           <div className="bg-gradient-to-br from-slate-900/50 to-slate-950/50 rounded-2xl border border-slate-800 border-dashed p-12 text-center">
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500/10 to-blue-600/10 flex items-center justify-center">
-              <AutoAwesomeIcon className="w-10 h-10 text-blue-400" />
+              <AutoAwesomeIcon />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">{t('dashboard.empty_state.title')}</h3>
             <p className="text-slate-400 mb-8 max-w-md mx-auto">
@@ -472,8 +541,8 @@ const Dashboard = () => {
               onClick={() => setShowCreateForm(true)}
               className="group inline-flex items-center px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-blue-500/20"
             >
-              <AddIcon className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" />
-              {t('dashboard.empty_state.button')}
+              <AddIcon />
+              <span className="ml-2">{t('dashboard.empty_state.button')}</span>
             </button>
           </div>
         ) : (
@@ -492,15 +561,15 @@ const Dashboard = () => {
                         className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-800/30 transition-colors"
                       >
                         <div className="flex items-center space-x-3">
-                          <StarsIcon className="w-5 h-5 text-blue-400" />
+                          <StarsIcon />
                           <span className="font-medium text-slate-200">
                             {t('dashboard.manage_scoring', 'Scoring Rules')}
                           </span>
                         </div>
                         {scoringExpanded[bot.id] ? (
-                          <ExpandLessIcon className="w-5 h-5 text-slate-400" />
+                          <ExpandLessIcon />
                         ) : (
-                          <ExpandMoreIcon className="w-5 h-5 text-slate-400" />
+                          <ExpandMoreIcon />
                         )}
                       </button>
                       {scoringExpanded[bot.id] && (
@@ -517,15 +586,15 @@ const Dashboard = () => {
                         className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-800/30 transition-colors"
                       >
                         <div className="flex items-center space-x-3">
-                          <InventoryIcon className="w-5 h-5 text-blue-400" />
+                          <InventoryIcon />
                           <span className="font-medium text-slate-200">
                             {t('dashboard.manage_products', 'Products')}
                           </span>
                         </div>
                         {productsExpanded[bot.id] ? (
-                          <ExpandLessIcon className="w-5 h-5 text-slate-400" />
+                          <ExpandLessIcon />
                         ) : (
-                          <ExpandMoreIcon className="w-5 h-5 text-slate-400" />
+                          <ExpandMoreIcon />
                         )}
                       </button>
                       {productsExpanded[bot.id] && (
