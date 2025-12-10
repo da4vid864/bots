@@ -6,6 +6,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ScoringRulesManager from '../components/ScoringRulesManager';
 import ProductManager from '../components/ProductManager';
+import axios from 'axios';
 
 const Dashboard = () => {
   const { bots, createBot, sseConnected } = useBots();
@@ -15,6 +16,8 @@ const Dashboard = () => {
   const [createLoading, setCreateLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const [notification, setNotification] = useState(null);
+  const [subscription, setSubscription] = useState(null);
+  const [trialWarning, setTrialWarning] = useState(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -22,17 +25,50 @@ const Dashboard = () => {
     prompt: ''
   });
 
+  // Obtener información de suscripción
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      try {
+        const response = await axios.get('/api/subs/status');
+        if (response.data.success && response.data.subscription) {
+          setSubscription(response.data.subscription);
+
+          // Mostrar advertencia si el trial está por expirar (menos de 3 días)
+          if (response.data.subscription.status === 'trial' && response.data.subscription.trial_days_left <= 3) {
+            setTrialWarning({
+              daysLeft: response.data.subscription.trial_days_left,
+              expiresAt: response.data.subscription.trial_ends_at
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching subscription:', error);
+      }
+    };
+
+    if (user) {
+      fetchSubscription();
+    }
+  }, [user]);
+
   // Efecto para manejar notificaciones de pago
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
+    const trialParam = searchParams.get('trial');
     
-    if (paymentStatus === 'success') {
+    if (trialParam === 'started') {
+      setNotification({
+        type: 'success',
+        title: '🎉 ¡Trial Activado!',
+        message: 'Tu prueba de 14 días sin tarjeta ha comenzado. Acceso ilimitado a todos los bots.'
+      });
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (paymentStatus === 'success') {
       setNotification({
         type: 'success',
         title: t('dashboard.notifications.subscription_success_title'),
         message: t('dashboard.notifications.subscription_success_message')
       });
-      // Limpiar URL param opcionalmente
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (paymentStatus === 'cancelled') {
       setNotification({
@@ -49,7 +85,7 @@ const Dashboard = () => {
     }
     
     // Auto-ocultar después de 5 segundos
-    if (paymentStatus) {
+    if (paymentStatus || trialParam) {
         const timer = setTimeout(() => setNotification(null), 5000);
         return () => clearTimeout(timer);
     }
@@ -131,6 +167,33 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* Trial Warning Banner */}
+      {trialWarning && (
+        <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <span className="text-yellow-600 text-lg">⏰</span>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-yellow-800">
+                Tu prueba vence pronto
+              </h3>
+              <p className="mt-1 text-sm text-yellow-700">
+                Te quedan <strong>{trialWarning.daysLeft}</strong> día{trialWarning.daysLeft !== 1 ? 's' : ''} para disfrutar del acceso ilimitado.
+              </p>
+              <div className="mt-3">
+                <Link
+                  to="/subs/purchase/pro"
+                  className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition-colors"
+                >
+                  Actualizar a Pro Ahora
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
@@ -189,9 +252,13 @@ const Dashboard = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">{t('dashboard.stats.current_plan')}</p>
                 <p className="text-3xl font-bold text-gray-800">
-                  {/* Aquí podrías conectar el estado real de la suscripción */}
-                  PRO
+                  {subscription ? (subscription.status === 'trial' ? 'PRO TRIAL' : subscription.plan.toUpperCase()) : 'CARGANDO...'}
                 </p>
+                {subscription?.status === 'trial' && (
+                  <div className="text-sm text-orange-600 font-semibold mt-1">
+                    {subscription?.trial_days_left} días restantes
+                  </div>
+                )}
                 <Link to="/pricing" className="text-sm text-blue-600 hover:text-blue-800 mt-1 inline-block">
                   {t('dashboard.stats.view_plans')}
                 </Link>

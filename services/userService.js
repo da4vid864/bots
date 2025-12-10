@@ -20,6 +20,24 @@ async function addTeamMember(email, role, addedBy) {
 }
 
 /**
+ * Crear un nuevo usuario (Self-Registration)
+ */
+async function createUser(email, role = 'vendor', addedBy = 'system') {
+    try {
+        const result = await pool.query(
+            'INSERT INTO users (email, role, added_by) VALUES ($1, $2, $3) RETURNING *',
+            [email.toLowerCase().trim(), role, addedBy]
+        );
+        return result.rows[0];
+    } catch (error) {
+        if (error.code === '23505') { // Unique violation
+            return getUserByEmail(email);
+        }
+        throw error;
+    }
+}
+
+/**
  * Obtener todos los miembros del equipo agregados por un admin
  */
 async function getTeamMembers(adminEmail) {
@@ -111,5 +129,6 @@ module.exports = {
     updateLastLogin,
     toggleUserStatus,
     removeTeamMember,
-    isAdmin
+    isAdmin,
+    createUser
 };

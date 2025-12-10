@@ -2,6 +2,7 @@
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = process.env;
 const userService = require('../services/userService');
+const subscriptionService = require('../services/subscriptionService');
 
 const handleGoogleCallback = async (req, res) => {
   try {
@@ -15,26 +16,21 @@ const handleGoogleCallback = async (req, res) => {
       role = 'admin';
     } else {
       // Verificar existencia en base de datos o crear si es nuevo (auto-registro básico)
-      // Nota: Aquí podrías decidir si permites registro abierto o no.
-      // Asumiremos que para compras, permitimos el registro como 'vendor' o un rol base.
       let dbUser = await userService.getUserByEmail(email);
       
       if (!dbUser) {
-          // Si es un usuario nuevo entrando por flujo de compra, lo creamos
-          // O si permites registro libre. Aquí asumiremos lógica existente de userService.
-          // Si userService.findOrCreateUser existe, úsalo. Si no, usamos la lógica actual.
-          console.log(`Nuevo usuario detectado: ${email}`);
+          console.log(`Nuevo usuario detectado: ${email}. Creando cuenta Free.`);
+          // Crear usuario con rol 'vendor' (o 'user') por defecto
+          dbUser = await userService.createUser(email, 'vendor', 'system');
+          // Crear suscripción Free por defecto con límites permanentes
+          // Free Tier: 1 bot, 100 leads/mes, sin tarjeta requerida
+          await subscriptionService.getOrCreateSubscription(email);
       }
 
       if (dbUser && dbUser.is_active) {
         role = dbUser.role;
         addedBy = dbUser.added_by;
         await userService.updateLastLogin(email);
-      } else if (!dbUser) {
-          // Opción: Permitir acceso básico para terminar la compra
-          // role = 'prospect'; 
-          // Por ahora mantenemos la lógica restrictiva si así está diseñado tu sistema
-          // Pero para vender, generalmente quieres dejar entrar al usuario.
       }
     }
     
@@ -57,13 +53,26 @@ const handleGoogleCallback = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
   
-    // === 4. LÓGICA DE REDIRECCIÓN DE PAGO ===
+    // === 4. LÓGICA DE REDIRECCIÓN DE PAGO / TRIAL ===
     
-    // Verificamos si hay intención de compra
+    // Verificamos si hay intención de compra (Trial)
     if (req.cookies.redirect_to_checkout === 'true') {
-      console.log(`💰 Usuario ${email} tiene cookie de compra. Redirigiendo a Stripe...`);
+      console.log(`💰 Usuario ${email} tiene cookie de compra. Iniciando 14-día trial sin tarjeta...`);
       res.clearCookie('redirect_to_checkout');
-      return res.redirect('/subs/purchase/pro');
+      
+      // Activar Trial automáticamente (14 días sin tarjeta requerida)
+      try {
+          const trialResult = await subscriptionService.activateProTrial(email);
+          console.log(`✅ Pro Trial activado para ${email}. Vence el ${trialResult.trial_ends_at}`);
+          // Redirigir al dashboard con mensaje de éxito
+          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+          const isProduction = process.env.NODE_ENV === 'production';
+          const target = isProduction ? '/dashboard?trial=started' : `${frontendUrl}/dashboard?trial=started`;
+          return res.redirect(target);
+      } catch (err) {
+          console.error("❌ Error activando trial automático:", err);
+          // Fallback al dashboard normal si falla
+      }
     }
   
     // === 5. REDIRECCIÓN NORMAL ===

@@ -10,6 +10,7 @@ const Login = () => {
   const [openFaq, setOpenFaq] = useState(null);
 
   const handlePurchase = () => {
+    // Iniciar flujo de Trial (que pasa por auth si es necesario)
     window.location.href = '/subs/purchase/pro';
   };
 

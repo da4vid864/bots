@@ -121,10 +121,18 @@ async function initializeDatabase() {
                 stripe_customer_id TEXT,
                 stripe_subscription_id TEXT,
                 current_period_end TIMESTAMP,
+                trial_ends_at TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+        
+        // Migración para agregar trial_ends_at si no existe
+        await pool.query(`
+            ALTER TABLE subscriptions
+            ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMP;
+        `);
+        
         console.log('✅ Tabla subscriptions verificada (NUEVA)');
 
         // 9. Tabla de reglas de scoring
