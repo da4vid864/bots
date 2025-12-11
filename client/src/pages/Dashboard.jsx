@@ -7,6 +7,11 @@ import { useTranslation } from 'react-i18next';
 import ScoringRulesManager from '../components/ScoringRulesManager';
 import ProductManager from '../components/ProductManager';
 import axios from 'axios';
+import { 
+    AddIcon, CloseIcon, CheckCircleIcon, WarningIcon, InfoIcon, ErrorIcon,
+    SmartToyIcon, FlashOnIcon, DiamondIcon, ExpandMoreIcon, ExpandLessIcon,
+    StarsIcon, InventoryIcon, AutoAwesomeIcon
+} from '../components/Icons';
 
 // Iconos SVG embebidos (compatibles con el login)
 const AddIcon = () => (
@@ -168,17 +173,15 @@ const Dashboard = () => {
         console.error('Error fetching subscription:', error);
       }
     };
-
-    if (user) {
-      fetchSubscription();
-    }
+    if (user) fetchSubscription();
   }, [user]);
 
   // Efecto para manejar notificaciones
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
     const trialParam = searchParams.get('trial');
-    
+    let notif = null;
+
     if (trialParam === 'started') {
       setNotification({
         type: 'success',
@@ -206,34 +209,18 @@ const Dashboard = () => {
   const handleCreateBot = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.id || !formData.prompt) {
-      setNotification({
-        type: 'error',
-        title: 'Error',
-        message: t('dashboard.create_bot.validation_error'),
-        duration: 3000
-      });
+      setNotification({ type: 'error', title: 'Error', message: t('dashboard.create_bot.validation_error') });
       return;
     }
-
     setCreateLoading(true);
     try {
       await createBot(formData);
       setFormData({ name: '', id: '', prompt: '' });
       setShowCreateForm(false);
-      setNotification({
-        type: 'success',
-        title: '¡Éxito!',
-        message: 'Bot creado correctamente',
-        duration: 3000
-      });
+      setNotification({ type: 'success', title: 'Success!', message: 'Bot created successfully.' });
     } catch (error) {
-      console.error('Error creando bot:', error);
-      setNotification({
-        type: 'error',
-        title: 'Error',
-        message: t('dashboard.create_bot.creation_error'),
-        duration: 3000
-      });
+      console.error('Error creating bot:', error);
+      setNotification({ type: 'error', title: 'Error', message: t('dashboard.create_bot.creation_error') });
     } finally {
       setCreateLoading(false);
     }
@@ -241,24 +228,12 @@ const Dashboard = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const toggleScoringExpanded = (botId) => {
-    setScoringExpanded(prev => ({
-      ...prev,
-      [botId]: !prev[botId]
-    }));
-  };
-
-  const toggleProductsExpanded = (botId) => {
-    setProductsExpanded(prev => ({
-      ...prev,
-      [botId]: !prev[botId]
-    }));
+  const toggleAccordion = (botId, type) => {
+    const key = `${botId}-${type}`;
+    setExpandedAccordions(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const connectedBots = bots.filter(bot => bot.runtimeStatus === 'CONNECTED').length;
