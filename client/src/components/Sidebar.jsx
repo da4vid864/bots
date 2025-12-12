@@ -1,104 +1,42 @@
-import React from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useTranslation } from 'react-i18next';
-import LanguageSwitcher from './LanguageSwitcher';
-import logo from '../assets/logo.png';
+{/* MÉTRICAS DESTACADAS */}
+<section className="mb-8 sm:mb-12">
+  <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">
+    Tu desempeño en tiempo real 📊
+  </h2>
 
-const Sidebar = ({ activePage, onPageChange }) => {
-  const { user, logout } = useAuth();
-  const { t } = useTranslation();
-
-  const navigationItems = [
-    ...(user?.role === 'admin'
-      ? [
-          { id: 'dashboard', label: t('sidebar.dashboard'), icon: '📊' },
-          { id: 'bots', label: t('sidebar.bot_management'), icon: '🤖' },
-        ]
-      : []),
-    ...(user?.role === 'vendor' || user?.role === 'admin'
-      ? [{ id: 'sales', label: t('sidebar.sales_panel'), icon: '💬' }]
-      : []),
-  ];
-
-  return (
-    <aside className="hidden sm:flex flex-col w-64 bg-slate-950 border-r border-slate-800 text-slate-100 h-screen">
-      {/* HEADER */}
-      <div className="px-4 pt-4 pb-3 border-b border-slate-800">
-        <div className="flex items-center space-x-2 mb-3">
-          <img src={logo} alt="BotInteligente" className="h-8 w-auto" />
-          <div className="leading-tight">
-            <p className="font-bold text-base text-white">WhatsApp</p>
-            <p className="font-black text-lg text-white tracking-tight">
-              Bot Manager
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-1 text-xs text-slate-400">
-          <p>
-            {t('sidebar.welcome', { name: user?.name || user?.email }) || user?.email}
+  {/* Solo tarjeta de Leads Totales */}
+  <div className="grid grid-cols-1 max-w-md gap-4 sm:gap-6 mb-4 sm:mb-8">
+    <div className="group p-4 sm:p-6 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900/50 to-slate-950 hover:border-blue-500/30 transition-all duration-300 hover:scale-[1.02] sm:hover:scale-105 cursor-pointer">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs sm:text-sm font-medium text-slate-400 mb-1">
+            Leads Totales
           </p>
-          <p className="mt-0.5 text-[11px] uppercase tracking-wide text-slate-500">
-            {user?.role}
+          <p className="text-2xl sm:text-3xl font-black text-white">
+            {metrics.totalLeads.toLocaleString()}
           </p>
         </div>
-
-        <div className="mt-3">
-          <LanguageSwitcher />
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+          <UsersIcon />
         </div>
       </div>
-
-      {/* NAVIGATION */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto">
-        <p className="px-2 mb-2 text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-          {t('sidebar.navigation') || 'Navigation'}
+      <div className="mt-3 sm:mt-4">
+        <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
+            style={{ width: '65%' }}
+          />
+        </div>
+        <p className="text-[11px] sm:text-xs text-slate-500 mt-2">
+          +12% desde el mes anterior
         </p>
-        <ul className="space-y-2">
-          {navigationItems.map((item) => {
-            const isActive = activePage === item.id;
-            return (
-              <li key={item.id}>
-                <button
-                  onClick={() => onPageChange(item.id)}
-                  className={[
-                    'w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
-                    isActive
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20'
-                      : 'bg-slate-900/40 text-slate-300 hover:bg-slate-800 hover:text-white border border-transparent hover:border-slate-700',
-                  ].join(' ')}
-                >
-                  <span className="text-lg">{item.icon}</span>
-                  <span className="truncate">{item.label}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-
-      {/* FOOTER */}
-      <div className="px-4 py-3 border-t border-slate-800">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-2 text-xs">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-            </span>
-            <span className="text-slate-400">
-              {t('sidebar.status_online') || 'Online'}
-            </span>
-          </div>
-        </div>
-        <button
-          onClick={logout}
-          className="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 bg-slate-900 hover:bg-slate-800 hover:text-white transition-colors space-x-2"
-        >
-          <span>🚪</span>
-          <span>{t('sidebar.logout')}</span>
-        </button>
       </div>
-    </aside>
-  );
-};
+    </div>
+  </div>
 
-export default Sidebar;
+  <div className="text-center">
+    <button className="inline-flex items-center px-5 py-2.5 rounded-lg border border-slate-700 text-slate-300 font-medium hover:bg-slate-800 transition-colors text-sm">
+      Ver Reporte Completo →
+    </button>
+  </div>
+</section>
