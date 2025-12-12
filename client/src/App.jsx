@@ -112,23 +112,25 @@ const DashboardLayout = () => {
     const routes = {
       sales: '/sales',
       bots: '/dashboard',
-      dashboard: '/dashboard'
+      dashboard: '/dashboard',
     };
     navigate(routes[pageId] || '/dashboard');
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <Sidebar 
-        activePage={getActivePage(location.pathname)} 
-        onPageChange={handlePageChange} 
+    <div className="flex h-screen bg-slate-950 overflow-hidden">
+      <Sidebar
+        activePage={getActivePage(location.pathname)}
+        onPageChange={handlePageChange}
       />
-      <main className="flex-1 overflow-y-auto relative focus:outline-none" id="main-content" tabIndex="-1">
-        <div className="max-w-7xl mx-auto p-4 md:p-8">
-          <Suspense fallback={<LoadingScreen />}>
-            <Outlet />
-          </Suspense>
-        </div>
+      <main
+        className="flex-1 overflow-y-auto relative focus:outline-none bg-slate-950"
+        id="main-content"
+        tabIndex="-1"
+      >
+        <Suspense fallback={<LoadingScreen />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );
