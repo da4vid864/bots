@@ -1,0 +1,3 @@
+ALTER TABLE bot_images
+  ADD COLUMN IF NOT EXISTS storage_key TEXT,
+  ADD COLUMN IF NOT EXISTS url TEXT;

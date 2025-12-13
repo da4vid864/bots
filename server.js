@@ -22,6 +22,7 @@ const botImageService = require('./services/botImageService');
 const baileysManager = require('./services/baileysManager');
 const scoringService = require('./services/scoringService');
 const productService = require('./services/productService');
+const storageService = require('./services/storageService');
 
 const { startSchedulerExecutor } = require('./services/schedulerExecutor');
 const authRoutes = require('./routes/authRoutes');
@@ -47,20 +48,7 @@ const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
 app.set('trust proxy', 1);
 
 // === CONFIGURACIÓN DE MULTER ===
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const dir = path.join(__dirname, 'public', 'uploads');
-        if (!fs.existsSync(dir)){
-            fs.mkdirSync(dir, { recursive: true });
-        }
-        cb(null, dir);
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-const upload = multer({ storage: storage });
+const upload = multer({ storage: multer.memoryStorage() });
 
 // =================================================================
 // === 1. WEBHOOK DE STRIPE (Debe ir ANTES de express.json) ===
@@ -451,42 +439,67 @@ app.delete('/api/delete-bot/:id', requireAdmin, async (req, res) => {
 
 // === RUTAS IMÁGENES ===
 app.post('/api/bot/:botId/images', requireAdmin, upload.single('image'), async (req, res) => {
-    const { botId } = req.params;
-    const { keyword } = req.body;
-    const file = req.file;
+  const { botId } = req.params;
+  const { keyword } = req.body;
+  const file = req.file;
 
-    if (!file || !keyword) return res.status(400).json({ message: 'Faltan datos' });
+  if (!file || !keyword) {
+    return res.status(400).json({ message: 'Faltan datos' });
+  }
 
-    try {
-        const image = await botImageService.addImage(botId, file.filename, file.originalname, keyword);
-        // Refresh images in baileysManager
-        baileysManager.refreshBotImages(botId);
-        res.json(image);
-    } catch (error) {
-        res.status(500).json({ message: 'Error guardando imagen' });
-    }
+  try {
+    // Subir a Cloudflare R2
+    const { key, url } = await storageService.uploadImage(
+      file.buffer,
+      file.originalname,
+      file.mimetype
+    );
+
+    // Guardar en BD
+    const image = await botImageService.addImage(
+      botId,
+      key,              // storageKey
+      file.originalname,
+      keyword,
+      url
+    );
+
+    // Actualizar la cache de imágenes del bot
+    baileysManager.refreshBotImages(botId);
+
+    res.json(image);
+  } catch (error) {
+    console.error('Error guardando imagen:', error);
+    res.status(500).json({ message: 'Error guardando imagen' });
+  }
 });
 
+
 app.get('/api/bot/:botId/images', requireAdmin, async (req, res) => {
-    try {
-        const images = await botImageService.getImagesByBot(req.params.botId);
-        res.json(images);
-    } catch (error) { res.status(500).json({ message: 'Error' }); }
+  try {
+    const images = await botImageService.getImagesByBot(req.params.botId);
+    res.json(images);
+  } catch (error) {
+    res.status(500).json({ message: 'Error' });
+  }
 });
 
 app.delete('/api/images/:imageId', requireAdmin, async (req, res) => {
-    try {
-        const deleted = await botImageService.deleteImage(req.params.imageId);
-        if (deleted) {
-            const p = path.join(__dirname, 'public', 'uploads', deleted.filename);
-            if (fs.existsSync(p)) fs.unlinkSync(p);
-            
-            // Refresh images in baileysManager
-            baileysManager.refreshBotImages(deleted.bot_id);
-        }
-        res.json({ message: 'Eliminada' });
-    } catch (error) { res.status(500).json({ message: 'Error' }); }
+  try {
+    const deleted = await botImageService.deleteImage(req.params.imageId);
+
+    if (deleted && deleted.storage_key) {
+      await storageService.deleteImage(deleted.storage_key);
+      baileysManager.refreshBotImages(deleted.bot_id);
+    }
+
+    res.json({ message: 'Eliminada' });
+  } catch (error) {
+    console.error('Error eliminando imagen:', error);
+    res.status(500).json({ message: 'Error' });
+  }
 });
+
 
 // === APIs TEAM, FEATURES, SCHEDULES ===
 
