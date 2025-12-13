@@ -1,187 +1,220 @@
 // controllers/sseController.js
 // SSE Controller for WhatsApp Bot Manager
 
-// Array to manage connected clients with id, HTTP response, and userEmail
-const connectedClients = [];
-
 /**
- * Generate a unique client ID
+ * Estructuras:
+ * - clientsById: Map<clientId, client>
+ * - clientsByUser: Map<userEmail, Set<clientId>>
  */
+const clientsById = new Map();
+const clientsByUser = new Map();
+
 function generateClientId() {
-    return `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `client_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+}
+
+function addClient(client) {
+  clientsById.set(client.id, client);
+
+  const email = client.userEmail;
+  if (!clientsByUser.has(email)) clientsByUser.set(email, new Set());
+  clientsByUser.get(email).add(client.id);
+}
+
+function removeClient(clientId) {
+  const client = clientsById.get(clientId);
+  if (!client) return;
+
+  // limpiar heartbeat
+  if (client.heartbeat) {
+    try {
+      clearInterval(client.heartbeat);
+    } catch (e) {}
+  }
+
+  // eliminar de mapa principal
+  clientsById.delete(clientId);
+
+  // eliminar del índice por usuario
+  const email = client.userEmail;
+  const set = clientsByUser.get(email);
+  if (set) {
+    set.delete(clientId);
+    if (set.size === 0) clientsByUser.delete(email);
+  }
+}
+
+function safeWrite(res, payload) {
+  try {
+    res.write(payload);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 /**
  * Handler for GET /api/events that establishes an SSE connection
  */
 function eventsHandler(req, res) {
-    // Set SSE headers
-    res.writeHead(200, {
-        'Content-Type': 'text/event-stream',
-        'Connection': 'keep-alive',
-        'Cache-Control': 'no-cache, no-transform',
-        'X-Accel-Buffering': 'no',
-        'Access-Control-Allow-Origin': process.env.FRONTEND_URL || 'http://localhost:3001',
-        'Access-Control-Allow-Credentials': 'true'
-    });
+  // Nota: /api/events normalmente es same-origin. Si es cross-origin, necesitas CORS correcto.
+  const origin = process.env.FRONTEND_URL || 'http://localhost:3001';
 
-    // Try to flush headers immediately (works in Node/Express)
-    if (typeof res.flushHeaders === 'function') {
-        try { res.flushHeaders(); } catch (e) { /* ignore */ }
-    }
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Connection': 'keep-alive',
+    'Cache-Control': 'no-cache, no-transform',
+    'X-Accel-Buffering': 'no',
 
-    // Ensure socket stays alive for SSE
-    if (req.socket) {
-        try {
-            req.socket.setKeepAlive(true);
-            req.socket.setTimeout(0);
-        } catch (e) {}
-    }
+    // CORS (solo si estás sirviendo frontend en otro origen)
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true',
+  });
 
-    // Create client object
-    const clientId = generateClientId();
-    const client = {
-        id: clientId,
-        response: res,
-        userEmail: req.user.email,
-        heartbeat: null
-    };
-
-    // Add client to connected clients array
-    connectedClients.push(client);
-
-    console.log(`🔗 SSE Client connected: ${clientId} for user: ${req.user.email}`);
-    console.log(`📊 Total connected SSE clients: ${connectedClients.length}`);
-
-    // Send initial connection event and a retry suggestion
+  // flush headers
+  if (typeof res.flushHeaders === 'function') {
     try {
-        res.write(`retry: 10000\n\n`);
-        res.write(`data: ${JSON.stringify({ type: 'CONNECTED', data: { clientId, message: 'SSE connection established' } })}\n\n`);
-    } catch (e) {
-        console.error('❌ Error writing initial SSE data:', e);
+      res.flushHeaders();
+    } catch (e) {}
+  }
+
+  // keepalive socket
+  if (req.socket) {
+    try {
+      req.socket.setKeepAlive(true);
+      req.socket.setTimeout(0);
+    } catch (e) {}
+  }
+
+  const clientId = generateClientId();
+  const userEmail = req.user?.email;
+
+  const client = {
+    id: clientId,
+    response: res,
+    userEmail,
+    heartbeat: null,
+  };
+
+  addClient(client);
+
+  console.log(`🔗 SSE Client connected: ${clientId} for user: ${userEmail}`);
+  console.log(`📊 Total connected SSE clients: ${clientsById.size}`);
+
+  // reconexión sugerida
+  safeWrite(res, `retry: 10000\n\n`);
+
+  // evento inicial
+  safeWrite(
+    res,
+    `data: ${JSON.stringify({
+      type: 'CONNECTED',
+      data: { clientId, message: 'SSE connection established' },
+    })}\n\n`
+  );
+
+  // Heartbeat: comentario cada 25s para evitar cierre por proxies
+  client.heartbeat = setInterval(() => {
+    const ok = safeWrite(res, `: heartbeat ${Date.now()}\n\n`);
+    if (!ok) {
+      console.error(`❌ SSE heartbeat write failed for client ${clientId}, removing client`);
+      removeClient(clientId);
+      try {
+        res.end();
+      } catch (e) {}
     }
+  }, 25000);
 
-    // Heartbeat: send a comment every 25s to keep connection alive
-    const hb = setInterval(() => {
-        try {
-            // Comment line is ignored by browsers but keeps proxies from closing
-            client.response.write(`: heartbeat ${Date.now()}\n\n`);
-        } catch (error) {
-            console.error(`❌ SSE heartbeat error for client ${clientId}:`, error);
-        }
-    }, 25000);
+  // Limpieza en desconexión
+  const cleanup = () => {
+    console.log(`🔌 SSE Client disconnected: ${clientId}`);
+    removeClient(clientId);
+    console.log(`📊 Remaining SSE clients: ${clientsById.size}`);
+  };
 
-    client.heartbeat = hb;
-
-    // Handle client disconnect
-    req.on('close', () => {
-        console.log(`🔌 SSE Client disconnected: ${clientId}`);
-        clearInterval(hb);
-
-        // Remove client from connected clients
-        const index = connectedClients.findIndex(c => c.id === clientId);
-        if (index !== -1) {
-            connectedClients.splice(index, 1);
-        }
-
-        console.log(`📊 Remaining SSE clients: ${connectedClients.length}`);
-    });
-
-    // Handle client errors
-    req.on('error', (error) => {
-        console.error(`❌ SSE Client error (${clientId}):`, error);
-        clearInterval(hb);
-
-        // Remove client from connected clients
-        const index = connectedClients.findIndex(c => c.id === clientId);
-        if (index !== -1) {
-            connectedClients.splice(index, 1);
-        }
-    });
+  // Usar res.on('close') es más fiable que req.on('close') en SSE
+  res.on('close', cleanup);
+  req.on('aborted', cleanup);
+  req.on('error', (err) => {
+    console.error(`❌ SSE Client error (${clientId}):`, err);
+    cleanup();
+  });
 }
 
 /**
  * Send event to specific user based on email
  */
 function sendEventToUser(userEmail, type, data) {
-    const userClients = connectedClients.filter(client => client.userEmail === userEmail);
-    
-    if (userClients.length === 0) {
-        console.log(`📭 No SSE clients found for user: ${userEmail}`);
-        return false;
+  const set = clientsByUser.get(userEmail);
+
+  if (!set || set.size === 0) {
+    // (no spamear logs si quieres, puedes comentar)
+    console.log(`📭 No SSE clients found for user: ${userEmail}`);
+    return false;
+  }
+
+  const eventData = JSON.stringify({ type, data });
+  let sentCount = 0;
+  const idsToRemove = [];
+
+  for (const clientId of set) {
+    const client = clientsById.get(clientId);
+    if (!client) {
+      idsToRemove.push(clientId);
+      continue;
     }
 
-    const eventData = JSON.stringify({ type, data });
-    let sentCount = 0;
+    const ok = safeWrite(client.response, `data: ${eventData}\n\n`);
+    if (ok) sentCount++;
+    else idsToRemove.push(clientId);
+  }
 
-    userClients.forEach(client => {
-        try {
-            client.response.write(`data: ${eventData}\n\n`);
-            sentCount++;
-        } catch (error) {
-            console.error(`❌ Error sending SSE event to client ${client.id}:`, error);
-            
-            // Remove failed client
-            const index = connectedClients.findIndex(c => c.id === client.id);
-            if (index !== -1) {
-                connectedClients.splice(index, 1);
-            }
-        }
-    });
+  // limpiar los que fallaron
+  idsToRemove.forEach(removeClient);
 
-    console.log(`📤 Sent SSE event [${type}] to ${sentCount}/${userClients.length} clients for user: ${userEmail}`);
-    return sentCount > 0;
+  console.log(`📤 Sent SSE event [${type}] to ${sentCount}/${set.size} clients for user: ${userEmail}`);
+  return sentCount > 0;
 }
 
 /**
  * Broadcast event to all connected clients
  */
 function broadcastEvent(type, data) {
-    if (connectedClients.length === 0) {
-        console.log('📭 No SSE clients connected for broadcast');
-        return false;
-    }
+  if (clientsById.size === 0) {
+    console.log('📭 No SSE clients connected for broadcast');
+    return false;
+  }
 
-    const eventData = JSON.stringify({ type, data });
-    let sentCount = 0;
+  const eventData = JSON.stringify({ type, data });
+  let sentCount = 0;
+  const idsToRemove = [];
 
-    connectedClients.forEach(client => {
-        try {
-            client.response.write(`data: ${eventData}\n\n`);
-            sentCount++;
-        } catch (error) {
-            console.error(`❌ Error broadcasting SSE event to client ${client.id}:`, error);
-            
-            // Remove failed client
-            const index = connectedClients.findIndex(c => c.id === client.id);
-            if (index !== -1) {
-                connectedClients.splice(index, 1);
-            }
-        }
-    });
+  for (const [clientId, client] of clientsById.entries()) {
+    const ok = safeWrite(client.response, `data: ${eventData}\n\n`);
+    if (ok) sentCount++;
+    else idsToRemove.push(clientId);
+  }
 
-    console.log(`📢 Broadcast SSE event [${type}] to ${sentCount}/${connectedClients.length} clients`);
-    return sentCount > 0;
+  idsToRemove.forEach(removeClient);
+
+  console.log(`📢 Broadcast SSE event [${type}] to ${sentCount}/${clientsById.size} clients`);
+  return sentCount > 0;
 }
 
-/**
- * Get connected clients count for monitoring
- */
 function getConnectedClientsCount() {
-    return connectedClients.length;
+  return clientsById.size;
 }
 
-/**
- * Get connected clients by user email
- */
 function getClientsByUser(userEmail) {
-    return connectedClients.filter(client => client.userEmail === userEmail);
+  const set = clientsByUser.get(userEmail);
+  if (!set) return [];
+  return [...set].map((id) => clientsById.get(id)).filter(Boolean);
 }
 
 module.exports = {
-    eventsHandler,
-    sendEventToUser,
-    broadcastEvent,
-    getConnectedClientsCount,
-    getClientsByUser
+  eventsHandler,
+  sendEventToUser,
+  broadcastEvent,
+  getConnectedClientsCount,
+  getClientsByUser,
 };

@@ -1,4 +1,3 @@
-// services/statsService.js
 const pool = require('./db');
 const botDbService = require('./botDbService');
 const baileysManager = require('./baileysManager');
@@ -7,21 +6,19 @@ const baileysManager = require('./baileysManager');
  * Devuelve métricas de dashboard para el owner (admin logueado)
  */
 async function getDashboardStats(ownerEmail) {
-  // 1) Bots del owner
   const allBots = await botDbService.getAllBots();
-  const bots = allBots.filter(b => b.owneremail === ownerEmail || b.ownerEmail === ownerEmail);
-  const botIds = bots.map(b => b.id);
+  const bots = allBots.filter((b) => (b.owneremail ?? b.ownerEmail) === ownerEmail);
+  const botIds = bots.map((b) => b.id);
 
   let botsConnected = 0;
   let botsDisconnected = 0;
 
-  bots.forEach(bot => {
+  bots.forEach((bot) => {
     const status = baileysManager.getBotStatus(bot.id);
     if (status === 'CONNECTED') botsConnected += 1;
     else botsDisconnected += 1;
   });
 
-  // Si no tiene bots, devolvemos ceros directamente
   if (botIds.length === 0) {
     return {
       botsTotal: 0,
@@ -33,7 +30,6 @@ async function getDashboardStats(ownerEmail) {
     };
   }
 
-  // 2) Leads totales para esos bots
   const totalLeadsRes = await pool.query(
     `SELECT COUNT(*)::int AS count
      FROM leads
@@ -41,7 +37,6 @@ async function getDashboardStats(ownerEmail) {
     [botIds]
   );
 
-  // 3) Leads calificados
   const qualifiedLeadsRes = await pool.query(
     `SELECT COUNT(*)::int AS count
      FROM leads
@@ -50,7 +45,6 @@ async function getDashboardStats(ownerEmail) {
     [botIds]
   );
 
-  // 4) Leads creados hoy
   const todayLeadsRes = await pool.query(
     `SELECT COUNT(*)::int AS count
      FROM leads

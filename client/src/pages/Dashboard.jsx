@@ -18,7 +18,6 @@ import {
   InfoIcon,
   ErrorIcon,
   SmartToyIcon,
-  FlashOnIcon,
   ExpandMoreIcon,
   ExpandLessIcon,
   StarsIcon,
@@ -32,26 +31,8 @@ const UsersIcon = () => (
   </svg>
 );
 
-const ChartIcon = () => (
-  <svg className="w-6 h-6 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-5h2v5zm4 0h-2v-3h2v3zm0-6h-2v2h2v-2zm-4 6h-2V7h2v10z" />
-  </svg>
-);
-
-const WalletIcon = () => (
-  <svg className="w-6 h-6 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c0-1.1-.9-2-2-2s-2 .9-2 2 0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 2 .9 2 2 2 .9 2 2-.9 2-2 2zm6 10h-12V8h12v10z" />
-  </svg>
-);
-
-const MessageIcon = () => (
-  <svg className="w-6 h-6 text-green-400" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12zm-4.5-1.1L12 15.45 7.77 18l1.12-4.81-3.73-3.23 4.92-.42L12 5l1.92 4.53 4.92.42-3.73 3.23L16.23 18z" />
-  </svg>
-);
-
 const Dashboard = () => {
-  const { bots, createBot, sseConnected } = useBots();
+  const { bots, createBot, sseConnected, dashboardStats } = useBots();
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -74,11 +55,6 @@ const Dashboard = () => {
     id: '',
     prompt: '',
   });
-
-  // Métricas simuladas
-  const [metrics, setMetrics] = useState(null);
-  const [metricsLoading, setMetricsLoading] = useState(true);
-  const [metricsError, setMetricsError] = useState(null);
 
   // Suscripción / Trial
   useEffect(() => {
@@ -135,33 +111,6 @@ const Dashboard = () => {
     }
   }, [searchParams, t]);
 
-  // Cargar métricas reales de dashboard
-  useEffect(() => {
-  if (!user || user.role !== 'admin') return;
-
-  let intervalId;
-
-  const fetchMetrics = async () => {
-    try {
-      setMetricsError(null);
-      const res = await axios.get('/api/dashboard-stats', { withCredentials: true });
-      setMetrics(res.data);
-    } catch (err) {
-      console.error('Error fetching dashboard stats:', err);
-      setMetricsError('No se pudieron cargar las métricas');
-    } finally {
-      setMetricsLoading(false);
-    }
-  };
-
-  fetchMetrics();
-  // refrescar cada 15 segundos (ajusta si quieres)
-  intervalId = setInterval(fetchMetrics, 15000);
-
-  return () => {
-    if (intervalId) clearInterval(intervalId);
-  };
-  }, [user]);
   const handleCreateBot = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.id || !formData.prompt) {
@@ -216,6 +165,9 @@ const Dashboard = () => {
   const connectedBots = bots.filter((bot) => bot.runtimeStatus === 'CONNECTED').length;
   const totalBots = bots.length;
 
+  const showStats = user?.role === 'admin';
+  const statsLoading = showStats && !dashboardStats;
+
   return (
     <>
       <Helmet>
@@ -227,18 +179,13 @@ const Dashboard = () => {
       </Helmet>
 
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-        {/* ============ NAVBAR (mismo sistema de diseño que la landing) ============ */}
+        {/* ============ NAVBAR ============ */}
         <nav className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            {/* Logo + título */}
             <div className="flex items-center space-x-2">
               <img src={logo} alt="BotInteligente" className="h-8 w-auto" />
-              <span className="font-bold text-lg text-white hidden sm:inline">
-                BotInteligente
-              </span>
-              <span className="text-xs sm:text-sm text-slate-400 sm:ml-3">
-                Dashboard
-              </span>
+              <span className="font-bold text-lg text-white hidden sm:inline">BotInteligente</span>
+              <span className="text-xs sm:text-sm text-slate-400 sm:ml-3">Dashboard</span>
             </div>
 
             {/* Tabs desktop */}
@@ -283,7 +230,6 @@ const Dashboard = () => {
               )}
             </div>
 
-            {/* Lado derecho: estado SSE + botón nuevo bot */}
             <div className="flex items-center space-x-3">
               {/* Estado SSE */}
               <div
@@ -298,9 +244,7 @@ const Dashboard = () => {
                     sseConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
                   }`}
                 />
-                {sseConnected
-                  ? t('dashboard.status.connected')
-                  : t('dashboard.status.disconnected')}
+                {sseConnected ? t('dashboard.status.connected') : t('dashboard.status.disconnected')}
               </div>
 
               {/* Botón crear bot (solo admin) */}
@@ -322,9 +266,7 @@ const Dashboard = () => {
                 <button
                   onClick={() => setActiveSection('bots')}
                   className={`px-3 py-1.5 rounded-full ${
-                    activeSection === 'bots'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-900 text-slate-300'
+                    activeSection === 'bots' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-300'
                   }`}
                 >
                   Bots
@@ -428,8 +370,7 @@ const Dashboard = () => {
                     ⏰ Tu prueba vence pronto
                   </h3>
                   <p className="text-amber-200 text-sm sm:text-base">
-                    Te quedan{' '}
-                    <strong>{trialWarning.daysLeft}</strong> día
+                    Te quedan <strong>{trialWarning.daysLeft}</strong> día
                     {trialWarning.daysLeft !== 1 ? 's' : ''} de acceso ilimitado.
                   </p>
                   <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-3 sm:space-y-0">
@@ -469,78 +410,68 @@ const Dashboard = () => {
                 <div className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-200">
                   Plan:{' '}
                   <span className="font-semibold text-blue-400">
-                    {subscription.status === 'trial'
-                      ? 'Trial'
-                      : subscription.plan_name || 'Starter'}
+                    {subscription.status === 'trial' ? 'Trial' : subscription.plan_name || 'Starter'}
                   </span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* MÉTRICAS DESTACADAS */}
-<section className="mb-8 sm:mb-12">
-  <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">
-    Tu desempeño en tiempo real 📊
-  </h2>
+          {/* MÉTRICAS (por SSE) */}
+          <section className="mb-8 sm:mb-12">
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">
+              Tu desempeño en tiempo real 📊
+            </h2>
 
-  {/* Si no es admin o aún no hay métricas, no mostramos nada especial */}
-  {user?.role !== 'admin' ? null : (
-    <>
-      {metricsLoading ? (
-        <p className="text-slate-400 text-sm">Cargando métricas...</p>
-      ) : metricsError ? (
-        <p className="text-red-400 text-sm">{metricsError}</p>
-      ) : (
-        <div className="grid grid-cols-1 max-w-md gap-4 sm:gap-6 mb-4 sm:mb-8">
-          {/* Leads Totales */}
-          <div className="group p-4 sm:p-6 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900/50 to-slate-950 hover:border-blue-500/30 transition-all duration-300 hover:scale-[1.02] sm:hover:scale-105 cursor-pointer">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-slate-400 mb-1">
-                  Leads Totales
-                </p>
-                <p className="text-2xl sm:text-3xl font-black text-white">
-                  {(metrics?.totalLeads ?? 0).toLocaleString()}
-                </p>
-              </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <UsersIcon />
-              </div>
-            </div>
-            <div className="mt-3 sm:mt-4">
-              <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
-                  style={{ width: '65%' }}
-                />
-              </div>
-              <p className="text-[11px] sm:text-xs text-slate-500 mt-2">
-                {/* Aquí podrías calcular variaciones si las devuelves del backend */}
-                Leads generados por todos tus bots.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+            {!showStats ? null : statsLoading ? (
+              <p className="text-slate-400 text-sm">Cargando métricas...</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 max-w-md gap-4 sm:gap-6 mb-4 sm:mb-8">
+                  {/* Leads Totales */}
+                  <div className="group p-4 sm:p-6 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900/50 to-slate-950 hover:border-blue-500/30 transition-all duration-300 hover:scale-[1.02] sm:hover:scale-105 cursor-pointer">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs sm:text-sm font-medium text-slate-400 mb-1">
+                          Leads Totales
+                        </p>
+                        <p className="text-2xl sm:text-3xl font-black text-white">
+                          {(dashboardStats?.totalLeads ?? 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <UsersIcon />
+                      </div>
+                    </div>
+                    <div className="mt-3 sm:mt-4">
+                      <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
+                          style={{ width: '65%' }}
+                        />
+                      </div>
+                      <p className="text-[11px] sm:text-xs text-slate-500 mt-2">
+                        Leads generados por todos tus bots.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
-      <div className="text-center">
-        <button className="inline-flex items-center px-5 py-2.5 rounded-lg border border-slate-700 text-slate-300 font-medium hover:bg-slate-800 transition-colors text-sm">
-          Ver Reporte Completo →
-        </button>
-      </div>
-    </>
-  )}
-</section>
+                <div className="text-center">
+                  <button className="inline-flex items-center px-5 py-2.5 rounded-lg border border-slate-700 text-slate-300 font-medium hover:bg-slate-800 transition-colors text-sm">
+                    Ver Reporte Completo →
+                  </button>
+                </div>
+              </>
+            )}
+          </section>
 
           {/* ================= SECCIÓN BOTS ================= */}
           {activeSection === 'bots' && (
             <section className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white">
-                    Tus Bots Inteligentes 🤖
-                  </h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white">Tus Bots Inteligentes 🤖</h2>
                   <p className="text-slate-400 text-sm">
                     Conecta, gestiona y escala tus bots de WhatsApp
                   </p>
@@ -561,12 +492,10 @@ const Dashboard = () => {
                   <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 rounded-full bg-gradient-to-br from-blue-500/10 to-blue-600/10 flex items-center justify-center">
                     <SmartToyIcon />
                   </div>
-                  <h3 className="text-lg sm:text-xl font-bold text-white mb-2">
-                    Aún no tienes bots
-                  </h3>
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-2">Aún no tienes bots</h3>
                   <p className="text-slate-400 mb-6 sm:mb-8 max-w-md mx-auto text-sm sm:text-base">
-                    Crea tu primer bot en menos de 5 minutos. Automatiza conversaciones y
-                    captura leads 24/7.
+                    Crea tu primer bot en menos de 5 minutos. Automatiza conversaciones y captura
+                    leads 24/7.
                   </p>
                   {user?.role === 'admin' && (
                     <button
@@ -598,11 +527,7 @@ const Dashboard = () => {
                                   Scoring Rules
                                 </span>
                               </div>
-                              {scoringExpanded[bot.id] ? (
-                                <ExpandLessIcon />
-                              ) : (
-                                <ExpandMoreIcon />
-                              )}
+                              {scoringExpanded[bot.id] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                             </button>
                             {scoringExpanded[bot.id] && (
                               <div className="border-t border-slate-800 p-3 sm:p-4 bg-slate-950/50">
@@ -623,11 +548,7 @@ const Dashboard = () => {
                                   Productos
                                 </span>
                               </div>
-                              {productsExpanded[bot.id] ? (
-                                <ExpandLessIcon />
-                              ) : (
-                                <ExpandMoreIcon />
-                              )}
+                              {productsExpanded[bot.id] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                             </button>
                             {productsExpanded[bot.id] && (
                               <div className="border-t border-slate-800 p-3 sm:p-4 bg-slate-950/50">
@@ -649,9 +570,7 @@ const Dashboard = () => {
             <section className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white">
-                    Scoring Rules 🎯
-                  </h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white">Scoring Rules 🎯</h2>
                   <p className="text-slate-400 text-sm">
                     Define cómo se puntúan tus leads automáticamente
                   </p>
@@ -688,9 +607,7 @@ const Dashboard = () => {
             <section className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white">
-                    Product Management 📦
-                  </h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white">Product Management 📦</h2>
                   <p className="text-slate-400 text-sm">
                     Gestiona tus productos y servicios que tus bots pueden ofrecer
                   </p>
@@ -731,9 +648,7 @@ const Dashboard = () => {
             <div className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-2xl border border-slate-800 max-w-md w-full p-5 sm:p-6 shadow-2xl">
               <div className="flex items-center justify-between mb-4 sm:mb-6">
                 <div>
-                  <h2 className="text-lg sm:text-xl font-bold text-white">
-                    Crear Nuevo Bot
-                  </h2>
+                  <h2 className="text-lg sm:text-xl font-bold text-white">Crear Nuevo Bot</h2>
                   <p className="text-xs sm:text-sm text-slate-400 mt-1">
                     Configura tu bot en 5 minutos
                   </p>
