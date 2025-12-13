@@ -743,6 +743,31 @@ app.delete('/api/products/:id', requireAdmin, async (req, res) => {
     res.status(500).json({ message: 'Error deleting product' });
   }
 });
+// === PRODUCT IMAGE UPLOAD (R2) ===
+app.post('/api/products/:id/image', requireAdmin, upload.single('image'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ message: 'Imagen requerida' });
+
+    // Subir a Cloudflare R2
+    const { key, url } = await storageService.uploadImage(
+      file.buffer,
+      file.originalname,
+      file.mimetype
+    );
+
+    // Guardar en BD (image_url y opcionalmente storage key)
+    const updated = await productService.updateProductImage(req.params.id, {
+      image_url: url,
+      image_storage_key: key,
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Error subiendo imagen de producto:', error);
+    res.status(500).json({ message: 'Error subiendo imagen de producto' });
+  }
+});
 
 // 4. Catch-All for Frontend Routing (MUST BE LAST)
 if (process.env.NODE_ENV === 'production') {
