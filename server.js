@@ -403,15 +403,28 @@ app.get('/api/lead-messages/:leadId', requireAuth, async (req, res) => {
 app.get('/api/initial-data', requireAuth, async (req, res) => {
   try {
     const user = req.user;
-    const stats = await statsService.getDashboardStats(user.email);
+
+    let stats = null;
+    try {
+      stats = await statsService.getDashboardStats(user.email);
+    } catch (e) {
+      console.error('Stats error (non-fatal):', e.message);
+      // fallback seguro
+      stats = {
+        botsTotal: 0,
+        botsConnected: 0,
+        botsDisconnected: 0,
+        totalLeads: 0,
+        qualifiedLeads: 0,
+        newLeadsToday: 0,
+      };
+    }
 
     let botsData = [];
     let leadsData = [];
 
     if (user.role === 'admin') {
       const allBots = await botDbService.getAllBots();
-
-      // ojo: algunas filas pueden venir como owneremail u ownerEmail
       const userBots = allBots.filter((bot) => (bot.owneremail ?? bot.ownerEmail) === user.email);
 
       botsData = userBots.map((bot) => ({
@@ -427,11 +440,13 @@ app.get('/api/initial-data', requireAuth, async (req, res) => {
       console.error('Error getting qualified leads:', error);
     }
 
+    // SSE (si ya está conectado)
     sseController.sendEventToUser(user.email, 'INIT', { bots: botsData });
     sseController.sendEventToUser(user.email, 'INIT_LEADS', { leads: leadsData });
     sseController.sendEventToUser(user.email, 'STATS_INIT', { stats });
 
-    res.json({ message: 'Initial data sent via SSE' });
+    // Fallback JSON (para que el front cargue aunque falle SSE timing)
+    res.json({ bots: botsData, leads: leadsData, stats });
   } catch (error) {
     console.error('Error sending initial data:', error);
     res.status(500).json({ message: 'Error sending initial data' });

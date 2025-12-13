@@ -12,7 +12,8 @@
     "build:client": "cd client && npm run build",
     "build": "npm run build:client",
     "serve": "NODE_ENV=production node server.js",
-    "heroku-postbuild": "npm run build:client"
+    "heroku-postbuild": "npm run build:client",
+    "migrate": "node migrate.js"
   },
   "author": "",
   "license": "ISC",
