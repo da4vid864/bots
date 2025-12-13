@@ -392,10 +392,7 @@ async function handleIncomingMessage(botId, msg) {
             let botReply = followUpQuestion ? `${aiResponse}\n\n${followUpQuestion}` : aiResponse;
 
             // Image tag handling
-            const imageTagRegex = /
-$$
-ENVIAR_IMAGEN:\s*([^
-$$]+)\]/i;
+            const imageTagRegex = /\[ENVIAR_IMAGEN:\s*([^\]]+)\]/i;
             const match = botReply.match(imageTagRegex);
             let imageMedia = null;
 
