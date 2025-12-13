@@ -531,7 +531,9 @@ const Dashboard = () => {
                             </button>
                             {scoringExpanded[bot.id] && (
                               <div className="border-t border-slate-800 p-3 sm:p-4 bg-slate-950/50">
-                                <ScoringRulesManager botId={bot.id} />
+                                <div className="light-form">
+                                  <ScoringRulesManager botId={bot.id} />
+                                </div>
                               </div>
                             )}
                           </div>
@@ -552,7 +554,9 @@ const Dashboard = () => {
                             </button>
                             {productsExpanded[bot.id] && (
                               <div className="border-t border-slate-800 p-3 sm:p-4 bg-slate-950/50">
-                                <ProductManager botId={bot.id} />
+                                <div className="light-form">
+                                  <ProductManager botId={bot.id} />
+                                </div>
                               </div>
                             )}
                           </div>
