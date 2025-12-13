@@ -76,12 +76,9 @@ const Dashboard = () => {
   });
 
   // Métricas simuladas
-  const [metrics] = useState({
-    totalLeads: 2345,
-    activeChats: 156,
-    conversionRate: 18.5,
-    revenue: 15670,
-  });
+  const [metrics, setMetrics] = useState(null);
+  const [metricsLoading, setMetricsLoading] = useState(true);
+  const [metricsError, setMetricsError] = useState(null);
 
   // Suscripción / Trial
   useEffect(() => {
@@ -138,6 +135,33 @@ const Dashboard = () => {
     }
   }, [searchParams, t]);
 
+  // Cargar métricas reales de dashboard
+  useEffect(() => {
+  if (!user || user.role !== 'admin') return;
+
+  let intervalId;
+
+  const fetchMetrics = async () => {
+    try {
+      setMetricsError(null);
+      const res = await axios.get('/api/dashboard-stats', { withCredentials: true });
+      setMetrics(res.data);
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      setMetricsError('No se pudieron cargar las métricas');
+    } finally {
+      setMetricsLoading(false);
+    }
+  };
+
+  fetchMetrics();
+  // refrescar cada 15 segundos (ajusta si quieres)
+  intervalId = setInterval(fetchMetrics, 15000);
+
+  return () => {
+    if (intervalId) clearInterval(intervalId);
+  };
+  }, [user]);
   const handleCreateBot = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.id || !formData.prompt) {
@@ -460,41 +484,53 @@ const Dashboard = () => {
     Tu desempeño en tiempo real 📊
   </h2>
 
-  {/* Solo tarjeta de Leads Totales */}
-  <div className="grid grid-cols-1 max-w-md gap-4 sm:gap-6 mb-4 sm:mb-8">
-    <div className="group p-4 sm:p-6 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900/50 to-slate-950 hover:border-blue-500/30 transition-all duration-300 hover:scale-[1.02] sm:hover:scale-105 cursor-pointer">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs sm:text-sm font-medium text-slate-400 mb-1">
-            Leads Totales
-          </p>
-          <p className="text-2xl sm:text-3xl font-black text-white">
-            {metrics.totalLeads.toLocaleString()}
-          </p>
+  {/* Si no es admin o aún no hay métricas, no mostramos nada especial */}
+  {user?.role !== 'admin' ? null : (
+    <>
+      {metricsLoading ? (
+        <p className="text-slate-400 text-sm">Cargando métricas...</p>
+      ) : metricsError ? (
+        <p className="text-red-400 text-sm">{metricsError}</p>
+      ) : (
+        <div className="grid grid-cols-1 max-w-md gap-4 sm:gap-6 mb-4 sm:mb-8">
+          {/* Leads Totales */}
+          <div className="group p-4 sm:p-6 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900/50 to-slate-950 hover:border-blue-500/30 transition-all duration-300 hover:scale-[1.02] sm:hover:scale-105 cursor-pointer">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm font-medium text-slate-400 mb-1">
+                  Leads Totales
+                </p>
+                <p className="text-2xl sm:text-3xl font-black text-white">
+                  {(metrics?.totalLeads ?? 0).toLocaleString()}
+                </p>
+              </div>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <UsersIcon />
+              </div>
+            </div>
+            <div className="mt-3 sm:mt-4">
+              <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
+                  style={{ width: '65%' }}
+                />
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-2">
+                {/* Aquí podrías calcular variaciones si las devuelves del backend */}
+                Leads generados por todos tus bots.
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-          <UsersIcon />
-        </div>
-      </div>
-      <div className="mt-3 sm:mt-4">
-        <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
-            style={{ width: '65%' }}
-          />
-        </div>
-        <p className="text-[11px] sm:text-xs text-slate-500 mt-2">
-          +12% desde el mes anterior
-        </p>
-      </div>
-    </div>
-  </div>
+      )}
 
-  <div className="text-center">
-    <button className="inline-flex items-center px-5 py-2.5 rounded-lg border border-slate-700 text-slate-300 font-medium hover:bg-slate-800 transition-colors text-sm">
-      Ver Reporte Completo →
-    </button>
-  </div>
+      <div className="text-center">
+        <button className="inline-flex items-center px-5 py-2.5 rounded-lg border border-slate-700 text-slate-300 font-medium hover:bg-slate-800 transition-colors text-sm">
+          Ver Reporte Completo →
+        </button>
+      </div>
+    </>
+  )}
 </section>
 
           {/* ================= SECCIÓN BOTS ================= */}

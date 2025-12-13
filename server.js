@@ -23,6 +23,7 @@ const baileysManager = require('./services/baileysManager');
 const scoringService = require('./services/scoringService');
 const productService = require('./services/productService');
 const storageService = require('./services/storageService');
+const statsService = require('./services/statsService');
 
 const { startSchedulerExecutor } = require('./services/schedulerExecutor');
 const authRoutes = require('./routes/authRoutes');
@@ -153,6 +154,15 @@ app.get('/api/dashboard', requireAdmin, (req, res) => {
         paymentSuccess
     });
 });
+app.get('/api/dashboard-stats', requireAdmin, async (req, res) => {
+  try {
+    const stats = await statsService.getDashboardStats(req.user.email);
+    res.json(stats);
+  } catch (error) {
+    console.error('Error obteniendo estadísticas:', error);
+    res.status(500).json({ message: 'Error obteniendo estadísticas' });
+  }
+});
 
 // Sales data endpoint - requires authentication
 app.get('/api/sales', requireAuth, (req, res) => {
@@ -171,6 +181,15 @@ function getRuntimeStatus(bot) {
     const botStatus = baileysManager.getBotStatus(bot.id);
     return botStatus;
 }
+async function broadcastStatsUpdate(ownerEmail) {
+  try {
+    const stats = await statsService.getDashboardStats(ownerEmail);
+    // Enviamos a todos los clientes SSE de ese owner
+    sseController.broadcastEvent('STATS_UPDATE', { ownerEmail, stats });
+  } catch (error) {
+    console.error('Error broadcasting stats update:', error);
+  }
+}
 
 function broadcastToDashboard(message) {
     sseController.broadcastEvent(message.type, message.data);
@@ -179,6 +198,26 @@ function broadcastToDashboard(message) {
 // === MANEJO DE MENSAJES DE BOTS ===
 async function handleBotMessage(botId, type, data) {
     switch (type) {
+            case 'NEW_QUALIFIED_LEAD': {
+          broadcastToDashboard({ type: 'NEW_QUALIFIED_LEAD', data: data.lead });
+
+          // obtener el dueño del bot y actualizar sus stats
+          const bot = await botDbService.getBotById(botId);
+          if (bot?.owneremail) {
+            await broadcastStatsUpdate(bot.owneremail);
+          }
+          break;
+        }
+
+        case 'CONNECTED':
+        case 'DISCONNECTED': {
+          const bot = await botDbService.getBotById(botId);
+          // ... tu lógica actual de UPDATE_BOT ...
+          if (bot?.owneremail) {
+            await broadcastStatsUpdate(bot.owneremail);
+          }
+          break;
+        }
         case 'QR_GENERATED':
             const botWithQR = await botDbService.getBotById(botId);
             broadcastToDashboard({
@@ -358,6 +397,8 @@ app.get('/api/lead-messages/:leadId', requireAuth, async (req, res) => {
 app.get('/api/initial-data', requireAuth, async (req, res) => {
     try {
         const user = req.user;
+        const stats = await statsService.getDashboardStats(user.email);
+
         let botsData = [];
         let leadsData = [];
 
@@ -382,7 +423,7 @@ app.get('/api/initial-data', requireAuth, async (req, res) => {
 
         sseController.sendEventToUser(user.email, 'INIT', { bots: botsData });
         sseController.sendEventToUser(user.email, 'INIT_LEADS', { leads: leadsData });
-
+        sseController.sendEventToUser(user.email, 'STATS_INIT', { stats });
         res.json({ message: 'Initial data sent via SSE' });
     } catch (error) {
         console.error('Error sending initial data:', error);
