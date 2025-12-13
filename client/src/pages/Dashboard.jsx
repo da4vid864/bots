@@ -285,7 +285,6 @@ const Dashboard = () => {
                   onClick={() => setShowCreateForm(true)}
                   className="hidden sm:inline-flex items-center px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-blue-500/20 text-sm"
                 >
-                  <AddIcon />
                   <span className="ml-2">{t('dashboard.new_bot_button')}</span>
                 </button>
               )}
