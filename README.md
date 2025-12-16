@@ -1,157 +1,112 @@
 # WhatsApp Bot Manager
 
-A comprehensive, multi-tenant platform for deploying, managing, and scaling AI-powered WhatsApp bots. This system enables businesses to automate customer engagement, capture leads, and coordinate real-time sales interventions through a centralized dashboard.
+A comprehensive dashboard to manage multiple WhatsApp bots, featuring automated lead scoring, CRM capabilities, product catalog management, and subscription handling. Built with Node.js, Express, React, and Baileys.
 
-![Status](https://img.shields.io/badge/Status-Active-success)
-![Version](https://img.shields.io/badge/Version-1.0.0-blue)
-![License](https://img.shields.io/badge/License-ISC-green)
+## Features
 
-## 🚀 Key Features
+*   **Multi-Bot Management**: Connect and manage multiple WhatsApp sessions simultaneously.
+*   **Real-time Dashboard**: Live updates on bot status, messages, and leads using Server-Sent Events (SSE).
+*   **Lead Scoring**: Automated rule-based scoring to qualify leads based on interactions.
+*   **CRM & Sales Panel**: Assign leads to agents, view message history, and send messages directly from the dashboard.
+*   **Product Catalog**: Manage products and images to share via bots.
+*   **Subscription System**: Integrated with Stripe for user subscriptions.
+*   **Google Authentication**: Secure login using Google OAuth.
 
-*   **Multi-Bot Orchestration**: Manage multiple WhatsApp instances simultaneously with independent configurations.
-*   **AI-Powered Automation**: Integrated DeepSeek AI for intelligent, context-aware conversations.
-*   **Smart Lead Capture**: Automatic extraction and scoring of lead information (Name, Email, Location) from natural dialogue.
-*   **Real-Time Dashboard**: Live monitoring of bot status, QR code generation, and active conversations via Server-Sent Events (SSE).
-*   **Hybrid Sales Control**: Seamless takeover capabilities allowing human agents to intervene in bot conversations.
-*   **Role-Based Access**: Granular permissions for Admins and Vendors/Sales Agents.
-*   **Enterprise Architecture**: Built on PostgreSQL with connection pooling, implementing a robust React + Node.js stack.
+## Tech Stack
 
-## 🛠️ Technology Stack
+*   **Backend**: Node.js, Express, PostgreSQL, Baileys (WhatsApp Web API), Passport.js
+*   **Frontend**: React, Vite, Tailwind CSS
+*   **Storage**: Cloudflare R2 / AWS S3 compatible (for image storage)
 
-*   **Runtime**: Node.js 20+
-*   **Frontend**: React 19, Vite 7, Tailwind CSS 4
-*   **Backend**: Express.js, Server-Sent Events (SSE)
-*   **WhatsApp Engine**: @whiskeysockets/baileys
-*   **Database**: PostgreSQL
-*   **AI/ML**: DeepSeek API
-*   **Auth**: Passport (Google OAuth), JWT
-*   **Infrastructure**: Docker/Nixpacks ready (Railway.app optimized)
+## Prerequisites
 
-## 📚 Documentation
-
-Detailed documentation is available in the `docs/` directory:
-
-*   [**Architecture Overview**](docs/ARCHITECTURE.md): System design, component interaction, and data flow.
-*   [**API Reference**](docs/API.md): Comprehensive guide to REST endpoints and SSE events.
-*   [**Lead Scoring System**](docs/LEAD_SCORING.md): Details on the lead qualification algorithm.
-*   [**Design System**](docs/DESIGN_SYSTEM.md): UI/UX guidelines and component usage.
-*   [**Contributing Guide**](docs/CONTRIBUTING.md): Standards and workflows for developers.
-
-## 🏗️ Architecture
-
-The system follows a modular service-oriented architecture:
-
-```mermaid
-graph TB
-    subgraph "Frontend"
-        REACT[React Dashboard]
-    end
-    
-    subgraph "Backend Services"
-        API[Express API]
-        SSE[SSE Controller]
-        BM[Baileys Manager]
-        SCHED[Scheduler]
-        AI[DeepSeek Service]
-    end
-    
-    subgraph "Data Layer"
-        DB[(PostgreSQL)]
-    end
-    
-    subgraph "External"
-        WA[WhatsApp Cloud]
-        DS[DeepSeek API]
-    end
-
-    REACT <--> API
-    REACT <--> SSE
-    API --> BM
-    BM --> WA
-    BM --> AI
-    AI --> DS
-    BM --> DB
-    API --> DB
-```
-
-*(See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the complete detailed diagram)*
-
-## 🚦 Prerequisites
-
-*   Node.js >= 20.0.0
-*   PostgreSQL >= 14
+*   Node.js (v20+ recommended)
+*   PostgreSQL Database
 *   Google Cloud Console Project (for OAuth)
-*   DeepSeek API Key
-*   Stripe Account (optional, for subscriptions)
+*   Stripe Account (for payments)
+*   Cloudflare R2 or AWS S3 compatible storage buckets
 
-## ⚡ Installation
+## Installation
 
 1.  **Clone the repository**
+
     ```bash
     git clone <repository-url>
-    cd whatsapp-bot-manager
+    cd <project-directory>
     ```
 
-2.  **Install Dependencies**
-    ```bash
-    # Install backend dependencies
-    npm install
+2.  **Install Backend Dependencies**
 
-    # Install frontend dependencies
+    ```bash
+    npm install
+    ```
+
+3.  **Install Frontend Dependencies**
+
+    ```bash
     cd client
     npm install
     cd ..
     ```
 
-3.  **Environment Configuration**
-    Create a `.env` file in the root directory:
+4.  **Environment Configuration**
+
+    Create a `.env` file in the root directory with the following variables:
+
     ```env
-    # Core
+    # Server
     PORT=3000
     NODE_ENV=development
-    
+    FRONTEND_URL=http://localhost:5173
+
     # Database
-    DATABASE_URL=postgresql://user:password@localhost:5432/whatsapp_manager
-    
-    # Authentication
-    GOOGLE_CLIENT_ID=your_client_id
-    GOOGLE_CLIENT_SECRET=your_client_secret
+    DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+
+    # Authentication (Google)
+    GOOGLE_CLIENT_ID=your_google_client_id
+    GOOGLE_CLIENT_SECRET=your_google_client_secret
     SESSION_SECRET=your_session_secret
-    JWT_SECRET=your_jwt_secret
-    ADMIN_EMAILS=admin@example.com
-    
-    # AI Services
-    DEEPSEEK_API_KEY=your_key
-    
-    # Stripe (Optional)
-    STRIPE_SECRET_KEY=your_stripe_key
-    STRIPE_WEBHOOK_SECRET=your_webhook_secret
+
+    # Stripe
+    STRIPE_SECRET_KEY=your_stripe_secret_key
+    STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+
+    # Storage (Cloudflare R2 / S3)
+    R2_ACCESS_KEY_ID=your_access_key
+    R2_SECRET_ACCESS_KEY=your_secret_key
+    R2_BUCKET_NAME=your_bucket_name
+    R2_ENDPOINT=your_endpoint_url
     ```
 
-4.  **Database Setup**
-    The system will automatically initialize tables on start, or you can run:
+5.  **Database Migration**
+
+    Initialize the database schema:
+
     ```bash
     npm run migrate
     ```
 
-## 🚀 Usage
+## Usage
 
-**Development Mode**
-Run backend and frontend concurrently with hot-reloading:
+### Development
+
+**Backend:**
+Start the backend server with hot-reloading:
 ```bash
 npm run dev
 ```
 
-**Production Build**
+**Frontend:**
+In a separate terminal, start the Vite development server:
+```bash
+cd client
+npm run dev
+```
+
+### Production
+
+Build the frontend and serve it via the backend:
+
 ```bash
 npm run build
 npm start
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for details on code standards, testing, and pull request procedures.
-
-## 📄 License
-
-This project is licensed under the ISC License.

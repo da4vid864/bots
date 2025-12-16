@@ -96,14 +96,14 @@ async function getDashboardStats(ownerEmail) {
     qualifiedLeadsCount = 0;
   }
 
-  // 4) Leads creados hoy
-  const todayLeadsRes = await pool.query(
-    `SELECT COUNT(*)::int AS count
-     FROM leads
-     WHERE bot_id = ANY($1::text[])
-       AND created_at::date = CURRENT_DATE`,
-    [botIds]
-  );
+// 4) Leads creados hoy (en tu esquema real: captured_at)
+const todayLeadsRes = await pool.query(
+  `SELECT COUNT(*)::int AS count
+   FROM leads
+   WHERE bot_id = ANY($1::text[])
+     AND captured_at::date = CURRENT_DATE`,
+  [botIds]
+);
 
   return {
     botsTotal: bots.length,
