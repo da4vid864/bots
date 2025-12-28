@@ -1,90 +1,92 @@
-# API Documentation
+# Documentación de la API
 
-This document provides a high-level overview of the API endpoints available in the system, focusing on Authentication, Subscription, and Real-time Events (SSE).
+Este documento proporciona una visión general de los endpoints de la API disponibles en el sistema, enfocándose en Autenticación, Suscripciones y Eventos en Tiempo Real (SSE).
 
-## Authentication Routes
-Base path: `/auth`
+## Rutas de Autenticación
+Ruta base: `/auth`
 
-*   `GET /auth/google`: Initiates Google OAuth2 login flow. Scopes: `profile`, `email`.
-*   `GET /auth/google/callback`: Callback URL for Google OAuth2. Redirections:
-    *   Success: Handle callback logic.
-    *   Failure: Redirects to `/login`.
-*   `GET /auth/logout`: Logs out the current user.
+*   `GET /auth/google`: Inicia el flujo de inicio de sesión con Google OAuth2. Scopes: `profile`, `email`.
+*   `GET /auth/google/callback`: URL de callback para Google OAuth2. Redirecciones:
+    *   Éxito: Maneja la lógica del callback y redirecciona al dashboard/panel.
+    *   Fallo: Redirecciona a `/login`.
+*   `GET /auth/logout`: Cierra la sesión del usuario actual.
 
-## Subscription Routes
-Base path: `/subs`
+## Rutas de Suscripción
+Ruta base: `/subs`
 
-*   `GET /subs/purchase/pro`: Initiates the purchase or trial flow for the Pro plan.
-    *   If not logged in, sets a cookie and redirects to login.
-    *   If logged in, activates trial and redirects to dashboard.
-*   `POST /subs/start-trial`: API endpoint to explicitly activate a trial for an authenticated user.
-*   `GET /subs/portal`: Redirects the user to the Stripe billing portal for managing subscriptions.
+*   `GET /subs/purchase/pro`: Inicia el flujo de compra o prueba para el plan Pro.
+    *   Si no ha iniciado sesión: "If the user is not logged in, a cookie is set to store the intended destination (the Pro plan purchase flow) and the user is redirected to the login page. After successful login, the user will be redirected back to this purchase flow."
+    *   Si ha iniciado sesión: "If the user is logged in, a trial for the Pro plan is activated and the user is redirected to the dashboard."
+*   `POST /subs/start-trial`: Endpoint API para activar explícitamente una prueba para un usuario autenticado.
+*   `GET /subs/portal`: Redirecciona al usuario al portal de facturación de Stripe para gestionar suscripciones.
 
-## Server-Sent Events (SSE)
-Base path: `/api/events`
+## Eventos Enviados por el Servidor (SSE)
+Ruta base: `/api/events`
 
-The system uses Server-Sent Events to push real-time updates to the frontend.
+El sistema utiliza Server-Sent Events para enviar actualizaciones en tiempo real al frontend.
 
 *   **Endpoint**: `GET /api/events`
-*   **Authentication**: Required (Cookie-based session)
-*   **Event Types**:
-    *   `CONNECTED`: Connection established.
-    *   `UPDATE_BOT`: Bot status updates (QR generated, connected, disconnected, disabled/enabled).
-    *   `NEW_QUALIFIED_LEAD`: Notification when a lead meets qualification criteria.
-    *   `NEW_MESSAGE_FOR_SALES`: New message needing attention.
-    *   `LEAD_ASSIGNED`: A lead has been assigned to a vendor.
-    *   `MESSAGE_SENT`: Confirmation of a sent message.
-    *   `LEAD_MESSAGES`: Bulk messages for a specific lead (response to request).
-    *   `INIT`: Initial bot data.
-    *   `INIT_LEADS`: Initial leads data.
+*   **Autenticación**: Requerida (Sesión basada en cookies)
+*   **Tipos de Eventos**:
+    *   `CONNECTED`: Conexión establecida.
+    *   `UPDATE_BOT`: Actualizaciones de estado del bot (QR generado, conectado, desconectado, deshabilitado/habilitado).
+    *   `NEW_QUALIFIED_LEAD`: Notificación cuando un lead cumple con los criterios de calificación.
+    *   `NEW_MESSAGE_FOR_SALES`: Nuevo mensaje que requiere atención de ventas.
+    *   `LEAD_ASSIGNED`: Un lead ha sido asignado a un vendedor.
+    *   `MESSAGE_SENT`: Confirmación de mensaje enviado.
+    *   `LEAD_MESSAGES`: Historial de mensajes de un lead específico (respuesta a solicitud).
+    *   `INIT`: Datos iniciales de los bots.
+    *   `INIT_LEADS`: Datos iniciales de los leads.
+    *   `STATS_UPDATE`: Actualización de estadísticas del dashboard.
 
-## General API Routes
-Base path: `/api`
+## Rutas Generales de la API
+Ruta base: `/api`
 
-### Authentication Status
-*   `GET /api/auth/status`: Checks if the current session is authenticated. Returns user details if true.
+### Estado de Autenticación
+*   `GET /api/auth/status`: Verifica si la sesión actual está autenticada. Retorna detalles del usuario si es verdadero.
 
-### Dashboard & Data
-*   `GET /api/dashboard`: (Admin only) Returns dashboard data including payment status.
-*   `GET /api/sales`: Returns sales-related data for the authenticated user.
-*   `GET /api/landing`: Returns public landing page data.
-*   `GET /api/initial-data`: Trigger initial data load via SSE.
+### Dashboard y Datos
+*   `GET /api/dashboard`: (Solo Admin) Retorna datos del dashboard incluyendo estado de pagos.
+*   `GET /api/sales`: Retorna datos relacionados con ventas para el usuario autenticado.
+*   `GET /api/landing`: Retorna datos públicos para la landing page.
+*   `GET /api/initial-data`: Dispara la carga inicial de datos vía SSE.
 
-### Bot Management (Admin)
-*   `POST /api/create-bot`: Create a new bot instance.
-*   `PATCH /api/edit-bot/:id`: Update bot configuration (e.g., prompt).
-*   `DELETE /api/delete-bot/:id`: Remove a bot instance.
-*   `POST /api/disable-bot/:id`: Pause a bot.
-*   `POST /api/enable-bot/:id`: Resume a bot.
+### Gestión de Bots (Admin)
+*   `POST /api/create-bot`: Crea una nueva instancia de bot.
+*   `PATCH /api/edit-bot/:id`: Actualiza la configuración del bot (ej. prompt).
+*   `DELETE /api/delete-bot/:id`: Elimina una instancia de bot.
+*   `POST /api/disable-bot/:id`: Pausa un bot.
+*   `POST /api/enable-bot/:id`: Reanuda un bot.
 
-### Lead Operations
-*   `POST /api/assign-lead`: Assign a lead to a user.
-*   `POST /api/send-message`: Send a WhatsApp message to a lead.
-*   `GET /api/lead-messages/:leadId`: Request message history for a lead (delivered via SSE).
+### Operaciones con Leads
+*   `POST /api/assign-lead`: Asigna un lead a un usuario.
+*   `POST /api/send-message`: Envía un mensaje de WhatsApp a un lead.
+*   `GET /api/lead-messages/:leadId`: Solicita el historial de mensajes de un lead (entregado vía SSE).
 
-### Images
-*   `POST /api/bot/:botId/images`: Upload an image for a bot.
-*   `GET /api/bot/:botId/images`: List images for a bot.
-*   `DELETE /api/images/:imageId`: Delete an image.
+### Imágenes
+*   `POST /api/bot/:botId/images`: Sube una imagen para un bot.
+*   `GET /api/bot/:botId/images`: Lista las imágenes de un bot.
+*   `DELETE /api/images/:imageId`: Elimina una imagen.
 
-### Team Management (Admin)
-*   `GET /api/team`: List team members.
-*   `POST /api/team`: Add a team member.
-*   `PATCH /api/team/:id/toggle`: Enable/disable a team member.
-*   `DELETE /api/team/:id`: Remove a team member.
+### Gestión de Equipo (Admin)
+*   `GET /api/team`: Lista los miembros del equipo.
+*   `POST /api/team`: Añade un miembro al equipo.
+*   `PATCH /api/team/:id/toggle`: Habilita/deshabilita un miembro del equipo.
+*   `DELETE /api/team/:id`: Elimina un miembro del equipo.
 
-### Scheduling
-*   `GET /api/bot/:id/schedules`: List scheduled tasks for a bot.
-*   `POST /api/schedules`: Create a scheduled task.
-*   `DELETE /api/schedules/:id`: Cancel a schedule.
+### Programación (Scheduling)
+*   `GET /api/bot/:id/schedules`: Lista tareas programadas para un bot.
+*   `POST /api/schedules`: Crea una tarea programada.
+*   `DELETE /api/schedules/:id`: Cancela una tarea programada.
 
-### Scoring Rules
-*   `GET /api/scoring-rules/:botId`: Get scoring rules.
-*   `POST /api/scoring-rules/:botId`: Create a scoring rule.
-*   `DELETE /api/scoring-rules/:ruleId`: Delete a scoring rule.
+### Reglas de Puntuación (Scoring)
+*   `GET /api/scoring-rules/:botId`: Obtiene las reglas de puntuación.
+*   `POST /api/scoring-rules/:botId`: Crea una regla de puntuación.
+*   `DELETE /api/scoring-rules/:ruleId`: Elimina una regla de puntuación.
 
-### Product Catalog
-*   `GET /api/products/:botId`: Get products.
-*   `POST /api/products/:botId`: Add a product.
-*   `PUT /api/products/:id`: Update a product.
-*   `DELETE /api/products/:id`: Delete a product.
+### Catálogo de Productos
+*   `GET /api/products/:botId`: Obtiene los productos.
+*   `POST /api/products/:botId`: Añade un producto.
+*   `PUT /api/products/:id`: Actualiza un producto.
+*   `DELETE /api/products/:id`: Elimina un producto.
+*   `POST /api/products/:id/image`: Sube una imagen para un producto.

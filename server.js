@@ -21,13 +21,17 @@ const scoringService = require('./services/scoringService');
 const productService = require('./services/productService');
 const storageService = require('./services/storageService');
 const statsService = require('./services/statsService');
+const pipelineService = require('./services/pipelineService');
+const deepseekService = require('./services/deepseekService');
 
 const { startSchedulerExecutor } = require('./services/schedulerExecutor');
 const authRoutes = require('./routes/authRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const complianceRoutes = require('./routes/complianceRoutes');
 const { handleStripeWebhook } = require('./controllers/webhookController');
 
 const { attachUser, requireAdmin, requireAuth } = require('./auth/authMiddleware');
+const tenantMiddleware = require('./middleware/tenantMiddleware');
 
 require('./auth/passport');
 
@@ -88,6 +92,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.use(attachUser);
+app.use(tenantMiddleware); // Establecer contexto del tenant después de identificar al usuario
 
 // CSP
 app.use((req, res, next) => {
@@ -107,6 +112,7 @@ app.use((req, res, next) => {
 // === RUTAS ===
 app.use('/auth', authRoutes);
 app.use('/subs', subscriptionRoutes);
+app.use('/api/compliance', complianceRoutes);
 
 // === API ROUTES ===
 
@@ -149,17 +155,6 @@ app.get('/api/dashboard', requireAdmin, (req, res) => {
     paymentSuccess,
   });
 });
-
-// (Opcional) Endpoint REST de stats (ya no necesario si usas SSE, pero no estorba)
-/*app.get('/api/dashboard-stats', requireAdmin, async (req, res) => {
-  try {
-    const stats = await statsService.getDashboardStats(req.user.email);
-    res.json(stats);
-  } catch (error) {
-    console.error('Error obteniendo estadísticas:', error);
-    res.status(500).json({ message: 'Error obteniendo estadísticas' });
-  }
-});*/
 
 // Sales data endpoint - requires authentication
 app.get('/api/sales', requireAuth, (req, res) => {
@@ -398,6 +393,98 @@ app.get('/api/lead-messages/:leadId', requireAuth, async (req, res) => {
     res.status(500).json({ message: 'Error getting lead messages' });
   }
 });
+
+// === API ENDPOINTS FOR PIPELINES ===
+
+app.get('/api/pipelines', requireAuth, async (req, res) => {
+  try {
+    const pipelines = await pipelineService.getPipelines();
+    res.json(pipelines);
+  } catch (error) {
+    console.error('Error fetching pipelines:', error);
+    res.status(500).json({ message: 'Error fetching pipelines' });
+  }
+});
+
+app.post('/api/pipelines', requireAuth, async (req, res) => {
+  const { name } = req.body;
+  try {
+    const pipeline = await pipelineService.createPipeline(name);
+    res.json(pipeline);
+  } catch (error) {
+    console.error('Error creating pipeline:', error);
+    res.status(500).json({ message: 'Error creating pipeline' });
+  }
+});
+
+app.put('/api/pipelines/stages/reorder', requireAuth, async (req, res) => {
+  const { stages } = req.body;
+  try {
+    await pipelineService.reorderStages(stages);
+    res.json({ message: 'Stages reordered' });
+  } catch (error) {
+    console.error('Error reordering stages:', error);
+    res.status(500).json({ message: 'Error reordering stages' });
+  }
+});
+
+app.post('/api/leads/:id/move', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { pipelineId, stageId } = req.body;
+  try {
+    await pipelineService.moveLead(id, pipelineId, stageId, req.user.email);
+    res.json({ message: 'Lead moved successfully' });
+  } catch (error) {
+    console.error('Error moving lead:', error);
+    res.status(500).json({ message: 'Error moving lead' });
+  }
+});
+
+// === AI SUGGESTION ENDPOINT ===
+app.post('/api/ai/suggest-reply', requireAuth, async (req, res) => {
+  const { leadId, context, tone } = req.body;
+  try {
+    // 1. Fetch data
+    const lead = await leadDbService.getLeadById(leadId);
+    if (!lead) return res.status(404).json({ message: 'Lead not found' });
+    
+    const messages = await leadDbService.getLeadMessages(leadId, 15); // limit 15
+    const products = await productService.getProductsByBot(lead.bot_id); // for context
+
+    // 2. Format history
+    const historyText = messages.map(m => 
+      `${m.sender === 'user' ? 'Customer' : 'Agent'}: ${m.message}`
+    ).join('\n');
+
+    // 3. Build System Prompt
+    const systemPrompt = `
+      Role: You are a helpful sales assistant.
+      Context: You are replying to a customer on WhatsApp.
+      Tone: ${tone || 'Professional yet friendly'}.
+      Constraint: Keep replies under 60 words unless detailed info is requested.
+      Customer Name: ${lead.name || 'Unknown'}
+      Interested In Tags: ${lead.tags?.join(', ') || 'None'}
+      Available Products: ${products.map(p => p.name).join(', ')}
+      
+      Instruction: Suggest the next reply to move the sale forward. Plain text only.
+    `;
+
+    // 4. Call DeepSeek (using existing service wrapper)
+    // We pass history empty array because we included history in the prompt text for better control here,
+    // or we can pass it as history. Let's pass it as a user message block to keep deepseekService simple.
+    
+    const prompt = `Here is the conversation history:\n${historyText}\n\nAdditional Context: ${context || ''}\n\nSuggest the next reply.`;
+    
+    const suggestion = await deepseekService.getChatReply(prompt, [], systemPrompt);
+    
+    res.json({ suggestion });
+
+  } catch (error) {
+    console.error('Error generating AI suggestion:', error);
+    res.status(500).json({ message: 'Error generating suggestion' });
+  }
+});
+
 
 // === INITIAL DATA ENDPOINTS FOR SSE CLIENTS ===
 app.get('/api/initial-data', requireAuth, async (req, res) => {

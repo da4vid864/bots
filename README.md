@@ -1,47 +1,61 @@
 # WhatsApp Bot Manager
 
-A comprehensive dashboard to manage multiple WhatsApp bots, featuring automated lead scoring, CRM capabilities, product catalog management, and subscription handling. Built with Node.js, Express, React, and Baileys.
+Un panel de control integral para gestionar múltiples bots de WhatsApp, con funcionalidades avanzadas de calificación de leads (lead scoring), CRM, gestión de catálogo de productos y manejo de suscripciones. Construido con tecnología moderna: Node.js, Express, React y Baileys.
 
-## Features
+## Tabla de Contenidos
 
-*   **Multi-Bot Management**: Connect and manage multiple WhatsApp sessions simultaneously.
-*   **Real-time Dashboard**: Live updates on bot status, messages, and leads using Server-Sent Events (SSE).
-*   **Lead Scoring**: Automated rule-based scoring to qualify leads based on interactions.
-*   **CRM & Sales Panel**: Assign leads to agents, view message history, and send messages directly from the dashboard.
-*   **Product Catalog**: Manage products and images to share via bots.
-*   **Subscription System**: Integrated with Stripe for user subscriptions.
-*   **Google Authentication**: Secure login using Google OAuth.
+*   [Características](#características)
+*   [Tecnologías](#tecnologías)
+*   [Requisitos Previos](#requisitos-previos)
+*   [Instalación](#instalación)
+*   [Configuración](#configuración)
+*   [Uso](#uso)
+*   [Scripts Disponibles](#scripts-disponibles)
+*   [Contribuir](#contribuir)
+*   [Licencia](#licencia)
 
-## Tech Stack
+## Características
 
-*   **Backend**: Node.js, Express, PostgreSQL, Baileys (WhatsApp Web API), Passport.js
-*   **Frontend**: React, Vite, Tailwind CSS
-*   **Storage**: Cloudflare R2 / AWS S3 compatible (for image storage)
+*   **Gestión Multi-Bot**: Conecta y administra múltiples sesiones de WhatsApp simultáneamente desde un solo lugar.
+*   **Dashboard en Tiempo Real**: Visualiza el estado de los bots, mensajes entrantes y leads calificados al instante mediante Server-Sent Events (SSE).
+*   **Lead Scoring Automatizado**: Sistema de puntuación basado en reglas para calificar leads automáticamente según sus interacciones y palabras clave.
+*   **Panel de Ventas y CRM**: Asigna leads a agentes, revisa el historial de conversaciones y envía mensajes directamente desde el dashboard.
+*   **Catálogo de Productos**: Gestiona productos e imágenes para compartirlos fácilmente a través de los bots.
+*   **Sistema de Suscripciones**: Integración nativa con Stripe para gestionar planes y pagos de usuarios (SaaS).
+*   **Autenticación Segura**: Inicio de sesión mediante Google OAuth.
 
-## Prerequisites
+## Tecnologías
 
-*   Node.js (v20+ recommended)
-*   PostgreSQL Database
-*   Google Cloud Console Project (for OAuth)
-*   Stripe Account (for payments)
-*   Cloudflare R2 or AWS S3 compatible storage buckets
+*   **Backend**: Node.js, Express, PostgreSQL, Baileys (API de WhatsApp Web), Passport.js.
+*   **Frontend**: React, Vite, Tailwind CSS.
+*   **Almacenamiento**: Compatible con Cloudflare R2 / AWS S3 (para almacenamiento de imágenes).
 
-## Installation
+## Requisitos Previos
 
-1.  **Clone the repository**
+*   **Node.js**: Versión 20.0.0 o superior.
+*   **PostgreSQL**: Base de datos relacional.
+*   **Google Cloud Console**: Un proyecto configurado para autenticación OAuth 2.0.
+*   **Cuenta de Stripe**: Para el procesamiento de pagos (si se usa el módulo de suscripciones).
+*   **Almacenamiento S3 Compatible**: Bucket en Cloudflare R2 o AWS S3.
+
+## Instalación
+
+Sigue estos pasos para configurar el proyecto en tu entorno local:
+
+1.  **Clonar el repositorio**
 
     ```bash
-    git clone <repository-url>
-    cd <project-directory>
+    git clone <url-del-repositorio>
+    cd <directorio-del-proyecto>
     ```
 
-2.  **Install Backend Dependencies**
+2.  **Instalar dependencias del Backend**
 
     ```bash
     npm install
     ```
 
-3.  **Install Frontend Dependencies**
+3.  **Instalar dependencias del Frontend**
 
     ```bash
     cd client
@@ -49,64 +63,87 @@ A comprehensive dashboard to manage multiple WhatsApp bots, featuring automated 
     cd ..
     ```
 
-4.  **Environment Configuration**
+4.  **Configurar Variables de Entorno**
 
-    Create a `.env` file in the root directory with the following variables:
+    Crea un archivo `.env` en la raíz del proyecto. Puedes usar el siguiente ejemplo como base:
 
     ```env
-    # Server
+    # Servidor
     PORT=3000
     NODE_ENV=development
     FRONTEND_URL=http://localhost:5173
 
-    # Database
-    DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+    # Base de Datos
+    DATABASE_URL=postgresql://usuario:password@localhost:5432/nombre_db
 
-    # Authentication (Google)
-    GOOGLE_CLIENT_ID=your_google_client_id
-    GOOGLE_CLIENT_SECRET=your_google_client_secret
-    SESSION_SECRET=your_session_secret
+    # Autenticación (Google OAuth)
+    GOOGLE_CLIENT_ID=tu_cliente_id_google
+    GOOGLE_CLIENT_SECRET=tu_secreto_cliente_google
+    SESSION_SECRET=tu_secreto_de_sesion
 
-    # Stripe
-    STRIPE_SECRET_KEY=your_stripe_secret_key
-    STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+    # Stripe (Pagos)
+    STRIPE_SECRET_KEY=tu_clave_secreta_stripe
+    STRIPE_WEBHOOK_SECRET=tu_secreto_webhook_stripe
 
-    # Storage (Cloudflare R2 / S3)
-    R2_ACCESS_KEY_ID=your_access_key
-    R2_SECRET_ACCESS_KEY=your_secret_key
-    R2_BUCKET_NAME=your_bucket_name
-    R2_ENDPOINT=your_endpoint_url
+    # Almacenamiento (Cloudflare R2 / S3)
+    R2_ACCESS_KEY_ID=tu_access_key
+    R2_SECRET_ACCESS_KEY=tu_secret_key
+    R2_BUCKET_NAME=nombre_de_tu_bucket
+    R2_ENDPOINT=url_endpoint_s3
     ```
 
-5.  **Database Migration**
+5.  **Ejecutar Migraciones de Base de Datos**
 
-    Initialize the database schema:
+    Inicializa el esquema de la base de datos:
 
     ```bash
     npm run migrate
     ```
 
-## Usage
+## Uso
 
-### Development
+### Desarrollo
 
-**Backend:**
-Start the backend server with hot-reloading:
+Para trabajar en el proyecto, necesitarás ejecutar tanto el backend como el frontend (en terminales separadas).
+
+**Terminal 1: Backend**
+Inicia el servidor con recarga automática (nodemon):
 ```bash
 npm run dev
 ```
 
-**Frontend:**
-In a separate terminal, start the Vite development server:
+**Terminal 2: Frontend**
+Inicia el servidor de desarrollo de Vite:
 ```bash
 cd client
 npm run dev
 ```
+Accede a la aplicación en `http://localhost:5173`.
 
-### Production
+### Producción
 
-Build the frontend and serve it via the backend:
+Para desplegar en producción, construye el frontend y sirve todo desde el backend:
 
 ```bash
 npm run build
 npm start
+```
+
+## Scripts Disponibles
+
+Definidos en `package.json`:
+
+*   `npm start`: Inicia el servidor en modo producción (`node server.js`).
+*   `npm run dev`: Inicia el servidor en modo desarrollo con reinicio automático (`nodemon server.js`).
+*   `npm run build:client`: Construye la aplicación de React para producción.
+*   `npm run build`: Alias para `build:client`.
+*   `npm run serve`: Inicia el servidor forzando `NODE_ENV=production`.
+*   `npm run migrate`: Ejecuta los scripts de migración de base de datos (`node migrate.js`).
+
+## Contribuir
+
+¡Las contribuciones son bienvenidas! Por favor, revisa nuestra guía en [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) para conocer los estándares de código y el flujo de trabajo para Pull Requests.
+
+## Licencia
+
+Este proyecto está bajo la Licencia ISC.

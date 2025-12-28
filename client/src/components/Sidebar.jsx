@@ -25,8 +25,18 @@ const NavSalesIcon = () => (
   </svg>
 );
 
+const NavPrivacyIcon = () => (
+  <svg
+    className="w-4 h-4 text-blue-400"
+    fill="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+  </svg>
+);
+
 const Sidebar = ({ activePage, onPageChange }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, tenant } = useAuth();
   const { t } = useTranslation();
 
   // Solo Dashboard (admin) y Sales Panel (admin / vendor)
@@ -49,10 +59,15 @@ const Sidebar = ({ activePage, onPageChange }) => {
           },
         ]
       : []),
+    {
+      id: 'privacy',
+      label: t('privacy.title') || 'Privacy Portal',
+      icon: <NavPrivacyIcon />,
+    },
   ];
 
   return (
-    <aside className="hidden sm:flex flex-col w-64 bg-slate-950 border-r border-slate-800 text-slate-100 h-screen">
+    <aside className="flex flex-col w-64 bg-slate-950 border-r border-slate-800 text-slate-100 h-screen">
       {/* HEADER */}
       <div className="px-4 pt-4 pb-3 border-b border-slate-800">
         <div className="flex items-center space-x-2 mb-3">
@@ -71,7 +86,7 @@ const Sidebar = ({ activePage, onPageChange }) => {
               user?.email}
           </p>
           <p className="mt-0.5 text-[11px] uppercase tracking-wide text-slate-500">
-            {user?.role}
+            {user?.role} {tenant ? `• ${tenant.name}` : ''}
           </p>
         </div>
 

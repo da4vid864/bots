@@ -6,7 +6,35 @@
     "bot_management": "Bot Management",
     "sales_panel": "Sales Panel",
     "status_online": "Status: Online",
-    "logout": "Logout"
+    "logout": "Logout",
+    "privacy_portal": "Privacy Portal"
+  },
+  "privacy": {
+    "title": "Privacy Portal",
+    "subtitle": "Manage your data rights (ARCO)",
+    "request_type": "Request Type",
+    "description": "Description",
+    "description_placeholder": "Describe your request...",
+    "submit": "Submit Request",
+    "history": "Request History",
+    "no_requests": "No requests found",
+    "status": "Status",
+    "date": "Date",
+    "types": {
+      "access": "Access",
+      "rectification": "Rectification",
+      "cancellation": "Cancellation",
+      "opposition": "Opposition"
+    },
+    "statuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "admin_view": "Admin View",
+    "approve": "Approve",
+    "reject": "Reject",
+    "success_message": "Request submitted successfully"
   },
   "chat": {
     "qualified_leads": "Qualified Leads",

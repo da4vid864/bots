@@ -1,48 +1,51 @@
-# Contributing Guide
+# Guía de Contribución
 
-Thank you for your interest in contributing to the project! This guide details the standards and workflows we follow.
+¡Gracias por tu interés en contribuir al proyecto! Esta guía detalla los estándares y flujos de trabajo que seguimos.
 
-## Development Workflow
+## Flujo de Trabajo de Desarrollo
 
-1.  **Fork & Clone**: Fork the repository and clone it locally.
-2.  **Branching**: Create a new branch for your feature or fix.
-    *   `feature/my-new-feature`
-    *   `fix/bug-description`
-    *   `docs/update-readme`
-3.  **Changes**: Make your changes, ensuring you follow the coding standards below.
-4.  **Commit**: Commit your changes with clear, descriptive messages.
-5.  **Push & PR**: Push to your fork and submit a Pull Request to the `main` branch.
+1.  **Fork & Clonar**: Haz un fork del repositorio y clónalo localmente.
+2.  **Branching**: Crea una nueva rama (branch) para tu funcionalidad o corrección.
+    *   `feature/mi-nueva-funcionalidad`
+    *   `fix/descripcion-del-bug`
+    *   `docs/actualizar-readme`
+3.  **Cambios**: Realiza tus cambios, asegurándote de seguir los estándares de código a continuación.
+4.  **Commit**: Haz commit de tus cambios con mensajes claros y descriptivos.
+5.  **Push & PR**: Sube (push) los cambios a tu fork y envía un Pull Request a la rama `main`.
 
-## Coding Standards
+## Estándares de Código
 
 ### General
-*   Write clean, readable, and maintainable code.
-*   Follow the existing project structure.
-*   Keep functions small and focused.
+
+*   Escribe código limpio, legible y mantenible.
+*   Sigue la estructura existente del proyecto.
+*   Mantén las funciones pequeñas y enfocadas.
 
 ### JavaScript (Backend & Frontend)
-*   **Linting**: We use ESLint. Ensure your code passes all linting rules before committing.
-*   **Formatting**: We use Prettier. Run prettier on your files to ensure consistent formatting.
-*   **Variable Naming**: Use `camelCase` for variables and functions. Use `PascalCase` for React components and classes.
-*   **Async/Await**: Prefer `async/await` over raw Promises where possible.
 
-### Commit Messages
-We follow the Conventional Commits specification:
+*   **Linting**: Usamos ESLint. Asegúrate de que tu código pase todas las reglas de linting antes de hacer commit.
+*   **Formato**: Usamos Prettier. Ejecuta Prettier en tus archivos para garantizar un formato consistente.
+*   **Nombres de Variables**: Usa `camelCase` para variables y funciones. Usa `PascalCase` para componentes React y clases.
+*   **Async/Await**: Prefiere `async/await` sobre Promises (promesas) donde sea posible.
 
-*   `feat: add new login page`
-*   `fix: resolve crash on startup`
-*   `docs: update API documentation`
-*   `style: format code with prettier`
-*   `refactor: simplify auth logic`
-*   `test: add unit tests for user service`
+### Mensajes de Commit
 
-## Pull Request Guidelines
+Seguimos la especificación de Conventional Commits:
 
-*   Provide a clear description of the changes.
-*   Link to any related issues.
-*   Ensure all tests pass.
-*   Review your own code before submitting.
+*   `feat: agregar nueva página de inicio de sesión`
+*   `fix: resolver fallo al inicio de la aplicación`
+*   `docs: actualizar la documentación de la API`
+*   `style: formatear el código con prettier`
+*   `refactor: simplificar la lógica de autenticación`
+*   `test: agregar pruebas unitarias para el servicio de usuario`
 
-## Reporting Issues
+## Guía para Pull Requests (PR)
 
-If you find a bug or have a feature request, please open an issue in the issue tracker providing as much detail as possible.
+*   Proporciona una descripción clara de los cambios.
+*   Enlaza a cualquier issue relacionada.
+*   Asegúrate de que todas las pruebas pasen.
+*   Revisa tu propio código antes de enviarlo.
+
+## Reportar Issues
+
+Si encuentras un bug o tienes una solicitud de funcionalidad, por favor, abre un issue en el issue tracker proporcionando tantos detalles como sea posible.

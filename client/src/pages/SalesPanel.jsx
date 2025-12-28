@@ -2,7 +2,9 @@ import React from 'react';
 import { useBots } from '../context/BotsContext';
 import { useAuth } from '../context/AuthContext';
 import ChatInterface from '../components/ChatInterface';
+import PipelineBoard from '../components/PipelineBoard'; // New Component
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
 
 // ===== SVG Icons =====
 const LeadsIcon = () => (
@@ -46,6 +48,7 @@ const SalesPanel = () => {
   const { leads, sseConnected } = useBots();
   const { user } = useAuth();
   const { t } = useTranslation();
+  const [viewMode, setViewMode] = useState('inbox'); // 'inbox' | 'kanban'
 
   const assignedLeads = leads.filter((lead) => lead.assigned_to === user?.email).length;
   const totalLeads = leads.length;
@@ -66,6 +69,22 @@ const SalesPanel = () => {
           </div>
 
           <div className="flex items-center space-x-3">
+             {/* View Toggle */}
+             <div className="flex bg-slate-900 rounded-lg p-1 border border-slate-800">
+                <button
+                  onClick={() => setViewMode('inbox')}
+                  className={`px-3 py-1 text-sm rounded-md transition ${viewMode === 'inbox' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  Inbox
+                </button>
+                <button
+                  onClick={() => setViewMode('kanban')}
+                  className={`px-3 py-1 text-sm rounded-md transition ${viewMode === 'kanban' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  Kanban
+                </button>
+             </div>
+
             {/* Estado SSE */}
             <div
               className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium ${
@@ -141,14 +160,20 @@ const SalesPanel = () => {
         </div>
       </header>
 
-      {/* CHAT INTERFACE */}
-      <main className="flex-1 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl h-full shadow-lg shadow-slate-900/40 overflow-hidden">
-          <ChatInterface />
+      {/* CHAT INTERFACE OR KANBAN */}
+      <main className="flex-1 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-hidden">
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl h-full shadow-lg shadow-slate-900/40 overflow-hidden flex flex-col">
+          {viewMode === 'inbox' ? (
+             <ChatInterface />
+          ) : (
+             <div className="h-full bg-white text-gray-900">
+               <PipelineBoard />
+             </div>
+          )}
         </div>
 
-        {/* EMPTY STATE / INSTRUCCIONES */}
-        {totalLeads === 0 && (
+        {/* EMPTY STATE / INSTRUCCIONES (Only show on Inbox + No Leads) */}
+        {totalLeads === 0 && viewMode === 'inbox' && (
           <div className="mt-6">
             <div className="bg-slate-900/70 rounded-2xl p-6 sm:p-8 border border-slate-800 text-center">
               <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">

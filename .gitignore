@@ -5,6 +5,8 @@ node_modules/
 .env
 .env.local
 .env.production
+.kilocode
+.idx
 
 # Database files
 data/

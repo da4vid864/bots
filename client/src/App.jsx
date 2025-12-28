@@ -8,6 +8,7 @@ import Sidebar from './components/Sidebar';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const SalesPanel = lazy(() => import('./pages/SalesPanel'));
 const Login = lazy(() => import('./pages/Login'));
+const PrivacyPortal = lazy(() => import('./pages/PrivacyPortal'));
 
 // --- Atomic UI Components ---
 
@@ -105,6 +106,7 @@ const DashboardLayout = () => {
   const getActivePage = (path) => {
     if (path.includes('sales')) return 'sales';
     if (path.includes('bots')) return 'bots';
+    if (path.includes('privacy')) return 'privacy';
     return 'dashboard';
   };
 
@@ -113,6 +115,7 @@ const DashboardLayout = () => {
       sales: '/sales',
       bots: '/dashboard',
       dashboard: '/dashboard',
+      privacy: '/privacy',
     };
     navigate(routes[pageId] || '/dashboard');
   };
@@ -156,6 +159,7 @@ const AppContent = () => {
         </RequireAuth>
       }>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/privacy" element={<PrivacyPortal />} />
         
         {/* Gated Content (Require Pro) */}
         <Route path="/sales" element={

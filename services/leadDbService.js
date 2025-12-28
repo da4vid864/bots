@@ -49,7 +49,7 @@ async function getOrCreateLead(botId, whatsappNumber) {
 
         // Crear nuevo lead
         result = await pool.query(
-            'INSERT INTO leads (bot_id, whatsapp_number, status, score, tags) VALUES ($1, $2, $3, 0, \'{}\') RETURNING *',
+            'INSERT INTO leads (bot_id, whatsapp_number, status, score, tags, tenant_id) VALUES ($1, $2, $3, 0, \'{}\', current_setting(\'app.current_tenant\')::uuid) RETURNING *',
             [botId, whatsappNumber, 'capturing']
         );
 
@@ -233,7 +233,7 @@ async function getLeadsByVendor(vendorEmail) {
  */
 async function addLeadMessage(leadId, sender, message) {
     await pool.query(
-        'INSERT INTO lead_messages (lead_id, sender, message) VALUES ($1, $2, $3)',
+        'INSERT INTO lead_messages (lead_id, sender, message, tenant_id) VALUES ($1, $2, $3, current_setting(\'app.current_tenant\')::uuid)',
         [leadId, sender, message]
     );
 

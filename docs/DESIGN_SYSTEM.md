@@ -1,135 +1,135 @@
-# WhatsAuto Design System
+# Sistema de Diseño WhatsAuto
 
 ## Overview
-This design system defines the visual foundation for the WhatsAuto SaaS landing page, aligning with the brand voice: **professional-empathetic, dynamic-tech, trustworthy**. Target audience: Sales and marketing teams in high-growth SMEs in e-commerce and services.
+Este sistema de diseño define la base visual para la landing page de WhatsAuto SaaS, alineándose con la voz de la marca: **profesional-empático, dinámico-tecnológico, confiable**. Audiencia objetivo: Equipos de ventas y marketing en PYMES de alto crecimiento en comercio electrónico y servicios.
 
-## 1. Color System
+## 1. Sistema de Color
 
-### 1.1 Semantic Colors
+### 1.1 Colores Semánticos
 
-#### Primary (Brand Action)
-- **Purpose:** Primary actions, main CTAs, key interactive elements.
-- **Psychological Impact:** Blue conveys trust, reliability, and professionalism—essential for a tool that handles customer conversations and sensitive data.
-- **Variants:**
-  - `primary-50`  `#eff6ff`  (light background)
-  - `primary-100` `#dbeafe`  (hover states)
-  - `primary-200` `#bfdbfe`  (borders)
-  - `primary-300` `#93c5fd`  (secondary buttons)
-  - `primary-400` `#60a5fa`  (active states)
-  - `primary-500` `#2872fa`  **Brand Blue** (main CTAs)
-  - `primary-600` `#1559ed`  (hover on primary)
-  - `primary-700` `#1d4ed8`  (active/pressed)
-  - `primary-800` `#1e40af`  (dark mode primary)
-  - `primary-900` `#1e3a8a`  (dark mode accents)
+#### Primario (Acción de Marca)
+- **Propósito:** Acciones primarias, CTAs principales, elementos interactivos clave.
+- **Impacto Psicológico:** El azul transmite confianza, fiabilidad y profesionalidad, esencial para una herramienta que gestiona conversaciones con clientes y datos sensibles.
+- **Variantes:**
+  - `primary-50` `#eff6ff` (fondo claro)
+  - `primary-100` `#dbeafe` (estados hover)
+  - `primary-200` `#bfdbfe` (bordes)
+  - `primary-300` `#93c5fd` (botones secundarios)
+  - `primary-400` `#60a5fa` (estados activos)
+  - `primary-500` `#2872fa` **Azul de Marca** (CTAs principales)
+  - `primary-600` `#1559ed` (hover en primario)
+  - `primary-700` `#1d4ed8` (activo/presionado)
+  - `primary-800` `#1e40af` (modo oscuro primario)
+  - `primary-900` `#1e3a8a` (acentos modo oscuro)
 
-#### Secondary (Backgrounds, Soft Accents)
-- **Purpose:** Backgrounds, subtle borders, neutral accents.
-- **Psychological Impact:** Soft blue‑gray creates a calm, focused environment, reducing visual noise while maintaining a tech‑forward feel.
-- **Variants:**
-  - `secondary-50`  `#f2f5f7`  (lightest background)
-  - `secondary-100` `#e1e8ed`  (card backgrounds)
-  - `secondary-200` `#c8d4de`  (dividers)
-  - `secondary-300` `#a0b4c8`  (disabled elements)
-  - `secondary-400` `#7b95ad`  (placeholder text)
-  - `secondary-500` `#5a738c`  (secondary text)
-  - `secondary-600` `#3a4f66`  (body text)
-  - `secondary-700` `#2d3f52`  (headings)
-  - `secondary-800` `#192a3d`  (dark mode backgrounds)
-  - `secondary-900` `#0f1a26`  (dark mode surfaces)
+#### Secundario (Fondos, Acentos Suaves)
+- **Propósito:** Fondos, bordes sutiles, acentos neutrales.
+- **Impacto Psicológico:** El azul-gris suave crea un ambiente tranquilo y enfocado, reduciendo el ruido visual mientras mantiene una sensación tecnológica.
+- **Variantes:**
+  - `secondary-50` `#f2f5f7` (fondo más claro)
+  - `secondary-100` `#e1e8ed` (fondos de tarjetas)
+  - `secondary-200` `#c8d4de` (divisores)
+  - `secondary-300` `#a0b4c8` (elementos deshabilitados)
+  - `secondary-400` `#7b95ad` (texto placeholder)
+  - `secondary-500` `#5a738c` (texto secundario)
+  - `secondary-600` `#3a4f66` (texto del cuerpo)
+  - `secondary-700` `#2d3f52` (encabezados)
+  - `secondary-800` `#192a3d` (fondos modo oscuro)
+  - `secondary-900` `#0f1a26` (superficies modo oscuro)
 
-#### Accent (Secondary CTAs, Highlights)
-- **Purpose:** Highlights, success states, secondary buttons, growth‑oriented elements.
-- **Psychological Impact:** Green symbolizes growth, positivity, and empathy—aligning with the product’s promise of increasing leads and improving customer relationships.
-- **Variants:**
-  - `accent-50`  `#ecfdf5`
+#### Acento (CTAs Secundarios, Highlights)
+- **Propósito:** Highlights, estados de éxito, botones secundarios, elementos orientados al crecimiento.
+- **Impacto Psicológico:** El verde simboliza el crecimiento, la positividad y la empatía, alineándose con la promesa del producto de aumentar los leads y mejorar las relaciones con los clientes.
+- **Variantes:**
+  - `accent-50` `#ecfdf5`
   - `accent-100` `#d1fae5`
   - `accent-200` `#a7f3d0`
   - `accent-300` `#6ee7b7`
   - `accent-400` `#34d399`
-  - `accent-500` `#10b981`  **Brand Green** (accent CTAs)
+  - `accent-500` `#10b981` **Verde de Marca** (CTAs de acento)
   - `accent-600` `#059669`
   - `accent-700` `#047857`
   - `accent-800` `#065f46`
   - `accent-900` `#064e3b`
 
-### 1.2 State Colors
-- **Success:** `#10b981` (accent‑500) – reinforces positive outcomes (e.g., “lead captured”).
-- **Error:** `#ef4444` – clear, attention‑grabbing for critical issues.
-- **Warning:** `#f59e0b` – alerts users without causing panic.
-- **Info:** `#3b82f6` – familiar blue for informational messages.
+### 1.2 Colores de Estado
+- **Éxito:** `#10b981` (accent-500) – refuerza resultados positivos (ej., "lead capturado").
+- **Error:** `#ef4444` – claro, llama la atención para problemas críticos.
+- **Advertencia:** `#f59e0b` – alerta a los usuarios sin causar pánico.
+- **Info:** `#3b82f6` – azul familiar para mensajes informativos.
 
-### 1.3 Gray Scale
-- **Usage:** Neutral text, borders, and backgrounds.
-- **Scale:**
-  - `gray-50`  `#f9fafb`  (background)
-  - `gray-100` `#f3f4f6`  (subtle backgrounds)
-  - `gray-200` `#e5e7eb`  (borders)
-  - `gray-300` `#d1d5db`  (dividers)
-  - `gray-400` `#9ca3af`  (placeholder)
-  - `gray-500` `#6b7280`  (secondary text)
-  - `gray-600` `#4b5563`  (body text)
-  - `gray-700` `#374151`  (headings)
-  - `gray-800` `#1f2937`  (dark mode text)
-  - `gray-900` `#111827`  (dark mode headings)
+### 1.3 Escala de Grises
+- **Uso:** Texto neutral, bordes y fondos.
+- **Escala:**
+  - `gray-50` `#f9fafb` (fondo)
+  - `gray-100` `#f3f4f6` (fondos sutiles)
+  - `gray-200` `#e5e7eb` (bordes)
+  - `gray-300` `#d1d5db` (divisores)
+  - `gray-400` `#9ca3af` (placeholder)
+  - `gray-500` `#6b7280` (texto secundario)
+  - `gray-600` `#4b5563` (texto del cuerpo)
+  - `gray-700` `#374151` (encabezados)
+  - `gray-800` `#1f2937` (texto modo oscuro)
+  - `gray-900` `#111827` (encabezados modo oscuro)
 
-### 1.4 Functional Gradients
-- **Hero Gradient:** `linear-gradient(135deg, #2872fa 0%, #10b981 100%)`
-  - Combines trust (blue) with growth (green) for a dynamic, engaging above‑the‑fold section.
-- **Button Gradient:** `linear-gradient(90deg, #2872fa, #1559ed)`
-  - Adds depth to primary buttons, improving click‑through perception.
+### 1.4 Degradados Funcionales
+- **Degradado Hero:** `linear-gradient(135deg, #2872fa 0%, #10b981 100%)`
+  - Combina confianza (azul) con crecimiento (verde) para una sección dinámica y atractiva sobre el pliegue.
+- **Degradado Botón:** `linear-gradient(90deg, #2872fa, #1559ed)`
+  - Añade profundidad a los botones primarios, mejorando la percepción de click-through.
 
-### 1.5 Dark Mode Mapping
-| Light Mode Token | Dark Mode Token | Justification |
-|------------------|-----------------|---------------|
-| `primary-500`    | `primary-400`   | Better contrast on dark backgrounds |
-| `secondary-50`   | `secondary-900` | Invert background/foreground relationship |
-| `secondary-100`  | `secondary-800` | Softer surfaces in dark theme |
-| `gray-50`        | `gray-900`      | Background inversion |
-| `gray-100`       | `gray-800`      | Subtle background inversion |
-| `gray-900`       | `gray-50`       | Text inversion |
-| `white`          | `secondary-900` | Pure white is too harsh in dark mode |
+### 1.5 Mapeo de Modo Oscuro
+| Token Modo Claro | Token Modo Oscuro | Justificación |
+|---|---|---|
+| `primary-500` | `primary-400` | Mejor contraste en fondos oscuros |
+| `secondary-50` | `secondary-900` | Invertir relación fondo/primer plano |
+| `secondary-100` | `secondary-800` | Superficies más suaves en tema oscuro |
+| `gray-50` | `gray-900` | Inversión de fondo |
+| `gray-100` | `gray-800` | Inversión de fondo sutil |
+| `gray-900` | `gray-50` | Inversión de texto |
+| `white` | `secondary-900` | El blanco puro es demasiado duro en modo oscuro |
 
-### 1.6 WCAG AA Compliance
-All color pairs used for text meet at least **4.5:1** contrast ratio (normal text) and **3:1** for large text. Examples:
-- `primary-500` on `white` = 4.6:1 ✅
-- `secondary-600` on `secondary-50` = 7.2:1 ✅
-- `accent-500` on `white` = 3.9:1 ✅ (large text only)
-- `gray-900` on `gray-100` = 10.2:1 ✅
+### 1.6 Cumplimiento de WCAG AA
+Todos los pares de colores utilizados para el texto cumplen con una relación de contraste de al menos **4.5:1** (texto normal) y **3:1** para texto grande. Ejemplos:
+- `primary-500` en `white` = 4.6:1 ✅
+- `secondary-600` en `secondary-50` = 7.2:1 ✅
+- `accent-600` en `white` = 4.54:1 ✅
+- `gray-900` en `gray-100` = 10.2:1 ✅
 
-## 2. Typography System
+## 2. Sistema de Tipografía
 
 ### 2.1 Font Stack
-- **Headings:** `Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`
-  - **Justification:** Inter is a modern, geometric sans‑serif with excellent readability and a tech‑forward personality. It supports multiple weights and is optimized for screens.
-- **Body:** `system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif`
-  - **Justification:** System fonts ensure fast loading and consistent rendering across platforms while maintaining a professional tone.
+- **Encabezados:** `Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`
+  - **Justificación:** Inter es una sans-serif moderna, geométrica con excelente legibilidad y una personalidad tecnológica. Soporta múltiples pesos y está optimizada para pantallas.
+- **Cuerpo:** `system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif`
+  - **Justificación:** Las fuentes del sistema aseguran una carga rápida y un renderizado consistente en todas las plataformas, manteniendo un tono profesional.
 
-### 2.2 Type Scale (Base: 1rem = 16px)
-| Element       | Font Size (rem) | Line Height | Tailwind Class               | Usage |
-|---------------|-----------------|-------------|------------------------------|-------|
-| H1            | 3.5 rem (56px)  | 1.1         | `text-5xl md:text-6xl font-bold tracking-tight` | Main headline |
-| H2            | 2.5 rem (40px)  | 1.2         | `text-4xl font-semibold tracking-tight` | Section titles |
-| H3            | 2.0 rem (32px)  | 1.3         | `text-3xl font-semibold`     | Feature headings |
-| H4            | 1.5 rem (24px)  | 1.4         | `text-2xl font-semibold`     | Card titles |
-| H5            | 1.25 rem (20px) | 1.5         | `text-xl font-medium`        | Sub‑headings |
-| H6            | 1.125 rem (18px)| 1.5         | `text-lg font-medium`        | Minor headings |
-| Body (large)  | 1.125 rem (18px)| 1.7         | `text-lg`                    | Introductory paragraphs |
-| Body          | 1 rem (16px)    | 1.6         | `text-base`                  | Default body text |
-| Small         | 0.875 rem (14px)| 1.5         | `text-sm`                    | Captions, meta info |
-| Extra Small   | 0.75 rem (12px) | 1.4         | `text-xs`                    | Labels, fine print |
+### 2.2 Escala de Tipos (Base: 1rem = 16px)
+| Elemento | Tamaño de Fuente (rem) | Altura de Línea | Clase Tailwind | Uso |
+|---|---|---|---|---|
+| H1 | 3.5 rem (56px) | 1.1 | `text-5xl md:text-6xl font-bold tracking-tight` | Encabezado principal |
+| H2 | 2.5 rem (40px) | 1.2 | `text-4xl font-semibold tracking-tight` | Títulos de sección |
+| H3 | 2.0 rem (32px) | 1.3 | `text-3xl font-semibold` | Encabezados de características |
+| H4 | 1.5 rem (24px) | 1.4 | `text-2xl font-semibold` | Títulos de tarjetas |
+| H5 | 1.25 rem (20px) | 1.5 | `text-xl font-medium` | Subencabezados |
+| H6 | 1.125 rem (18px) | 1.5 | `text-lg font-medium` | Encabezados menores |
+| Cuerpo (largo) | 1.125 rem (18px) | 1.7 | `text-lg` | Párrafos introductorios |
+| Cuerpo | 1 rem (16px) | 1.6 | `text-base` | Texto del cuerpo predeterminado |
+| Pequeño | 0.875 rem (14px) | 1.5 | `text-sm` | Subtítulos, metainformación |
+| Extra Pequeño | 0.75 rem (12px) | 1.4 | `text-xs` | Etiquetas, letra pequeña |
 
-### 2.3 Section Hierarchy
-- **Hero:** H1 with gradient text, H2 for sub‑headline, large body for value proposition.
-- **Features:** H2 section title, H3 feature cards, body text for descriptions.
-- **Testimonials:** H2 section title, H4 customer names, body for quotes.
-- **Pricing:** H2 section title, H4 plan names, body for features.
-- **FAQ:** H2 section title, H5 questions, body answers.
+### 2.3 Jerarquía de Sección
+- **Hero:** H1 con texto degradado, H2 para subencabezado, cuerpo grande para propuesta de valor.
+- **Características:** Título de sección H2, tarjetas de características H3, texto del cuerpo para descripciones.
+- **Testimonios:** Título de sección H2, nombres de clientes H4, cuerpo para citas.
+- **Precios:** Título de sección H2, nombres de planes H4, cuerpo para características.
+- **FAQ:** Título de sección H2, preguntas H5, respuestas del cuerpo.
 
-This hierarchy guides eye‑tracking from largest to smallest, creating a clear visual flow that emphasizes key messages.
+Esta jerarquía guía el seguimiento ocular de mayor a menor, creando un flujo visual claro que enfatiza los mensajes clave.
 
-## 3. Tailwind CSS Configuration
+## 3. Configuración de Tailwind CSS
 
-### 3.1 Full `tailwind.config.js`
+### 3.1 `tailwind.config.js` Completo
 ```javascript
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -208,102 +208,64 @@ export default {
 }
 ```
 
-### 3.2 Usage Examples
+### 3.2 Ejemplos de Uso
 ```html
-<!-- Primary button -->
+<!-- Botón Primario -->
 <button class="bg-primary-500 hover:bg-primary-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
-  Start Free Trial
+  Iniciar Prueba Gratuita
 </button>
 
-<!-- Accent button -->
-<button class="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
-  See Pricing
+<!-- Botón de Acento -->
+<button class="bg-accent-600 hover:bg-accent-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
+  Ver Precios
 </button>
 
-<!-- Hero section with gradient -->
+<!-- Sección Hero con degradado -->
 <section class="bg-gradient-primary text-white">
-  <h1 class="font-heading text-5xl md:text-6xl font-bold tracking-tight">Automate sales and support conversations</h1>
+  <h1 class="font-heading text-5xl md:text-6xl font-bold tracking-tight">Automatice las conversaciones de ventas y soporte</h1>
 </section>
 
-<!-- Card with secondary background -->
+<!-- Tarjeta con fondo secundario -->
 <div class="bg-secondary-50 dark:bg-secondary-900 p-6 rounded-xl">
-  <h3 class="font-heading text-2xl font-semibold text-secondary-800 dark:text-secondary-100">Predictive Customer Intent</h3>
+  <h3 class="font-heading text-2xl font-semibold text-secondary-800 dark:text-secondary-100">Intención Predictiva del Cliente</h3>
 </div>
 ```
 
-## 4. Microinteractions & Hover States
+## 4. Microinteracciones y Estados Hover
 
-### 4.1 Button Hover States
-- **Primary Button:** `transition-all duration-200 hover:scale-[1.02] hover:shadow-lg`
-- **Secondary Button:** `transition-all duration-200 hover:scale-[1.02] hover:shadow-md`
-- **Outline Button:** `transition-all duration-200 hover:scale-[1.01] hover:shadow-sm`
-- **Ghost Button:** `transition-colors duration-200 hover:bg-secondary-100 dark:hover:bg-secondary-800`
+### 4.1 Estados Hover de Botones
+- **Botón Primario:** `transition-all duration-200 hover:scale-[1.02] hover:shadow-lg`
+- **Botón Secundario:** `transition-all duration-200 hover:scale-[1.02] hover:shadow-md`
+- **Botón de Esquema:** `transition-all duration-200 hover:scale-[1.01] hover:shadow-sm`
+- **Botón Fantasma:** `transition-colors duration-200 hover:bg-secondary-100 dark:hover:bg-secondary-800`
 
-### 4.2 Card Hover States
-Cards should have a subtle lift and shadow increase on hover to indicate interactivity.
+### 4.2 Estados Hover de Tarjetas
+Las tarjetas deben tener un levantamiento sutil y un aumento de sombra al pasar el ratón para indicar interactividad.
 
 ```html
 <div class="bg-white dark:bg-secondary-900 rounded-xl p-6 shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
-  <!-- card content -->
+  <!-- contenido de la tarjeta -->
 </div>
 ```
 
-**Tailwind Classes:** `transition-all duration-300 hover:scale-[1.02] hover:shadow-xl`
+**Clases Tailwind:** `transition-all duration-300 hover:scale-[1.02] hover:shadow-xl`
 
-### 4.3 Navigation Link Hover States
-Navigation links should have a subtle underline and color change.
+### 4.3 Estados Hover de Enlaces de Navegación
+Los enlaces de navegación deben tener un subrayado sutil y un cambio de color.
 
 ```html
 <a class="text-secondary-700 dark:text-secondary-300 hover:text-primary-500 dark:hover:text-primary-400 transition-colors duration-200 border-b-2 border-transparent hover:border-primary-500">
-  Link
+  Enlace
 </a>
 ```
 
-**Tailwind Classes:** `transition-colors duration-200 hover:text-primary-500 dark:hover:text-primary-400 hover:border-primary-500`
+**Clases Tailwind:** `transition-colors duration-200 hover:text-primary-500 dark:hover:text-primary-400 hover:border-primary-500`
 
-### 4.4 Custom Hook `useHover` (Optional)
-For more complex interactions, you can use the `useHover` hook that returns a boolean indicating whether the element is being hovered.
+## 5. Justificaciones Estratégicas Resumen
 
-```tsx
-import { useState, useRef, useEffect } from 'react';
-
-export function useHover() {
-  const [isHovered, setIsHovered] = useState(false);
-  const ref = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-
-    const handleMouseEnter = () => setIsHovered(true);
-    const handleMouseLeave = () => setIsHovered(false);
-
-    node.addEventListener('mouseenter', handleMouseEnter);
-    node.addEventListener('mouseleave', handleMouseLeave);
-
-    return () => {
-      node.removeEventListener('mouseenter', handleMouseEnter);
-      node.removeEventListener('mouseleave', handleMouseLeave);
-    };
-  }, []);
-
-  return [ref, isHovered] as const;
-}
-```
-
-Usage example:
-```tsx
-const [ref, isHovered] = useHover();
-return <div ref={ref} className={isHovered ? 'bg-primary-100' : ''}>Hover me</div>;
-```
-
-## 5. Strategic Justifications Summary
-
-- **Color Psychology:** Blue (trust) + Green (growth) = a palette that reassures while promising business improvement.
-- **Typography:** Inter and system fonts balance performance with a modern, professional aesthetic.
-- **Dark Mode:** Mapped tokens ensure readability and reduce eye strain for extended use.
-- **WCAG Compliance:** All contrasts meet AA standards, making the landing page accessible to a wider audience.
-- **Tailwind Integration:** Tokenized colors and fonts enable consistent, rapid development across the project.
-- **Microinteractions:** Subtle animations and hover effects enhance perceived quality and user engagement, making the interface feel dynamic and responsive.
-
-This design system provides a solid foundation that can scale with the product while staying aligned with the brand’s core values.
+- **Psicología del Color:** Azul (confianza) + Verde (crecimiento) = una paleta que tranquiliza al tiempo que promete una mejora comercial.
+- **Tipografía:** Inter y las fuentes del sistema equilibran el rendimiento con una estética moderna y profesional.
+- **Modo Oscuro:** Los tokens asignados garantizan la legibilidad y reducen la fatiga visual para un uso prolongado.
+- **Cumplimiento de WCAG:** Todos los contrastes cumplen con los estándares AA, lo que hace que la página de destino sea accesible para un público más amplio.
+- **Integración de Tailwind:** Los colores y fuentes tokenizados permiten un desarrollo rápido y coherente en todo el proyecto.
+- **Microinteracciones:** Las animaciones sutiles y los efectos de desplazamiento mejoran la calidad percibida y la participación del usuario, haciendo que la interfaz sea dinámica y receptiva.

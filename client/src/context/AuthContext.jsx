@@ -1,14 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 
 // Create Auth Context
 const AuthContext = createContext();
-
-// Axios configuration for API calls
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/',
-  withCredentials: true,
-});
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -75,6 +69,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
     isVendor: user?.role === 'vendor',
+    tenant: user?.tenant_id ? { id: user.tenant_id, name: user.tenant_name } : null,
   };
 
   return (

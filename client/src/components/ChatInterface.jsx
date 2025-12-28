@@ -3,6 +3,7 @@ import { useBots } from '../context/BotsContext';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import logo from '../assets/logo.png';
+import api from '../utils/api'; // Import API helper
 import LeadScoreCard from './LeadScoreCard';
 
 const ChatInterface = () => {
@@ -11,6 +12,7 @@ const ChatInterface = () => {
   const { t } = useTranslation();
   const [messageInput, setMessageInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [suggesting, setSuggesting] = useState(false); // AI State
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -44,6 +46,24 @@ const ChatInterface = () => {
       console.error('Error sending message:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAiSuggest = async () => {
+    if (!selectedLead) return;
+    setSuggesting(true);
+    try {
+       const res = await api.post('/ai/suggest-reply', {
+          leadId: selectedLead.id,
+          tone: 'professional' // Default
+       });
+       if (res.data.suggestion) {
+           setMessageInput(res.data.suggestion);
+       }
+    } catch (error) {
+       console.error("AI Error:", error);
+    } finally {
+       setSuggesting(false);
     }
   };
 
@@ -223,6 +243,21 @@ const ChatInterface = () => {
 
             {/* Message Input */}
             <div className="p-4 border-t border-gray-200 bg-white">
+              {/* AI Suggestion Button */}
+              <div className="flex justify-between items-center mb-2">
+                   <div className="text-xs text-gray-400">
+                       {suggesting ? '✨ AI thinking...' : ''}
+                   </div>
+                   <button
+                      onClick={handleAiSuggest}
+                      disabled={suggesting || selectedLead.assigned_to !== user?.email}
+                      className="text-xs flex items-center gap-1 text-purple-600 hover:text-purple-700 disabled:opacity-50 font-medium"
+                   >
+                       <span>✨</span>
+                       {t('chat.ai_suggest', 'Smart Reply')}
+                   </button>
+              </div>
+
               <div className="flex space-x-2">
                 <input
                   type="text"

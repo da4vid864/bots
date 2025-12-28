@@ -6,7 +6,35 @@
     "bot_management": "Gestión de Bots",
     "sales_panel": "Panel de Ventas",
     "status_online": "Estado: En línea",
-    "logout": "Cerrar Sesión"
+    "logout": "Cerrar Sesión",
+    "privacy_portal": "Portal de Privacidad"
+  },
+  "privacy": {
+    "title": "Portal de Privacidad",
+    "subtitle": "Gestiona tus derechos ARCO",
+    "request_type": "Tipo de Solicitud",
+    "description": "Descripción",
+    "description_placeholder": "Describe tu solicitud...",
+    "submit": "Enviar Solicitud",
+    "history": "Historial de Solicitudes",
+    "no_requests": "No se encontraron solicitudes",
+    "status": "Estado",
+    "date": "Fecha",
+    "types": {
+      "access": "Acceso",
+      "rectification": "Rectificación",
+      "cancellation": "Cancelación",
+      "opposition": "Oposición"
+    },
+    "statuses": {
+      "pending": "Pendiente",
+      "approved": "Aprobado",
+      "rejected": "Rechazado"
+    },
+    "admin_view": "Vista de Administrador",
+    "approve": "Aprobar",
+    "reject": "Rechazar",
+    "success_message": "Solicitud enviada exitosamente"
   },
   "chat": {
     "qualified_leads": "Leads Calificados",

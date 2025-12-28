@@ -8,8 +8,12 @@
         throw new Error('DEEPSEEK_API_KEY no configurada');
       }
 
+      // If systemPrompt is not provided, we could fetch it here if we had botId
+      // But typically the caller (baileysManager) constructs the prompt including available tools/images.
+      // So we trust the caller to have injected the correct tenant-specific system prompt.
+
       const messages = [
-        { role: 'system', content: systemPrompt }, // Usa el prompt del bot específico
+        { role: 'system', content: systemPrompt || 'Eres un asistente útil.' },
         ...history,
         { role: 'user', content: message }
       ];
