@@ -118,15 +118,29 @@ export default function PipelineBoard() {
   );
 
   // 1. Fetch Pipelines & Leads
+   // 1. Fetch Pipelines & Leads (CORREGIDO)
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [pipelinesRes, leadsRes] = await Promise.all([
           api.get('/pipelines'),
-          api.get('/initial-data') // Using existing endpoint to get leads
+          api.get('/initial-data')
         ]);
 
-        const loadedPipelines = pipelinesRes.data || [];
+        console.log("Respuesta API Pipelines:", pipelinesRes); // Para depuración
+
+        // CORRECCIÓN: Asegurar que loadedPipelines sea siempre un Array
+        // Muchas APIs devuelven { data: [...] } o { pipelines: [...] }
+        let loadedPipelines = [];
+        
+        if (Array.isArray(pipelinesRes.data)) {
+            loadedPipelines = pipelinesRes.data;
+        } else if (pipelinesRes.data && Array.isArray(pipelinesRes.data.data)) {
+            loadedPipelines = pipelinesRes.data.data;
+        } else if (pipelinesRes.data && Array.isArray(pipelinesRes.data.pipelines)) {
+            loadedPipelines = pipelinesRes.data.pipelines;
+        }
+
         setPipelines(loadedPipelines);
         
         // Select default or first pipeline
@@ -135,23 +149,26 @@ export default function PipelineBoard() {
             setSelectedPipelineId(defaultPipe.id);
         }
 
-        // Process leads from initial-data
-        // Note: initial-data returns 'leads' which are 'qualified leads'. 
-        // We might need a better endpoint to fetch ALL leads for the board, 
-        // or filter the ones relevant to this pipeline.
-        // For MVP, we'll assume the leads returned have pipeline_id/stage_id or we assign defaults.
-        const allLeads = leadsRes.data.leads || [];
+        // CORRECCIÓN: Validación similar para Leads
+        const leadsData = leadsRes.data || {};
+        const allLeads = Array.isArray(leadsData.leads) ? leadsData.leads : [];
         setLeads(allLeads);
 
       } catch (error) {
         console.error("Error loading board data", error);
+        // Evitar que la pantalla se rompa si falla la API
+        setPipelines([]); 
+        setLeads([]);
       }
     };
     fetchData();
   }, []);
 
   // 2. Derive Board State
-  const activePipeline = pipelines.find(p => p.id === selectedPipelineId);
+    const activePipeline = Array.isArray(pipelines) 
+      ? pipelines.find(p => p.id === selectedPipelineId) 
+      : null;
+
   const stages = activePipeline ? activePipeline.stages : [];
   
   // Group leads by stage
