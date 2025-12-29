@@ -101,12 +101,14 @@ app.use((req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
     "default-src 'self'; " +
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://connect.facebook.net; " +
       "style-src 'self' 'unsafe-inline'; " +
       "img-src 'self' data: blob: https:; " +
-      "connect-src 'self' wss: ws: https://api.stripe.com; " +
-      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com; " +
-      "font-src 'self'; "
+      "connect-src 'self' wss: ws: https: https://api.stripe.com https://connect.facebook.net; " +
+      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://connect.facebook.net; " +
+      "font-src 'self'; " +
+      "object-src 'none'; " +
+      "media-src 'self' https:; "
   );
   next();
 });
