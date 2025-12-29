@@ -28,6 +28,8 @@ const { startSchedulerExecutor } = require('./services/schedulerExecutor');
 const authRoutes = require('./routes/authRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const complianceRoutes = require('./routes/complianceRoutes');
+const webChatRoutes = require('./routes/webChatRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
 const { handleStripeWebhook } = require('./controllers/webhookController');
 
 const { attachUser, requireAdmin, requireAuth } = require('./auth/authMiddleware');
@@ -113,6 +115,8 @@ app.use((req, res, next) => {
 app.use('/auth', authRoutes);
 app.use('/subs', subscriptionRoutes);
 app.use('/api/compliance', complianceRoutes);
+app.use('/api/web-chat', webChatRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // === API ROUTES ===
 
