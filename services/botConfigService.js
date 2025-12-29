@@ -30,7 +30,8 @@ async function getBotFeatures(botId) {
         if (result.rows.length === 0) {
             // Crear registro con valores por defecto
             await pool.query(
-                'INSERT INTO bot_features (bot_id) VALUES ($1)',
+                `INSERT INTO bot_features (bot_id, tenant_id) 
+                 VALUES ($1, COALESCE(current_setting('app.current_tenant', true), '')::uuid)`,
                 [botId]
             );
             
@@ -89,7 +90,8 @@ async function updateBotFeature(botId, featureName, value) {
         
         if (existing.rows.length === 0) {
             await pool.query(
-                'INSERT INTO bot_features (bot_id) VALUES ($1)',
+                `INSERT INTO bot_features (bot_id, tenant_id) 
+                 VALUES ($1, COALESCE(current_setting('app.current_tenant', true), '')::uuid)`,
                 [botId]
             );
         }
@@ -133,7 +135,8 @@ async function updateBotFeatures(botId, features) {
         
         if (existing.rows.length === 0) {
             await pool.query(
-                'INSERT INTO bot_features (bot_id) VALUES ($1)',
+                `INSERT INTO bot_features (bot_id, tenant_id) 
+                 VALUES ($1, COALESCE(current_setting('app.current_tenant', true), '')::uuid)`,
                 [botId]
             );
         }
@@ -199,7 +202,9 @@ async function updateBotFeatures(botId, features) {
 async function createBotFeatures(botId) {
     try {
         await pool.query(
-            'INSERT INTO bot_features (bot_id) VALUES ($1) ON CONFLICT (bot_id) DO NOTHING',
+            `INSERT INTO bot_features (bot_id, tenant_id) 
+             VALUES ($1, COALESCE(current_setting('app.current_tenant', true), '')::uuid) 
+             ON CONFLICT (bot_id) DO NOTHING`,
             [botId]
         );
         
