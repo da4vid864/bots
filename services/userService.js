@@ -52,21 +52,23 @@ async function createUser(email, role = 'vendor', addedBy = 'system') {
     try {
         // Utiliza la función del sistema que crea Tenant + User atómicamente y salta RLS
         const result = await pool.query(
-            'SELECT * FROM create_tenant_and_user_system($1, $2, $3)',
+            `SELECT id, email, role, is_active, tenant_id, added_by, created_at 
+             FROM create_tenant_and_user_system($1, $2, $3)`,
             [email.toLowerCase().trim(), role, addedBy]
         );
         
-        // The function returns user_id and tenant_id
-        const { user_id, tenant_id } = result.rows[0];
+        // The function returns user with id, email, role, etc.
+        const user = result.rows[0];
         
-        // Return a constructed user object
+        // Return the user object with all fields
         return {
-            id: user_id,
-            email: email,
-            role: role,
-            tenant_id: tenant_id,
-            added_by: addedBy,
-            is_active: true
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            tenant_id: user.tenant_id,
+            added_by: user.added_by,
+            is_active: user.is_active,
+            created_at: user.created_at
         };
     } catch (error) {
         if (error.code === '23505') { // Unique violation
@@ -102,8 +104,10 @@ async function getTeamMembers(adminEmail) {
 async function getUserByEmail(email) {
     try {
         // Use the system function to find user regardless of tenant (for login)
+        // Must specify columns explicitly since it's a table-returning function
         const result = await pool.query(
-            'SELECT * FROM get_user_by_email_system($1)',
+            `SELECT id, email, role, tenant_id, is_active, added_by, created_at 
+             FROM get_user_by_email_system($1)`,
             [email.toLowerCase().trim()]
         );
         return result.rows[0];
