@@ -16,9 +16,16 @@ const attachUser = async (req, res, next) => {
       if (userService.isAdmin(decoded.email)) {
         decoded.role = 'admin';
         // Get tenant_id from DB even for admins
-        const dbUser = await userService.getUserByEmail(decoded.email);
-        if (dbUser) {
+        let dbUser = await userService.getUserByEmail(decoded.email);
+        if (!dbUser) {
+          // Admin without DB user - create them
+          console.log(`Creating new admin user: ${decoded.email}`);
+          dbUser = await userService.createUser(decoded.email, 'admin', 'system');
+        }
+        if (dbUser && dbUser.tenant_id) {
           decoded.tenant_id = dbUser.tenant_id;
+        } else {
+          console.warn(`⚠️  Admin user ${decoded.email} has no tenant_id`);
         }
         req.user = decoded;
         next();
@@ -26,22 +33,38 @@ const attachUser = async (req, res, next) => {
       }
       
       // Si no es admin, verificar en la base de datos
-      const dbUser = await userService.getUserByEmail(decoded.email);
+      let dbUser = await userService.getUserByEmail(decoded.email);
+      
+      // Si el usuario no existe, crearlo automáticamente
+      if (!dbUser) {
+        console.log(`Creating new user: ${decoded.email}`);
+        dbUser = await userService.createUser(decoded.email, 'vendor', 'google');
+      }
       
       if (dbUser && dbUser.is_active) {
         decoded.role = dbUser.role;
         decoded.addedBy = dbUser.added_by;
         decoded.tenant_id = dbUser.tenant_id; // CRITICAL: Preserve tenant_id from DB
+        
+        if (!decoded.tenant_id) {
+          console.warn(`⚠️  User ${decoded.email} has no tenant_id after DB lookup`);
+        }
+        
         req.user = decoded;
         
         // Actualizar último login
-        await userService.updateLastLogin(decoded.email);
+        try {
+          await userService.updateLastLogin(decoded.email);
+        } catch (e) {
+          console.error('Error updating last login:', e.message);
+        }
       } else {
         decoded.role = 'unauthorized';
+        console.warn(`User ${decoded.email} not active or not found`);
         req.user = decoded;
       }
     } catch (err) {
-      console.warn("Token JWT inválido, limpiando cookie.");
+      console.warn("Token JWT inválido, limpiando cookie:", err.message);
       res.clearCookie('auth_token');
     }
   }
