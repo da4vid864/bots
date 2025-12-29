@@ -26,28 +26,29 @@ async function fixFunctions() {
         
         // 2. get_user_by_email_system() - NEW
         console.log('2️⃣  Creating get_user_by_email_system()...');
+        await pool.query(`DROP FUNCTION IF EXISTS get_user_by_email_system(text) CASCADE`);
         await pool.query(`
             CREATE OR REPLACE FUNCTION get_user_by_email_system(p_email TEXT)
             RETURNS TABLE (
                 id UUID,
-                email VARCHAR,
-                role VARCHAR,
-                is_active BOOLEAN,
+                email TEXT,
+                role TEXT,
                 tenant_id UUID,
-                added_by VARCHAR,
-                created_at TIMESTAMP,
-                updated_at TIMESTAMP
+                is_active BOOLEAN,
+                added_by TEXT,
+                password_hash TEXT,
+                created_at TIMESTAMP
             ) AS $$
             BEGIN
                 RETURN QUERY SELECT 
                     users.id,
                     users.email,
                     users.role,
-                    users.is_active,
                     users.tenant_id,
+                    users.is_active,
                     users.added_by,
-                    users.created_at,
-                    users.updated_at
+                    users.password_hash,
+                    users.created_at
                 FROM users
                 WHERE LOWER(users.email) = LOWER(p_email);
             END;
@@ -57,28 +58,29 @@ async function fixFunctions() {
         
         // 3. create_tenant_and_user_system() - NEW
         console.log('3️⃣  Creating create_tenant_and_user_system()...');
+        await pool.query(`DROP FUNCTION IF EXISTS create_tenant_and_user_system(text, text, text) CASCADE`);
         await pool.query(`
             CREATE OR REPLACE FUNCTION create_tenant_and_user_system(
                 p_email TEXT,
-                p_role VARCHAR,
-                p_added_by VARCHAR
+                p_role TEXT,
+                p_added_by TEXT
             )
             RETURNS TABLE (
                 id UUID,
-                email VARCHAR,
-                role VARCHAR,
+                email TEXT,
+                role TEXT,
                 is_active BOOLEAN,
                 tenant_id UUID,
-                added_by VARCHAR,
-                created_at TIMESTAMP,
-                updated_at TIMESTAMP
+                added_by TEXT,
+                created_at TIMESTAMP
             ) AS $$
             DECLARE
                 v_tenant_id UUID;
                 v_user_id UUID;
             BEGIN
                 -- Create new tenant
-                INSERT INTO tenants (name) VALUES (p_email || ' Tenant')
+                INSERT INTO tenants (name, plan, status) 
+                VALUES (p_email || ' Tenant', 'free', 'active')
                 RETURNING tenants.id INTO v_tenant_id;
                 
                 -- Create new user
@@ -94,8 +96,7 @@ async function fixFunctions() {
                     users.is_active,
                     users.tenant_id,
                     users.added_by,
-                    users.created_at,
-                    users.updated_at
+                    users.created_at
                 FROM users
                 WHERE users.id = v_user_id;
             END;
