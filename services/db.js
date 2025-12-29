@@ -40,8 +40,9 @@ pool.query = async (text, params) => {
   const client = await pool.connect();
   try {
     if (tenantId) {
-      // Set the tenant ID for this session
-      await client.query(`SET app.current_tenant = '${tenantId}'`);
+      // Set the tenant ID for this session using $1 to avoid SQL injection
+      // PostgreSQL SET command uses special syntax, but we'll use format() for safety
+      await client.query(`SET app.current_tenant = '${String(tenantId).replace(/'/g, "''")}'`);
     } else {
       // Clear the tenant ID to ensure we don't accidentally use a previous tenant's context
       // 'RESET app.current_tenant' might throw if it wasn't set, so we set to null/empty

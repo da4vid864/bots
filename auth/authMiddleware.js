@@ -15,6 +15,11 @@ const attachUser = async (req, res, next) => {
       // Verificar si es admin (de las variables de entorno)
       if (userService.isAdmin(decoded.email)) {
         decoded.role = 'admin';
+        // Get tenant_id from DB even for admins
+        const dbUser = await userService.getUserByEmail(decoded.email);
+        if (dbUser) {
+          decoded.tenant_id = dbUser.tenant_id;
+        }
         req.user = decoded;
         next();
         return;
@@ -26,6 +31,7 @@ const attachUser = async (req, res, next) => {
       if (dbUser && dbUser.is_active) {
         decoded.role = dbUser.role;
         decoded.addedBy = dbUser.added_by;
+        decoded.tenant_id = dbUser.tenant_id; // CRITICAL: Preserve tenant_id from DB
         req.user = decoded;
         
         // Actualizar último login

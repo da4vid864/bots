@@ -34,21 +34,22 @@ async function initBotTable() {
  */
 async function addBot(botConfig) {
     const { id, name, port, prompt, ownerEmail } = botConfig;
-    // We assume the DB wrapper injects the tenant context.
-    // The INSERT trigger or RLS policy might require tenant_id to be set explicitly in the query 
-    // to match the session variable, or use DEFAULT.
-    // Given our migration:
-    // "ALTER TABLE bots ADD COLUMN tenant_id UUID REFERENCES tenants(id);"
-    // "CREATE POLICY tenant_insert_policy ... WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid)"
-    // Postgres RLS for INSERT usually requires the row being inserted to have the column set to the value 
-    // that satisfies the policy.
-    // So we should add `current_setting(...)` to the values list.
+    // Use parameterized query with current_setting for tenant isolation
+    // Note: current_setting() must be used in the query, not as a parameter
     
     const query = `
         INSERT INTO bots (id, name, port, prompt, status, owner_email, tenant_id) 
-        VALUES ($1, $2, $3, $4, $5, $6, current_setting('app.current_tenant')::uuid)
+        VALUES ($1, $2, $3, $4, $5, $6, COALESCE(current_setting('app.current_tenant', true), '')::uuid)
     `;
-    await pool.query(query, [id, name, port, prompt, 'enabled', ownerEmail]);
+    try {
+        await pool.query(query, [id, name, port, prompt, 'enabled', ownerEmail]);
+    } catch (error) {
+        // If tenant_id is still empty UUID, throw a more meaningful error
+        if (error.code === '22P02' && error.message.includes('invalid input syntax for type uuid')) {
+            throw new Error(`Tenant context not set. User must be authenticated with a valid tenant.`);
+        }
+        throw error;
+    }
 }
 
 /**
