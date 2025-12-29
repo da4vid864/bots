@@ -11,7 +11,7 @@ async function getPipelines() {
     // 1. Get Pipelines
     const pipelinesResult = await pool.query(
         `SELECT * FROM pipelines 
-         WHERE tenant_id = current_setting('app.current_tenant')::uuid 
+         WHERE tenant_id = COALESCE(current_setting('app.current_tenant', true), '')::uuid 
          ORDER BY is_default DESC, created_at ASC`
     );
     const pipelines = pipelinesResult.rows;
@@ -51,7 +51,7 @@ async function createPipeline(name) {
         // Create Pipeline
         const pipelineResult = await client.query(
             `INSERT INTO pipelines (name, tenant_id) 
-             VALUES ($1, current_setting('app.current_tenant')::uuid) 
+             VALUES ($1, COALESCE(current_setting('app.current_tenant', true), '')::uuid) 
              RETURNING *`,
             [name]
         );
@@ -70,7 +70,7 @@ async function createPipeline(name) {
         for (const stage of defaultStages) {
             const stageResult = await client.query(
                 `INSERT INTO pipeline_stages (pipeline_id, tenant_id, name, position, color, type)
-                 VALUES ($1, current_setting('app.current_tenant')::uuid, $2, $3, $4, $5)
+                 VALUES ($1, COALESCE(current_setting('app.current_tenant', true), '')::uuid, $2, $3, $4, $5)
                  RETURNING *`,
                 [pipeline.id, stage.name, stage.position, stage.color, stage.type]
             );
@@ -104,7 +104,7 @@ async function reorderStages(stageUpdates) {
         for (const update of stageUpdates) {
             await client.query(
                 `UPDATE pipeline_stages SET position = $1 
-                 WHERE id = $2 AND tenant_id = current_setting('app.current_tenant')::uuid`,
+                 WHERE id = $2 AND tenant_id = COALESCE(current_setting('app.current_tenant', true), '')::uuid`,
                 [update.position, update.id]
             );
         }
@@ -152,7 +152,7 @@ async function moveLead(leadId, pipelineId, stageId, userEmail) {
         if (oldStageId !== stageId) {
             await client.query(
                 `INSERT INTO lead_stage_events (lead_id, tenant_id, old_stage_id, new_stage_id, changed_by)
-                 VALUES ($1, current_setting('app.current_tenant')::uuid, $2, $3, $4)`,
+                 VALUES ($1, COALESCE(current_setting('app.current_tenant', true), '')::uuid, $2, $3, $4)`,
                 [leadId, oldStageId, stageId, userEmail]
             );
         }

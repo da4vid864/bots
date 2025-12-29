@@ -47,9 +47,9 @@ async function getOrCreateLead(botId, whatsappNumber) {
             return result.rows[0];
         }
 
-        // Crear nuevo lead
+        // Crear nuevo lead con tenant_id del contexto
         result = await pool.query(
-            'INSERT INTO leads (bot_id, whatsapp_number, status, score, tags, tenant_id) VALUES ($1, $2, $3, 0, \'{}\', current_setting(\'app.current_tenant\')::uuid) RETURNING *',
+            'INSERT INTO leads (bot_id, whatsapp_number, status, score, tags, tenant_id) VALUES ($1, $2, $3, 0, \'{}\', COALESCE(current_setting(\'app.current_tenant\', true), \'\')::uuid) RETURNING *',
             [botId, whatsappNumber, 'capturing']
         );
 

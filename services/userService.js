@@ -31,7 +31,7 @@ async function addTeamMember(email, role, addedBy) {
         
         const result = await pool.query(
             `INSERT INTO users (email, role, added_by, tenant_id) 
-             VALUES ($1, $2, $3, current_setting('app.current_tenant')::uuid) 
+             VALUES ($1, $2, $3, COALESCE(current_setting('app.current_tenant', true), '')::uuid) 
              RETURNING *`,
             [email.toLowerCase().trim(), role, addedBy]
         );

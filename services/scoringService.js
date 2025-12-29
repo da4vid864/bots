@@ -111,7 +111,7 @@ async function createScoringRule(botId, ruleData) {
     const result = await pool.query(
         `INSERT INTO scoring_rules
         (bot_id, keyword, match_type, points, response_message, tag_to_add, tenant_id)
-        VALUES ($1, $2, $3, $4, $5, $6, current_setting('app.current_tenant')::uuid)
+        VALUES ($1, $2, $3, $4, $5, $6, COALESCE(current_setting('app.current_tenant', true), '')::uuid)
         RETURNING *`,
         [botId, keyword, match_type || 'contains', points || 0, response_message, tag_to_add]
     );
