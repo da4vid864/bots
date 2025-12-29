@@ -36,7 +36,6 @@ async function fixFunctions() {
                 tenant_id UUID,
                 is_active BOOLEAN,
                 added_by TEXT,
-                password_hash TEXT,
                 created_at TIMESTAMP
             ) AS $$
             BEGIN
@@ -47,7 +46,6 @@ async function fixFunctions() {
                     users.tenant_id,
                     users.is_active,
                     users.added_by,
-                    users.password_hash,
                     users.created_at
                 FROM users
                 WHERE LOWER(users.email) = LOWER(p_email);
