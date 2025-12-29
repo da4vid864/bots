@@ -49,6 +49,14 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
     console.log(`[${botId}] 🔍 Inicializando conexión Baileys para: ${botName}`);
 
     try {
+        // Obtain full bot config with tenant_id if not already present
+        let fullBotConfig = botConfig;
+        if (!botConfig.tenantId && !botConfig.tenant_id) {
+            const botDbService = require('./botDbService');
+            const fullBot = await botDbService.getBotById(botId);
+            fullBotConfig = fullBot;
+        }
+
         const { baileys } = await loadBaileys();
         const {
             makeWASocket,
@@ -86,12 +94,13 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
 
         activeSessions.set(botId, {
             socket,
-            botConfig,
+            botConfig: fullBotConfig,
             isReady: false,
-            isPaused: botConfig.status === 'disabled',
+            isPaused: fullBotConfig.status === 'disabled',
             availableImages: [],
             availableProducts: [],
             saveCreds,
+            tenantId: fullBotConfig.tenantId || fullBotConfig.tenant_id,
         });
 
         await loadBotImages(botId);
@@ -180,7 +189,16 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
         if (type !== 'notify') return;
 
         for (const msg of messages) {
-            await handleIncomingMessage(botId, msg);
+            const session = activeSessions.get(botId);
+            if (session && session.tenantId) {
+                // Set tenant context before processing message
+                const { runWithTenant } = require('./db');
+                await runWithTenant(session.tenantId, async () => {
+                    await handleIncomingMessage(botId, msg);
+                });
+            } else {
+                await handleIncomingMessage(botId, msg);
+            }
         }
     });
 }
