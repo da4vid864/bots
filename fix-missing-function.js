@@ -30,7 +30,7 @@ async function fixFunctions() {
         await pool.query(`
             CREATE OR REPLACE FUNCTION get_user_by_email_system(p_email TEXT)
             RETURNS TABLE (
-                id UUID,
+                id INTEGER,
                 email TEXT,
                 role TEXT,
                 tenant_id UUID,
@@ -64,7 +64,7 @@ async function fixFunctions() {
                 p_added_by TEXT
             )
             RETURNS TABLE (
-                id UUID,
+                id INTEGER,
                 email TEXT,
                 role TEXT,
                 is_active BOOLEAN,
@@ -74,7 +74,7 @@ async function fixFunctions() {
             ) AS $$
             DECLARE
                 v_tenant_id UUID;
-                v_user_id UUID;
+                v_user_id INTEGER;
             BEGIN
                 -- Create new tenant
                 INSERT INTO tenants (name, plan, status) 
