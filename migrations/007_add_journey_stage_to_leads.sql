@@ -1,0 +1,1 @@
+ALTER TABLE leads ADD COLUMN journey_stage VARCHAR(255) DEFAULT 'Nuevo';
