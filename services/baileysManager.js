@@ -6,7 +6,6 @@ const fs = require('fs');
 const QRCode = require('qrcode');
 const pino = require('pino');
 const axios = require('axios');
-const chatSyncService = require('./chatSyncService');
 
 // Dynamically import ESM modules
 async function loadBaileys() {
@@ -158,14 +157,6 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
                 runtimeStatus: statusReport,
             });
 
-            // 🆕 Sincronizar chats existentes (en background)
-            if (!session.isPaused) {
-                console.log(`[${botId}] 🔄 Iniciando sincronización de historial...`);
-                
-                setTimeout(() => {
-                    loadExistingChats(botId);
-                }, 2000);
-            }
         } else if (connection === 'close') {
             const shouldReconnect =
                 lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
@@ -191,16 +182,29 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
     // Save credentials on update
     socket.ev.on('creds.update', saveCreds);
 
+    // 🆕 Handle messaging history sync (cuando Baileys sincroniza historial)
+    socket.ev.on('messaging-history.set', async ({ chats, contacts, messages, isLatest }) => {
+        const currentSession = activeSessions.get(botId);
+        if (!currentSession || currentSession.isPaused) return;
+
+        console.log(`[${botId}] 📚 Historial recibido: ${chats?.length || 0} chats, ${messages?.length || 0} mensajes`);
+
+        // Procesar en background para no bloquear
+        processHistorySync(botId, chats || [], messages || [], currentSession).catch(err => {
+            console.error(`[${botId}] ❌ Error procesando historial:`, err);
+        });
+    });
+
     // Handle incoming messages
     socket.ev.on('messages.upsert', async (messageUpdate) => {
-        if (!session.isReady || session.isPaused) return;
+        const currentSession = activeSessions.get(botId);
+        if (!currentSession || !currentSession.isReady || currentSession.isPaused) return;
 
         const { messages, type } = messageUpdate;
         if (type !== 'notify') return;
 
         for (const msg of messages) {
-            const currentSession = activeSessions.get(botId);
-            if (currentSession && currentSession.tenantId) {
+            if (currentSession.tenantId) {
                 const { runWithTenant } = require('./db');
                 await runWithTenant(currentSession.tenantId, async () => {
                     await handleIncomingMessage(botId, msg);
@@ -215,6 +219,194 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
     socket.ev.on('messages.update', async (updates) => {
         // Listener for message status changes
     });
+}
+
+/**
+ * 🆕 Procesa el historial de mensajes sincronizado por Baileys
+ */
+async function processHistorySync(botId, chats, messages, session) {
+    console.log(`[${botId}] 🔄 Procesando sincronización de historial...`);
+
+    const tenantId = session.tenantId;
+    let processedChats = 0;
+    let leadsCreated = 0;
+    let leadsUpdated = 0;
+
+    // Agrupar mensajes por chat
+    const messagesByChat = {};
+    for (const msg of messages) {
+        const chatId = msg.key?.remoteJid;
+        if (!chatId) continue;
+        
+        // Ignorar grupos y broadcasts
+        if (chatId.endsWith('@g.us') || chatId.endsWith('@broadcast')) continue;
+        
+        if (!messagesByChat[chatId]) {
+            messagesByChat[chatId] = [];
+        }
+        messagesByChat[chatId].push(msg);
+    }
+
+    console.log(`[${botId}] 📊 Chats individuales encontrados: ${Object.keys(messagesByChat).length}`);
+
+    // Procesar cada chat
+    for (const [chatId, chatMessages] of Object.entries(messagesByChat)) {
+        try {
+            const result = await processSingleChatHistory(botId, chatId, chatMessages, tenantId, session);
+            processedChats++;
+            
+            if (result.created) leadsCreated++;
+            if (result.updated) leadsUpdated++;
+
+            // Pausa cada 5 chats para no sobrecargar la API de IA
+            if (processedChats % 5 === 0) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        } catch (error) {
+            console.error(`[${botId}] ❌ Error procesando chat ${chatId}:`, error.message);
+        }
+    }
+
+    console.log(`[${botId}] ✅ Sincronización completada:`);
+    console.log(`   📊 Chats procesados: ${processedChats}`);
+    console.log(`   🆕 Leads creados: ${leadsCreated}`);
+    console.log(`   📝 Leads actualizados: ${leadsUpdated}`);
+
+    // Notificar al frontend
+    const botOwnerEmail = session.botConfig?.ownerEmail;
+    if (botOwnerEmail) {
+        sseController.sendEventToUser(botOwnerEmail, 'SYNC_COMPLETED', {
+            botId,
+            processedChats,
+            leadsCreated,
+            leadsUpdated,
+        });
+    }
+}
+
+/**
+ * 🆕 Procesa el historial de un chat individual
+ */
+async function processSingleChatHistory(botId, chatId, messages, tenantId, session) {
+    const result = { created: false, updated: false };
+
+    // Ejecutar con contexto de tenant si existe
+    const processChat = async () => {
+        // Crear o obtener lead
+        let lead = await getOrCreateLead(botId, chatId);
+        if (!lead) {
+            console.error(`[${botId}] ❌ No se pudo crear lead para ${chatId}`);
+            return result;
+        }
+
+        // Verificar si es un lead nuevo
+        const existingMessages = await getLeadMessages(lead.id, 1);
+        if (existingMessages.length === 0) {
+            result.created = true;
+            console.log(`[${botId}] 🆕 Nuevo lead creado: ${chatId}`);
+        }
+
+        // Extraer mensajes del usuario
+        const userMessages = [];
+        
+        // Ordenar mensajes por timestamp
+        const sortedMessages = messages.sort((a, b) => {
+            const timeA = Number(a.messageTimestamp) || 0;
+            const timeB = Number(b.messageTimestamp) || 0;
+            return timeA - timeB;
+        });
+
+        for (const msg of sortedMessages) {
+            const content = getMessageContent(msg.message);
+            if (!content) continue;
+
+            const isFromMe = msg.key?.fromMe || false;
+            const sender = isFromMe ? 'bot' : 'user';
+
+            // Guardar mensaje si es lead nuevo
+            if (result.created) {
+                try {
+                    await addLeadMessage(lead.id, sender, content);
+                } catch (e) {
+                    // Ignorar duplicados
+                }
+            }
+
+            // Acumular mensajes del usuario
+            if (!isFromMe) {
+                userMessages.push(content);
+            }
+        }
+
+        // Si hay mensajes del usuario, extraer información
+        if (userMessages.length > 0) {
+            // Tomar los últimos 10 mensajes para análisis
+            const combinedText = userMessages.slice(-10).join('\n');
+            
+            try {
+                // Extraer info con IA
+                console.log(`[${botId}] 🤖 Analizando mensajes de ${chatId}...`);
+                const extractedInfo = await extractLeadInfo(combinedText);
+                
+                if (Object.keys(extractedInfo).length > 0) {
+                    console.log(`[${botId}] 📋 Info extraída para ${chatId}:`, JSON.stringify(extractedInfo));
+                    
+                    // Solo actualizar campos vacíos
+                    const updateData = {};
+                    if (extractedInfo.name && !lead.name) updateData.name = extractedInfo.name;
+                    if (extractedInfo.email && !lead.email) updateData.email = extractedInfo.email;
+                    if (extractedInfo.location && !lead.location) updateData.location = extractedInfo.location;
+                    if (extractedInfo.phone && !lead.phone) updateData.phone = extractedInfo.phone;
+
+                    if (Object.keys(updateData).length > 0) {
+                        lead = await updateLeadInfo(lead.id, updateData);
+                        result.updated = true;
+                        console.log(`[${botId}] ✅ Lead ${lead.id} actualizado:`, JSON.stringify(updateData));
+                    }
+                }
+
+                // Aplicar scoring
+                const scoringResult = await scoringService.evaluateMessage(botId, combinedText);
+                if (scoringResult.scoreDelta !== 0 || scoringResult.tags.length > 0) {
+                    await scoringService.applyScoring(lead.id, scoringResult);
+                    result.updated = true;
+                    console.log(`[${botId}] 🎯 Scoring aplicado: +${scoringResult.scoreDelta} pts, tags: [${scoringResult.tags.join(', ')}]`);
+                }
+
+                // Refrescar lead para verificar si está completo
+                lead = await require('./leadDbService').getLeadById(lead.id);
+
+                // Calificar si está completo
+                if (lead && lead.status === 'capturing' && isLeadComplete(lead)) {
+                    await qualifyLead(lead.id);
+                    result.updated = true;
+                    console.log(`[${botId}] 🏆 Lead ${lead.id} calificado automáticamente`);
+
+                    // Notificar al frontend
+                    if (session.botConfig?.ownerEmail) {
+                        sseController.sendEventToUser(session.botConfig.ownerEmail, 'NEW_QUALIFIED_LEAD', {
+                            lead,
+                            botId,
+                            source: 'sync',
+                        });
+                    }
+                }
+
+            } catch (aiError) {
+                console.error(`[${botId}] ⚠️ Error en extracción IA para ${chatId}:`, aiError.message);
+            }
+        }
+
+        return result;
+    };
+
+    // Ejecutar con tenant si existe
+    if (tenantId) {
+        const { runWithTenant } = require('./db');
+        return await runWithTenant(tenantId, processChat);
+    } else {
+        return await processChat();
+    }
 }
 
 async function handleIncomingMessage(botId, msg) {
@@ -247,7 +439,7 @@ async function handleIncomingMessage(botId, msg) {
 
                 const msgLower = userMessage.toLowerCase();
 
-                // 1) Preferir PRODUCTOS si hay (para “foto de la pluma” normalmente es un producto)
+                // 1) Preferir PRODUCTOS si hay (para "foto de la pluma" normalmente es un producto)
                 let matchedProduct = null;
                 if (session.availableProducts && session.availableProducts.length > 0) {
                     matchedProduct = session.availableProducts.find((p) => {
@@ -424,7 +616,10 @@ async function handleIncomingMessage(botId, msg) {
             let botReply = followUpQuestion ? `${aiResponse}\n\n${followUpQuestion}` : aiResponse;
 
             // Image tag handling
-            const imageTagRegex = /\[ENVIAR_IMAGEN:\s*([^\]]+)\]/i;
+            const imageTagRegex = /
+$$
+ENVIAR_IMAGEN:\s*([^
+$$]+)\]/i;
             const match = botReply.match(imageTagRegex);
             let imageMedia = null;
 
@@ -496,12 +691,10 @@ async function handleIncomingMessage(botId, msg) {
         // Check for decryption/session errors
         if (error.message && (error.message.includes('Bad MAC') || error.message.includes('decrypt'))) {
             console.warn(`[${botId}] ⚠️ Error de decryption detectado. Limpiando sesión...`);
-            // Signal needs to clean session - disconnect and reconnect
-            const session = activeSessions.get(botId);
-            if (session && session.socket) {
+            const currentSession = activeSessions.get(botId);
+            if (currentSession && currentSession.socket) {
                 try {
-                    // Close socket to trigger reconnection
-                    await session.socket.end();
+                    await currentSession.socket.end();
                     console.log(`[${botId}] 🔄 Socket cerrado. Reconectando...`);
                 } catch (closeError) {
                     console.error(`[${botId}] Error cerrando socket:`, closeError);
@@ -512,10 +705,12 @@ async function handleIncomingMessage(botId, msg) {
 }
 
 function getMessageContent(message) {
+    if (!message) return null;
     if (message.conversation) return message.conversation;
     if (message.extendedTextMessage?.text) return message.extendedTextMessage.text;
     if (message.imageMessage?.caption) return message.imageMessage.caption;
     if (message.videoMessage?.caption) return message.videoMessage.caption;
+    if (message.documentMessage?.caption) return message.documentMessage.caption;
     return null;
 }
 
@@ -540,25 +735,6 @@ async function loadBotProducts(botId) {
         console.log(`[${botId}] 🛍️ Productos cargados en memoria: ${session.availableProducts.length}`);
     } catch (error) {
         console.error(`[${botId}] ❌ Error cargando productos:`, error);
-    }
-}
-
-/**
- * Carga y sincroniza chats existentes cuando el bot se conecta
- */
-async function loadExistingChats(botId) {
-    const session = activeSessions.get(botId);
-    if (!session || !session.socket) return;
-
-    try {
-        console.log(`[${botId}] 🔄 Sincronización de chats iniciada...`);
-        
-        // Por ahora, los chats se sincronizarán cuando lleguen nuevos mensajes
-        // La sincronización completa requiere store que no está disponible
-        console.log(`[${botId}] ℹ️ Los leads se crearán/actualizarán al recibir mensajes`);
-        
-    } catch (error) {
-        console.error(`[${botId}] ❌ Error cargando chats existentes:`, error);
     }
 }
 
@@ -592,9 +768,6 @@ async function sendImage(botId, to, mediaObject) {
     }
 }
 
-/**
- * ✅ NUEVO: Enviar imagen REAL por URL, con fallback a Buffer
- */
 async function sendImageUrl(botId, to, imageUrl, caption = '') {
     const session = activeSessions.get(botId);
     if (!session || !session.socket || !session.isReady) {
@@ -662,23 +835,6 @@ async function disconnectBot(botId) {
     if (!session || !session.socket) return;
 
     try {
-        // 🆕 Limpiar interval del store
-        if (session.storeInterval) {
-            clearInterval(session.storeInterval);
-        }
-
-        // 🆕 Guardar store antes de desconectar
-        if (session.store) {
-            const authDir = path.join(__dirname, '..', 'auth-sessions', botId);
-            const storeFile = path.join(authDir, 'store.json');
-            try {
-                session.store.writeToFile(storeFile);
-                console.log(`[${botId}] 💾 Store guardado`);
-            } catch (e) {
-                // Ignorar
-            }
-        }
-
         const { Boom } = await loadBaileys();
         await session.socket.end(new Boom('Bot disconnected by user'));
         console.log(`[${botId}] 🔌 Sesión Baileys desconectada`);
@@ -688,6 +844,7 @@ async function disconnectBot(botId) {
         activeSessions.delete(botId);
     }
 }
+
 module.exports = {
     initializeBaileysConnection,
     sendMessage,
@@ -700,6 +857,3 @@ module.exports = {
     disconnectBot,
     loadBaileys,
 };
-
-
-
