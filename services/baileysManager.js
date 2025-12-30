@@ -6,6 +6,7 @@ const fs = require('fs');
 const QRCode = require('qrcode');
 const pino = require('pino');
 const axios = require('axios');
+const chatSyncService = require('./chatSyncService');
 
 // Dynamically import ESM modules
 async function loadBaileys() {
@@ -49,7 +50,6 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
     console.log(`[${botId}] 🔍 Inicializando conexión Baileys para: ${botName}`);
 
     try {
-        // Obtain full bot config with tenant_id if not already present
         let fullBotConfig = botConfig;
         if (!botConfig.tenantId && !botConfig.tenant_id) {
             const botDbService = require('./botDbService');
@@ -64,6 +64,7 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
             DisconnectReason,
             fetchLatestBaileysVersion,
             makeCacheableSignalKeyStore,
+            makeInMemoryStore,  // 🆕 Agregar esto
         } = baileys;
 
         const authDir = path.join(__dirname, '..', 'auth-sessions', botId);
@@ -72,11 +73,25 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
         }
 
         const { state, saveCreds } = await useMultiFileAuthState(authDir);
-
         const { version, isLatest } = await fetchLatestBaileysVersion();
+        
         console.log(`[${botId}] 📦 Usando Baileys v${version.join('.')}, latest: ${isLatest}`);
 
         const logger = pino({ level: 'silent' });
+
+        // 🆕 Crear store para persistir mensajes
+        const store = makeInMemoryStore({ logger });
+        
+        // 🆕 Cargar store si existe
+        const storeFile = path.join(authDir, 'store.json');
+        if (fs.existsSync(storeFile)) {
+            try {
+                store.readFromFile(storeFile);
+                console.log(`[${botId}] 📂 Store cargado desde archivo`);
+            } catch (e) {
+                console.log(`[${botId}] ⚠️ No se pudo cargar store:`, e.message);
+            }
+        }
 
         const socket = makeWASocket({
             version,
@@ -90,10 +105,25 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
             markOnlineOnConnect: true,
             connectTimeoutMs: 60000,
             keepAliveIntervalMs: 10000,
+            syncFullHistory: true,  // 🆕 Sincronizar historial completo
         });
+
+        // 🆕 Vincular store al socket
+        store.bind(socket.ev);
+
+        // 🆕 Guardar store periódicamente
+        const storeInterval = setInterval(() => {
+            try {
+                store.writeToFile(storeFile);
+            } catch (e) {
+                // Ignorar errores de escritura
+            }
+        }, 30000); // Cada 30 segundos
 
         activeSessions.set(botId, {
             socket,
+            store,  // 🆕 Guardar referencia al store
+            storeInterval,  // 🆕 Para limpiar después
             botConfig: fullBotConfig,
             isReady: false,
             isPaused: fullBotConfig.status === 'disabled',
@@ -119,12 +149,13 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
     const session = activeSessions.get(botId);
     if (!session) return;
 
-    // Handle generic socket errors (including decryption errors)
+    // Handle connection updates
     socket.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
         console.log(`[${botId}] 🔌 Estado de conexión:`, connection);
 
+        // QR Code generation
         if (qr) {
             try {
                 const qrCodeUrl = await QRCode.toDataURL(qr);
@@ -137,6 +168,7 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
             }
         }
 
+        // Connection opened
         if (connection === 'open') {
             console.log(`[${botId}] ✅ WhatsApp conectado!`);
             session.isReady = true;
@@ -155,13 +187,17 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
                 runtimeStatus: statusReport,
             });
 
+            // 🆕 Sincronizar chats existentes (en background)
             if (!session.isPaused) {
-                console.log(`[${botId}] 🔍 Cargando historial existente...`);
-                loadExistingChats(botId);
+                console.log(`[${botId}] 🔄 Iniciando sincronización de historial...`);
+                
+                setTimeout(() => {
+                    loadExistingChats(botId);
+                }, 2000);
             }
         } else if (connection === 'close') {
             const shouldReconnect =
-                (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
+                lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
 
             console.log(
                 `[${botId}] ❌ Conexión cerrada. Reconectar: ${shouldReconnect}`,
@@ -181,8 +217,10 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
         }
     });
 
+    // Save credentials on update
     socket.ev.on('creds.update', saveCreds);
 
+    // Handle incoming messages
     socket.ev.on('messages.upsert', async (messageUpdate) => {
         if (!session.isReady || session.isPaused) return;
 
@@ -190,11 +228,10 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
         if (type !== 'notify') return;
 
         for (const msg of messages) {
-            const session = activeSessions.get(botId);
-            if (session && session.tenantId) {
-                // Set tenant context before processing message
+            const currentSession = activeSessions.get(botId);
+            if (currentSession && currentSession.tenantId) {
                 const { runWithTenant } = require('./db');
-                await runWithTenant(session.tenantId, async () => {
+                await runWithTenant(currentSession.tenantId, async () => {
                     await handleIncomingMessage(botId, msg);
                 });
             } else {
@@ -203,20 +240,10 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
         }
     });
 
-    // Handle socket errors (decryption, session errors)
-    socket.ev.on('message-status.update', async (updates) => {
-        // Just a listener for message status, no action needed
-        // but this prevents unhandled errors
+    // Handle message status updates
+    socket.ev.on('messages.update', async (updates) => {
+        // Listener for message status changes
     });
-
-    // Capture any uncaught errors from socket processing
-    // Note: socket.on may not exist in newer Baileys versions; use socket.ev.on('error') if needed
-    // socket.on('error', (error) => {
-    //     console.error(`[${botId}] 🔴 Socket error:`, error);
-    //     if (error.message && (error.message.includes('Bad MAC') || error.message.includes('decrypt'))) {
-    //         console.warn(`[${botId}] ⚠️ Session corruption detected. Will attempt reconnection on next message...`);
-    //     }
-    // });
 }
 
 async function handleIncomingMessage(botId, msg) {
@@ -545,13 +572,23 @@ async function loadBotProducts(botId) {
     }
 }
 
+/**
+ * Carga y sincroniza chats existentes cuando el bot se conecta
+ */
 async function loadExistingChats(botId) {
     const session = activeSessions.get(botId);
     if (!session || !session.socket) return;
 
     try {
-        const chats = await session.socket.groupFetchAllParticipating();
-        console.log(`[${botId}] 📚 Cargados ${Object.keys(chats).length} chats existentes`);
+        // Usar el nuevo servicio de sincronización
+        if (session.tenantId) {
+            const { runWithTenant } = require('./db');
+            await runWithTenant(session.tenantId, async () => {
+                await chatSyncService.syncExistingChats(botId, session.socket, session);
+            });
+        } else {
+            await chatSyncService.syncExistingChats(botId, session.socket, session);
+        }
     } catch (error) {
         console.error(`[${botId}] ❌ Error cargando chats existentes:`, error);
     }
@@ -657,6 +694,23 @@ async function disconnectBot(botId) {
     if (!session || !session.socket) return;
 
     try {
+        // 🆕 Limpiar interval del store
+        if (session.storeInterval) {
+            clearInterval(session.storeInterval);
+        }
+
+        // 🆕 Guardar store antes de desconectar
+        if (session.store) {
+            const authDir = path.join(__dirname, '..', 'auth-sessions', botId);
+            const storeFile = path.join(authDir, 'store.json');
+            try {
+                session.store.writeToFile(storeFile);
+                console.log(`[${botId}] 💾 Store guardado`);
+            } catch (e) {
+                // Ignorar
+            }
+        }
+
         const { Boom } = await loadBaileys();
         await session.socket.end(new Boom('Bot disconnected by user'));
         console.log(`[${botId}] 🔌 Sesión Baileys desconectada`);
