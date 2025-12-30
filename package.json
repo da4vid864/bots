@@ -15,7 +15,10 @@
     "build": "npm run build:client",
     "serve": "NODE_ENV=production node server.js",
     "heroku-postbuild": "npm run build:client",
-    "migrate": "node migrate.js"
+    "migrate": "node migrate.js",
+    "backup": "node scripts/backup-database.js",
+    "backup:database-only": "node scripts/backup-database.js --database-only",
+    "backup:no-upload": "node scripts/backup-database.js --no-upload"
   },
   "author": "",
   "license": "ISC",

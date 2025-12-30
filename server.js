@@ -30,6 +30,7 @@ const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const complianceRoutes = require('./routes/complianceRoutes');
 const webChatRoutes = require('./routes/webChatRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const dataIntegrityRoutes = require('./routes/dataIntegrityRoutes');
 const { handleStripeWebhook } = require('./controllers/webhookController');
 
 const { attachUser, requireAdmin, requireAuth } = require('./auth/authMiddleware');
@@ -119,6 +120,7 @@ app.use('/subs', subscriptionRoutes);
 app.use('/api/compliance', complianceRoutes);
 app.use('/api/web-chat', webChatRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/data-integrity', dataIntegrityRoutes);
 
 // === API ROUTES ===
 

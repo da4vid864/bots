@@ -119,6 +119,7 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
     const session = activeSessions.get(botId);
     if (!session) return;
 
+    // Handle generic socket errors (including decryption errors)
     socket.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
@@ -201,6 +202,21 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
             }
         }
     });
+
+    // Handle socket errors (decryption, session errors)
+    socket.ev.on('message-status.update', async (updates) => {
+        // Just a listener for message status, no action needed
+        // but this prevents unhandled errors
+    });
+
+    // Capture any uncaught errors from socket processing
+    // Note: socket.on may not exist in newer Baileys versions; use socket.ev.on('error') if needed
+    // socket.on('error', (error) => {
+    //     console.error(`[${botId}] 🔴 Socket error:`, error);
+    //     if (error.message && (error.message.includes('Bad MAC') || error.message.includes('decrypt'))) {
+    //         console.warn(`[${botId}] ⚠️ Session corruption detected. Will attempt reconnection on next message...`);
+    //     }
+    // });
 }
 
 async function handleIncomingMessage(botId, msg) {
@@ -478,6 +494,22 @@ async function handleIncomingMessage(botId, msg) {
         }
     } catch (error) {
         console.error(`[${botId}] ❌ Error procesando mensaje:`, error);
+        
+        // Check for decryption/session errors
+        if (error.message && (error.message.includes('Bad MAC') || error.message.includes('decrypt'))) {
+            console.warn(`[${botId}] ⚠️ Error de decryption detectado. Limpiando sesión...`);
+            // Signal needs to clean session - disconnect and reconnect
+            const session = activeSessions.get(botId);
+            if (session && session.socket) {
+                try {
+                    // Close socket to trigger reconnection
+                    await session.socket.end();
+                    console.log(`[${botId}] 🔄 Socket cerrado. Reconectando...`);
+                } catch (closeError) {
+                    console.error(`[${botId}] Error cerrando socket:`, closeError);
+                }
+            }
+        }
     }
 }
 
@@ -634,7 +666,6 @@ async function disconnectBot(botId) {
         activeSessions.delete(botId);
     }
 }
-
 module.exports = {
     initializeBaileysConnection,
     sendMessage,
@@ -647,3 +678,6 @@ module.exports = {
     disconnectBot,
     loadBaileys,
 };
+
+
+

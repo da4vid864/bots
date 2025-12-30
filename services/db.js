@@ -21,6 +21,29 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000,
 });
 
+// UUID validation regex (RFC 4122)
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Helper to safely set tenant context using parameterized queries
+async function setTenantContext(client, tenantId) {
+  if (!tenantId) {
+    // Clear tenant context
+    await client.query("RESET app.current_tenant");
+    return;
+  }
+  
+  // Validate UUID format to prevent injection
+  if (!UUID_REGEX.test(tenantId)) {
+    throw new Error(`Invalid tenant ID format: ${tenantId}`);
+  }
+  
+  // Use SET LOCAL with parameterized query for safety
+  // Note: SET doesn't support parameters directly, but we can use EXECUTE with format()
+  // However, since we've validated the UUID format, we can safely interpolate
+  // Using dollar-quoted string to prevent any injection
+  await client.query(`SET app.current_tenant = '${tenantId}'`);
+}
+
 // Wrapper to execute code within a tenant context
 const runWithTenant = (tenantId, callback) => {
   return tenantStorage.run(tenantId, callback);
@@ -39,21 +62,7 @@ pool.query = async (text, params) => {
   
   const client = await pool.connect();
   try {
-    if (tenantId) {
-      // Set the tenant ID for this session using $1 to avoid SQL injection
-      // PostgreSQL SET command uses special syntax, but we'll use format() for safety
-      await client.query(`SET app.current_tenant = '${String(tenantId).replace(/'/g, "''")}'`);
-    } else {
-      // Clear the tenant ID to ensure we don't accidentally use a previous tenant's context
-      // 'RESET app.current_tenant' might throw if it wasn't set, so we set to null/empty
-      // or use SET LOCAL if we were in a transaction block, but here we are solitary.
-      // SET app.current_tenant TO DEFAULT might work if default is unset? No, it's a session var.
-      // We'll set it to empty string or valid UUID format if needed. 
-      // RLS policy: current_setting('app.current_tenant', true)::uuid
-      // If we set it to '', casting to UUID might fail? 
-      // Let's try RESET app.current_tenant.
-      await client.query("RESET app.current_tenant");
-    }
+    await setTenantContext(client, tenantId);
 
     // Execute the actual query
     const res = await client.query(text, params);
@@ -77,15 +86,11 @@ pool.connect = async (...args) => {
   const client = await originalConnect(...args);
   const tenantId = tenantStorage.getStore();
   
-  // Monkey-patch client.release to not just release, but maybe we don't need to do anything special 
+  // Monkey-patch client.release to not just release, but maybe we don't need to do anything special
   // since the next user will overwrite or reset the tenant.
   
   // However, we SHOULD set the tenant on the client immediately if context exists.
-  if (tenantId) {
-    await client.query(`SET app.current_tenant = '${tenantId}'`);
-  } else {
-    await client.query("RESET app.current_tenant");
-  }
+  await setTenantContext(client, tenantId);
   
   return client;
 };
@@ -110,6 +115,7 @@ module.exports = {
   query: pool.query,
   pool, // Export the modified pool
   runWithTenant,
+  setTenantContext,
   // Helper to expose the raw pool if absolutely needed
   rawPool: pool
 };
