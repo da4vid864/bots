@@ -32,6 +32,8 @@ const {
     addLeadMessage,
     getLeadMessages,
     isLeadComplete,
+    getLeadsByBot,
+    getLeadById,
 } = require('./leadDbService');
 
 /**
@@ -49,7 +51,6 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
     console.log(`[${botId}] 🔍 Inicializando conexión Baileys para: ${botName}`);
 
     try {
-        // Obtain full bot config with tenant_id if not already present
         let fullBotConfig = botConfig;
         if (!botConfig.tenantId && !botConfig.tenant_id) {
             const botDbService = require('./botDbService');
@@ -119,13 +120,11 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
     const session = activeSessions.get(botId);
     if (!session) return;
 
-    // Handle connection updates
     socket.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
         console.log(`[${botId}] 🔌 Estado de conexión:`, connection);
 
-        // QR Code generation
         if (qr) {
             try {
                 const qrCodeUrl = await QRCode.toDataURL(qr);
@@ -138,7 +137,6 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
             }
         }
 
-        // Connection opened
         if (connection === 'open') {
             console.log(`[${botId}] ✅ WhatsApp conectado!`);
             session.isReady = true;
@@ -156,6 +154,14 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
                 status: session.isPaused ? 'disabled' : 'enabled',
                 runtimeStatus: statusReport,
             });
+
+            // 🆕 SIEMPRE sincronizar al conectar
+            if (!session.isPaused) {
+                console.log(`[${botId}] 🔄 Iniciando sincronización forzada...`);
+                setTimeout(async () => {
+                    await forceHistorySync(botId);
+                }, 3000);
+            }
 
         } else if (connection === 'close') {
             const shouldReconnect =
@@ -179,23 +185,22 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
         }
     });
 
-    // Save credentials on update
     socket.ev.on('creds.update', saveCreds);
 
-    // 🆕 Handle messaging history sync (cuando Baileys sincroniza historial)
+    // También escuchar el evento de historial por si Baileys lo envía
     socket.ev.on('messaging-history.set', async ({ chats, contacts, messages, isLatest }) => {
         const currentSession = activeSessions.get(botId);
         if (!currentSession || currentSession.isPaused) return;
 
-        console.log(`[${botId}] 📚 Historial recibido: ${chats?.length || 0} chats, ${messages?.length || 0} mensajes`);
+        console.log(`[${botId}] 📚 Evento de historial recibido: ${chats?.length || 0} chats, ${messages?.length || 0} mensajes`);
 
-        // Procesar en background para no bloquear
-        processHistorySync(botId, chats || [], messages || [], currentSession).catch(err => {
-            console.error(`[${botId}] ❌ Error procesando historial:`, err);
-        });
+        if (messages && messages.length > 0) {
+            processHistorySync(botId, chats || [], messages, currentSession).catch(err => {
+                console.error(`[${botId}] ❌ Error procesando historial:`, err);
+            });
+        }
     });
 
-    // Handle incoming messages
     socket.ev.on('messages.upsert', async (messageUpdate) => {
         const currentSession = activeSessions.get(botId);
         if (!currentSession || !currentSession.isReady || currentSession.isPaused) return;
@@ -215,17 +220,144 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
         }
     });
 
-    // Handle message status updates
     socket.ev.on('messages.update', async (updates) => {
         // Listener for message status changes
     });
 }
 
 /**
- * 🆕 Procesa el historial de mensajes sincronizado por Baileys
+ * 🆕 Fuerza la sincronización del historial desde la DB
+ */
+async function forceHistorySync(botId) {
+    const session = activeSessions.get(botId);
+    if (!session || !session.socket || !session.isReady) {
+        console.log(`[${botId}] ⚠️ Bot no está listo para sincronizar`);
+        return;
+    }
+
+    console.log(`[${botId}] 🔄 Sincronización forzada iniciada...`);
+
+    const tenantId = session.tenantId;
+    let processedLeads = 0;
+    let leadsUpdated = 0;
+
+    try {
+        const processLeadsFromDB = async () => {
+            // Obtener todos los leads existentes del bot
+            const existingLeads = await getLeadsByBot(botId);
+            
+            console.log(`[${botId}] 📋 Leads existentes en DB: ${existingLeads.length}`);
+
+            for (const lead of existingLeads) {
+                try {
+                    // Si el lead ya tiene toda la info, saltar
+                    if (isLeadComplete(lead)) {
+                        processedLeads++;
+                        continue;
+                    }
+
+                    // Obtener mensajes del lead de nuestra DB
+                    const messages = await getLeadMessages(lead.id, 20);
+                    
+                    if (messages.length === 0) {
+                        processedLeads++;
+                        continue;
+                    }
+
+                    // Filtrar solo mensajes del usuario
+                    const userMessages = messages
+                        .filter(m => m.sender === 'user')
+                        .map(m => m.message);
+
+                    if (userMessages.length === 0) {
+                        processedLeads++;
+                        continue;
+                    }
+
+                    // Combinar últimos mensajes para análisis
+                    const combinedText = userMessages.slice(-10).join('\n');
+
+                    // Extraer información
+                    console.log(`[${botId}] 🤖 Analizando lead ${lead.id} (${lead.whatsapp_number})...`);
+                    
+                    const extractedInfo = await extractLeadInfo(combinedText);
+                    
+                    if (Object.keys(extractedInfo).length > 0) {
+                        const updateData = {};
+                        if (extractedInfo.name && !lead.name) updateData.name = extractedInfo.name;
+                        if (extractedInfo.email && !lead.email) updateData.email = extractedInfo.email;
+                        if (extractedInfo.location && !lead.location) updateData.location = extractedInfo.location;
+                        if (extractedInfo.phone && !lead.phone) updateData.phone = extractedInfo.phone;
+
+                        if (Object.keys(updateData).length > 0) {
+                            await updateLeadInfo(lead.id, updateData);
+                            leadsUpdated++;
+                            console.log(`[${botId}] ✅ Lead ${lead.id} actualizado:`, JSON.stringify(updateData));
+                        }
+                    }
+
+                    // Aplicar scoring
+                    const scoringResult = await scoringService.evaluateMessage(botId, combinedText);
+                    if (scoringResult.scoreDelta !== 0 || scoringResult.tags.length > 0) {
+                        await scoringService.applyScoring(lead.id, scoringResult);
+                        console.log(`[${botId}] 🎯 Scoring: +${scoringResult.scoreDelta} pts`);
+                    }
+
+                    // Verificar si ahora está completo
+                    const updatedLead = await getLeadById(lead.id);
+                    if (updatedLead && updatedLead.status === 'capturing' && isLeadComplete(updatedLead)) {
+                        await qualifyLead(lead.id);
+                        leadsUpdated++;
+                        console.log(`[${botId}] 🏆 Lead ${lead.id} calificado`);
+                    }
+
+                    processedLeads++;
+
+                    // Pausa cada 3 leads para no sobrecargar la API de IA
+                    if (processedLeads % 3 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+
+                } catch (leadError) {
+                    console.error(`[${botId}] ⚠️ Error procesando lead ${lead.id}:`, leadError.message);
+                    processedLeads++;
+                }
+            }
+        };
+
+        // Ejecutar con tenant context
+        if (tenantId) {
+            const { runWithTenant } = require('./db');
+            await runWithTenant(tenantId, processLeadsFromDB);
+        } else {
+            await processLeadsFromDB();
+        }
+
+        console.log(`[${botId}] ✅ Sincronización forzada completada:`);
+        console.log(`   📊 Leads procesados: ${processedLeads}`);
+        console.log(`   📝 Leads actualizados: ${leadsUpdated}`);
+
+        // Notificar al frontend
+        const botOwnerEmail = session.botConfig?.ownerEmail;
+        if (botOwnerEmail) {
+            sseController.sendEventToUser(botOwnerEmail, 'SYNC_COMPLETED', {
+                botId,
+                processedChats: processedLeads,
+                leadsCreated: 0,
+                leadsUpdated,
+            });
+        }
+
+    } catch (error) {
+        console.error(`[${botId}] ❌ Error en sincronización forzada:`, error);
+    }
+}
+
+/**
+ * Procesa el historial de mensajes enviado por Baileys
  */
 async function processHistorySync(botId, chats, messages, session) {
-    console.log(`[${botId}] 🔄 Procesando sincronización de historial...`);
+    console.log(`[${botId}] 🔄 Procesando historial de Baileys...`);
 
     const tenantId = session.tenantId;
     let processedChats = 0;
@@ -238,7 +370,6 @@ async function processHistorySync(botId, chats, messages, session) {
         const chatId = msg.key?.remoteJid;
         if (!chatId) continue;
         
-        // Ignorar grupos y broadcasts
         if (chatId.endsWith('@g.us') || chatId.endsWith('@broadcast')) continue;
         
         if (!messagesByChat[chatId]) {
@@ -247,9 +378,8 @@ async function processHistorySync(botId, chats, messages, session) {
         messagesByChat[chatId].push(msg);
     }
 
-    console.log(`[${botId}] 📊 Chats individuales encontrados: ${Object.keys(messagesByChat).length}`);
+    console.log(`[${botId}] 📊 Chats individuales: ${Object.keys(messagesByChat).length}`);
 
-    // Procesar cada chat
     for (const [chatId, chatMessages] of Object.entries(messagesByChat)) {
         try {
             const result = await processSingleChatHistory(botId, chatId, chatMessages, tenantId, session);
@@ -258,7 +388,6 @@ async function processHistorySync(botId, chats, messages, session) {
             if (result.created) leadsCreated++;
             if (result.updated) leadsUpdated++;
 
-            // Pausa cada 5 chats para no sobrecargar la API de IA
             if (processedChats % 5 === 0) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
@@ -267,12 +396,11 @@ async function processHistorySync(botId, chats, messages, session) {
         }
     }
 
-    console.log(`[${botId}] ✅ Sincronización completada:`);
-    console.log(`   📊 Chats procesados: ${processedChats}`);
-    console.log(`   🆕 Leads creados: ${leadsCreated}`);
-    console.log(`   📝 Leads actualizados: ${leadsUpdated}`);
+    console.log(`[${botId}] ✅ Historial procesado:`);
+    console.log(`   📊 Chats: ${processedChats}`);
+    console.log(`   🆕 Creados: ${leadsCreated}`);
+    console.log(`   📝 Actualizados: ${leadsUpdated}`);
 
-    // Notificar al frontend
     const botOwnerEmail = session.botConfig?.ownerEmail;
     if (botOwnerEmail) {
         sseController.sendEventToUser(botOwnerEmail, 'SYNC_COMPLETED', {
@@ -285,31 +413,25 @@ async function processHistorySync(botId, chats, messages, session) {
 }
 
 /**
- * 🆕 Procesa el historial de un chat individual
+ * Procesa un chat individual del historial
  */
 async function processSingleChatHistory(botId, chatId, messages, tenantId, session) {
     const result = { created: false, updated: false };
 
-    // Ejecutar con contexto de tenant si existe
     const processChat = async () => {
-        // Crear o obtener lead
         let lead = await getOrCreateLead(botId, chatId);
         if (!lead) {
-            console.error(`[${botId}] ❌ No se pudo crear lead para ${chatId}`);
             return result;
         }
 
-        // Verificar si es un lead nuevo
         const existingMessages = await getLeadMessages(lead.id, 1);
         if (existingMessages.length === 0) {
             result.created = true;
-            console.log(`[${botId}] 🆕 Nuevo lead creado: ${chatId}`);
+            console.log(`[${botId}] 🆕 Nuevo lead: ${chatId}`);
         }
 
-        // Extraer mensajes del usuario
         const userMessages = [];
         
-        // Ordenar mensajes por timestamp
         const sortedMessages = messages.sort((a, b) => {
             const timeA = Number(a.messageTimestamp) || 0;
             const timeB = Number(b.messageTimestamp) || 0;
@@ -323,7 +445,6 @@ async function processSingleChatHistory(botId, chatId, messages, tenantId, sessi
             const isFromMe = msg.key?.fromMe || false;
             const sender = isFromMe ? 'bot' : 'user';
 
-            // Guardar mensaje si es lead nuevo
             if (result.created) {
                 try {
                     await addLeadMessage(lead.id, sender, content);
@@ -332,26 +453,19 @@ async function processSingleChatHistory(botId, chatId, messages, tenantId, sessi
                 }
             }
 
-            // Acumular mensajes del usuario
             if (!isFromMe) {
                 userMessages.push(content);
             }
         }
 
-        // Si hay mensajes del usuario, extraer información
-        if (userMessages.length > 0) {
-            // Tomar los últimos 10 mensajes para análisis
+        if (userMessages.length > 0 && !isLeadComplete(lead)) {
             const combinedText = userMessages.slice(-10).join('\n');
             
             try {
-                // Extraer info con IA
-                console.log(`[${botId}] 🤖 Analizando mensajes de ${chatId}...`);
+                console.log(`[${botId}] 🤖 Analizando ${chatId}...`);
                 const extractedInfo = await extractLeadInfo(combinedText);
                 
                 if (Object.keys(extractedInfo).length > 0) {
-                    console.log(`[${botId}] 📋 Info extraída para ${chatId}:`, JSON.stringify(extractedInfo));
-                    
-                    // Solo actualizar campos vacíos
                     const updateData = {};
                     if (extractedInfo.name && !lead.name) updateData.name = extractedInfo.name;
                     if (extractedInfo.email && !lead.email) updateData.email = extractedInfo.email;
@@ -361,28 +475,23 @@ async function processSingleChatHistory(botId, chatId, messages, tenantId, sessi
                     if (Object.keys(updateData).length > 0) {
                         lead = await updateLeadInfo(lead.id, updateData);
                         result.updated = true;
-                        console.log(`[${botId}] ✅ Lead ${lead.id} actualizado:`, JSON.stringify(updateData));
+                        console.log(`[${botId}] ✅ Actualizado:`, JSON.stringify(updateData));
                     }
                 }
 
-                // Aplicar scoring
                 const scoringResult = await scoringService.evaluateMessage(botId, combinedText);
                 if (scoringResult.scoreDelta !== 0 || scoringResult.tags.length > 0) {
                     await scoringService.applyScoring(lead.id, scoringResult);
                     result.updated = true;
-                    console.log(`[${botId}] 🎯 Scoring aplicado: +${scoringResult.scoreDelta} pts, tags: [${scoringResult.tags.join(', ')}]`);
                 }
 
-                // Refrescar lead para verificar si está completo
-                lead = await require('./leadDbService').getLeadById(lead.id);
+                lead = await getLeadById(lead.id);
 
-                // Calificar si está completo
                 if (lead && lead.status === 'capturing' && isLeadComplete(lead)) {
                     await qualifyLead(lead.id);
                     result.updated = true;
-                    console.log(`[${botId}] 🏆 Lead ${lead.id} calificado automáticamente`);
+                    console.log(`[${botId}] 🏆 Lead calificado: ${lead.id}`);
 
-                    // Notificar al frontend
                     if (session.botConfig?.ownerEmail) {
                         sseController.sendEventToUser(session.botConfig.ownerEmail, 'NEW_QUALIFIED_LEAD', {
                             lead,
@@ -393,14 +502,13 @@ async function processSingleChatHistory(botId, chatId, messages, tenantId, sessi
                 }
 
             } catch (aiError) {
-                console.error(`[${botId}] ⚠️ Error en extracción IA para ${chatId}:`, aiError.message);
+                console.error(`[${botId}] ⚠️ Error IA:`, aiError.message);
             }
         }
 
         return result;
     };
 
-    // Ejecutar con tenant si existe
     if (tenantId) {
         const { runWithTenant } = require('./db');
         return await runWithTenant(tenantId, processChat);
@@ -428,10 +536,9 @@ async function handleIncomingMessage(botId, msg) {
 
         await addLeadMessage(lead.id, 'user', userMessage);
 
-        // === SCORING & AUTOMATION START ===
         let skipAiGeneration = false;
 
-        // === INTENT DETECTION START ===
+        // Intent detection
         try {
             const isImageIntent = await detectUserIntent(userMessage);
             if (isImageIntent) {
@@ -439,7 +546,6 @@ async function handleIncomingMessage(botId, msg) {
 
                 const msgLower = userMessage.toLowerCase();
 
-                // 1) Preferir PRODUCTOS si hay (para "foto de la pluma" normalmente es un producto)
                 let matchedProduct = null;
                 if (session.availableProducts && session.availableProducts.length > 0) {
                     matchedProduct = session.availableProducts.find((p) => {
@@ -456,13 +562,10 @@ async function handleIncomingMessage(botId, msg) {
                             (sku && msgLower.includes(sku)) ||
                             (name && msgLower.includes(name)) ||
                             (tags && tags.split(/\s+/).some((t) => t && msgLower.includes(t))) ||
-                            (desc &&
-                                desc.length > 0 &&
-                                msgWords.some((w) => w.length >= 4 && desc.includes(w)))
+                            (desc && desc.length > 0 && msgWords.some((w) => w.length >= 4 && desc.includes(w)))
                         );
                     });
 
-                    // fallback suave: si hay productos y no matcheó, usa el primero
                     if (!matchedProduct) matchedProduct = session.availableProducts[0];
                 }
 
@@ -474,14 +577,9 @@ async function handleIncomingMessage(botId, msg) {
                         `📦 Stock: ${matchedProduct.stock_status || 'in_stock'}`;
 
                     await sendImageUrl(botId, senderId, matchedProduct.image_url, caption);
-                    await addLeadMessage(
-                        lead.id,
-                        'bot',
-                        `[Imagen de producto enviada: ${matchedProduct.sku || matchedProduct.name}]`
-                    );
+                    await addLeadMessage(lead.id, 'bot', `[Imagen de producto enviada: ${matchedProduct.sku || matchedProduct.name}]`);
                     skipAiGeneration = true;
                 } else {
-                    // 2) Si no hay imagen de producto, intentar imágenes del banco (availableImages)
                     let imageMedia = null;
                     const caption = '¡Aquí tienes una imagen! 📸';
 
@@ -502,7 +600,6 @@ async function handleIncomingMessage(botId, msg) {
                         await addLeadMessage(lead.id, 'bot', `[Imagen enviada: ${caption}]`);
                         skipAiGeneration = true;
                     } else {
-                        // 3) No inventar URL como texto
                         const noImgMsg =
                             'Puedo enviarte fotos, pero por ahora no tengo una imagen disponible para esa opción. ' +
                             '¿Qué modelo te interesa (o cuál SKU) para enviarte la foto exacta?';
@@ -515,16 +612,14 @@ async function handleIncomingMessage(botId, msg) {
         } catch (intentError) {
             console.error(`[${botId}] ⚠️ Error in intent detection:`, intentError);
         }
-        // === INTENT DETECTION END ===
 
+        // Scoring
         try {
             const evaluation = await scoringService.evaluateMessage(botId, userMessage);
 
             if (evaluation.scoreDelta !== 0 || evaluation.tags.length > 0) {
                 lead = await scoringService.applyScoring(lead.id, evaluation);
-                console.log(
-                    `[${botId}] 🎯 Scoring aplicado: ${evaluation.scoreDelta} pts, Tags: ${evaluation.tags.join(', ')}`
-                );
+                console.log(`[${botId}] 🎯 Scoring: ${evaluation.scoreDelta} pts, Tags: ${evaluation.tags.join(', ')}`);
             }
 
             if (evaluation.responses && evaluation.responses.length > 0) {
@@ -533,28 +628,23 @@ async function handleIncomingMessage(botId, msg) {
                     await addLeadMessage(lead.id, 'bot', responseText);
                 }
                 skipAiGeneration = true;
-                console.log(`[${botId}] 🤖 Respuesta automática enviada, saltando IA.`);
             }
 
             if (lead.score >= 50 && lead.status === 'capturing') {
                 lead = await qualifyLead(lead.id);
-                const qualMsg =
-                    '¡Felicidades! Has calificado para atención prioritaria. Un asesor revisará tu caso pronto.';
+                const qualMsg = '¡Felicidades! Has calificado para atención prioritaria. Un asesor revisará tu caso pronto.';
                 await sendMessage(botId, senderId, qualMsg);
                 await addLeadMessage(lead.id, 'bot', qualMsg);
 
-                const botOwnerEmail = session.botConfig.ownerEmail;
-                sseController.sendEventToUser(botOwnerEmail, 'NEW_QUALIFIED_LEAD', { lead, botId });
+                sseController.sendEventToUser(session.botConfig.ownerEmail, 'NEW_QUALIFIED_LEAD', { lead, botId });
                 return;
             }
         } catch (scoringError) {
             console.error(`[${botId}] ❌ Error en scoring:`, scoringError);
         }
-        // === SCORING & AUTOMATION END ===
 
         if (lead.status === 'assigned') {
-            const botOwnerEmail = session.botConfig.ownerEmail;
-            sseController.sendEventToUser(botOwnerEmail, 'NEW_MESSAGE_FOR_SALES', {
+            sseController.sendEventToUser(session.botConfig.ownerEmail, 'NEW_MESSAGE_FOR_SALES', {
                 leadId: lead.id,
                 from: senderId,
                 message: userMessage,
@@ -575,8 +665,7 @@ async function handleIncomingMessage(botId, msg) {
                 await sendMessage(botId, senderId, finalMsg);
                 await addLeadMessage(lead.id, 'bot', finalMsg);
 
-                const botOwnerEmail = session.botConfig.ownerEmail;
-                sseController.sendEventToUser(botOwnerEmail, 'NEW_QUALIFIED_LEAD', { lead, botId });
+                sseController.sendEventToUser(session.botConfig.ownerEmail, 'NEW_QUALIFIED_LEAD', { lead, botId });
                 return;
             }
 
@@ -615,28 +704,22 @@ async function handleIncomingMessage(botId, msg) {
             const aiResponse = await getChatReply(userMessage, history, promptWithContext);
             let botReply = followUpQuestion ? `${aiResponse}\n\n${followUpQuestion}` : aiResponse;
 
-            // Image tag handling
             const imageTagRegex = /$$ENVIAR_IMAGEN:\s*([^$$]+)\]/i;
             const match = botReply.match(imageTagRegex);
             let imageMedia = null;
 
             if (match) {
                 const keyword = match[1].trim().toLowerCase();
-                console.log(`[${botId}] 🖼️ IA solicitó imagen con keyword: "${keyword}"`);
-
                 imageMedia = await botImageService.getImageMedia(keyword, botId);
                 botReply = botReply.replace(match[0], '').trim();
             }
 
-            // Product tag handling
             const productTagRegex = /\$\$\s*SEND_PRODUCT:\s*([\w-]+)\s*\$\$/i;
             const productMatch = botReply.match(productTagRegex);
             let productToSend = null;
 
             if (productMatch) {
                 const sku = productMatch[1].trim();
-                console.log(`[${botId}] 🛍️ IA solicitó producto con SKU: "${sku}"`);
-
                 productToSend = session.availableProducts.find((p) => p.sku === sku);
                 botReply = botReply.replace(productMatch[0], '').trim();
             }
@@ -675,8 +758,6 @@ async function handleIncomingMessage(botId, msg) {
                         tags: ['interested_in_product', `product_${productToSend.sku}`],
                         responses: [],
                     });
-
-                    console.log(`[${botId}] 🎯 Scoring aplicado por envío de producto: +10 pts`);
                 } catch (prodError) {
                     console.error(`[${botId}] ❌ Error enviando producto:`, prodError);
                 }
@@ -685,14 +766,12 @@ async function handleIncomingMessage(botId, msg) {
     } catch (error) {
         console.error(`[${botId}] ❌ Error procesando mensaje:`, error);
         
-        // Check for decryption/session errors
         if (error.message && (error.message.includes('Bad MAC') || error.message.includes('decrypt'))) {
-            console.warn(`[${botId}] ⚠️ Error de decryption detectado. Limpiando sesión...`);
+            console.warn(`[${botId}] ⚠️ Error de decryption detectado.`);
             const currentSession = activeSessions.get(botId);
             if (currentSession && currentSession.socket) {
                 try {
                     await currentSession.socket.end();
-                    console.log(`[${botId}] 🔄 Socket cerrado. Reconectando...`);
                 } catch (closeError) {
                     console.error(`[${botId}] Error cerrando socket:`, closeError);
                 }
@@ -717,7 +796,7 @@ async function loadBotImages(botId) {
 
     try {
         session.availableImages = await botImageService.getImagesByBot(botId);
-        console.log(`[${botId}] 🖼️ Imágenes cargadas en memoria: ${session.availableImages.length}`);
+        console.log(`[${botId}] 🖼️ Imágenes cargadas: ${session.availableImages.length}`);
     } catch (error) {
         console.error(`[${botId}] ❌ Error cargando imágenes:`, error);
     }
@@ -729,7 +808,7 @@ async function loadBotProducts(botId) {
 
     try {
         session.availableProducts = await productService.getProductsByBot(botId);
-        console.log(`[${botId}] 🛍️ Productos cargados en memoria: ${session.availableProducts.length}`);
+        console.log(`[${botId}] 🛍️ Productos cargados: ${session.availableProducts.length}`);
     } catch (error) {
         console.error(`[${botId}] ❌ Error cargando productos:`, error);
     }
@@ -738,7 +817,7 @@ async function loadBotProducts(botId) {
 async function sendMessage(botId, to, message) {
     const session = activeSessions.get(botId);
     if (!session || !session.socket || !session.isReady) {
-        throw new Error(`Bot ${botId} no está listo para enviar mensajes`);
+        throw new Error(`Bot ${botId} no está listo`);
     }
 
     try {
@@ -753,7 +832,7 @@ async function sendMessage(botId, to, message) {
 async function sendImage(botId, to, mediaObject) {
     const session = activeSessions.get(botId);
     if (!session || !session.socket || !session.isReady) {
-        throw new Error(`Bot ${botId} no está listo para enviar imágenes`);
+        throw new Error(`Bot ${botId} no está listo`);
     }
 
     try {
@@ -768,7 +847,7 @@ async function sendImage(botId, to, mediaObject) {
 async function sendImageUrl(botId, to, imageUrl, caption = '') {
     const session = activeSessions.get(botId);
     if (!session || !session.socket || !session.isReady) {
-        throw new Error(`Bot ${botId} no está listo para enviar imágenes`);
+        throw new Error(`Bot ${botId} no está listo`);
     }
 
     try {
@@ -779,7 +858,7 @@ async function sendImageUrl(botId, to, imageUrl, caption = '') {
         console.log(`[${botId}] ✅ Imagen(URL) enviada a ${to}`);
         return;
     } catch (err) {
-        console.warn(`[${botId}] ⚠️ Falló envío por URL, intentando Buffer...`, err?.message);
+        console.warn(`[${botId}] ⚠️ Falló URL, intentando Buffer...`);
     }
 
     const res = await axios.get(imageUrl, { responseType: 'arraybuffer' });
@@ -797,11 +876,9 @@ function setBotStatus(botId, status) {
     if (!session) return;
 
     session.isPaused = status === 'disabled';
+    console.log(`[${botId}] ${session.isPaused ? '⏸️ PAUSADO' : '▶️ REANUDADO'}`);
 
-    console.log(`[${botId}] ${session.isPaused ? '⏸️ Bot PAUSADO' : '▶️ Bot REANUDADO'}`);
-
-    const botOwnerEmail = session.botConfig.ownerEmail;
-    sseController.sendEventToUser(botOwnerEmail, 'UPDATE_BOT', {
+    sseController.sendEventToUser(session.botConfig.ownerEmail, 'UPDATE_BOT', {
         status,
         runtimeStatus: session.isPaused ? 'DISABLED' : 'CONNECTED',
         botId,
@@ -816,7 +893,6 @@ async function refreshBotImages(botId) {
 function getBotStatus(botId) {
     const session = activeSessions.get(botId);
     if (!session) return 'DISCONNECTED';
-
     if (session.isPaused) return 'DISABLED';
     if (!session.isReady) return 'STARTING';
     return 'CONNECTED';
@@ -834,9 +910,9 @@ async function disconnectBot(botId) {
     try {
         const { Boom } = await loadBaileys();
         await session.socket.end(new Boom('Bot disconnected by user'));
-        console.log(`[${botId}] 🔌 Sesión Baileys desconectada`);
+        console.log(`[${botId}] 🔌 Desconectado`);
     } catch (error) {
-        console.error(`[${botId}] ❌ Error desconectando sesión:`, error);
+        console.error(`[${botId}] ❌ Error desconectando:`, error);
     } finally {
         activeSessions.delete(botId);
     }
