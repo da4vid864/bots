@@ -53,7 +53,7 @@ const ChatInterface = () => {
     if (!selectedLead) return;
     setSuggesting(true);
     try {
-       const res = await api.post('/ai/suggest-reply', {
+       const res = await api.post('/api/ai/suggest-reply', {
           leadId: selectedLead.id,
           tone: 'professional' // Default
        });

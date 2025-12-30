@@ -56,7 +56,8 @@
     "assigned_error": "This lead is assigned to {{name}}. You cannot send messages.",
     "select_lead_title": "Select a lead to start chatting",
     "select_lead_subtitle": "Choose a lead from the sidebar to view and send messages",
-    "you": " • You"
+    "you": " • You",
+    "ai_suggest": "AI Suggest Reply"
   },
   "dashboard": {
     "notifications": {
@@ -134,6 +135,13 @@
     "save_changes": "Save Changes",
     "edit": "Edit",
     "delete": "Delete"
+  },
+  "lead_score": {
+    "title": "Lead Score",
+    "score": "Score",
+    "tags": "Tags",
+    "interactions": "Interactions",
+    "engagement": "Engagement Level"
   },
   "sales_panel": {
     "title": "Sales Panel",

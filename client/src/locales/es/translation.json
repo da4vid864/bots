@@ -56,6 +56,17 @@
     "assigned_error": "Este lead está asignado a {{name}}. No puedes enviar mensajes.",
     "select_lead_title": "Selecciona un lead para chatear",
     "select_lead_subtitle": "Elige un lead de la barra lateral para ver y enviar mensajes",
+    "you": " • Tú",
+    "ai_suggest": "Sugerencia de IA"
+  },
+    "no_leads": "No hay leads calificados disponibles",
+    "no_messages": "No hay mensajes aún",
+    "start_conversation": "¡Inicia la conversación!",
+    "type_message": "Escribe tu mensaje...",
+    "send": "Enviar",
+    "assigned_error": "Este lead está asignado a {{name}}. No puedes enviar mensajes.",
+    "select_lead_title": "Selecciona un lead para chatear",
+    "select_lead_subtitle": "Elige un lead de la barra lateral para ver y enviar mensajes",
     "you": " • Tú"
   },
   "dashboard": {
@@ -134,6 +145,13 @@
     "save_changes": "Guardar Cambios",
     "edit": "Editar",
     "delete": "Eliminar"
+  },
+  "lead_score": {
+    "title": "Puntuación del Lead",
+    "score": "Puntuación",
+    "tags": "Etiquetas",
+    "interactions": "Interacciones",
+    "engagement": "Nivel de Engagement"
   },
   "sales_panel": {
     "title": "Panel de Ventas",
