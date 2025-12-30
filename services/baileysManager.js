@@ -50,6 +50,7 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
     console.log(`[${botId}] 🔍 Inicializando conexión Baileys para: ${botName}`);
 
     try {
+        // Obtain full bot config with tenant_id if not already present
         let fullBotConfig = botConfig;
         if (!botConfig.tenantId && !botConfig.tenant_id) {
             const botDbService = require('./botDbService');
@@ -64,7 +65,6 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
             DisconnectReason,
             fetchLatestBaileysVersion,
             makeCacheableSignalKeyStore,
-            makeInMemoryStore,  // 🆕 Agregar esto
         } = baileys;
 
         const authDir = path.join(__dirname, '..', 'auth-sessions', botId);
@@ -73,25 +73,11 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
         }
 
         const { state, saveCreds } = await useMultiFileAuthState(authDir);
+
         const { version, isLatest } = await fetchLatestBaileysVersion();
-        
         console.log(`[${botId}] 📦 Usando Baileys v${version.join('.')}, latest: ${isLatest}`);
 
         const logger = pino({ level: 'silent' });
-
-        // 🆕 Crear store para persistir mensajes
-        const store = makeInMemoryStore({ logger });
-        
-        // 🆕 Cargar store si existe
-        const storeFile = path.join(authDir, 'store.json');
-        if (fs.existsSync(storeFile)) {
-            try {
-                store.readFromFile(storeFile);
-                console.log(`[${botId}] 📂 Store cargado desde archivo`);
-            } catch (e) {
-                console.log(`[${botId}] ⚠️ No se pudo cargar store:`, e.message);
-            }
-        }
 
         const socket = makeWASocket({
             version,
@@ -105,25 +91,10 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
             markOnlineOnConnect: true,
             connectTimeoutMs: 60000,
             keepAliveIntervalMs: 10000,
-            syncFullHistory: true,  // 🆕 Sincronizar historial completo
         });
-
-        // 🆕 Vincular store al socket
-        store.bind(socket.ev);
-
-        // 🆕 Guardar store periódicamente
-        const storeInterval = setInterval(() => {
-            try {
-                store.writeToFile(storeFile);
-            } catch (e) {
-                // Ignorar errores de escritura
-            }
-        }, 30000); // Cada 30 segundos
 
         activeSessions.set(botId, {
             socket,
-            store,  // 🆕 Guardar referencia al store
-            storeInterval,  // 🆕 Para limpiar después
             botConfig: fullBotConfig,
             isReady: false,
             isPaused: fullBotConfig.status === 'disabled',
@@ -580,15 +551,12 @@ async function loadExistingChats(botId) {
     if (!session || !session.socket) return;
 
     try {
-        // Usar el nuevo servicio de sincronización
-        if (session.tenantId) {
-            const { runWithTenant } = require('./db');
-            await runWithTenant(session.tenantId, async () => {
-                await chatSyncService.syncExistingChats(botId, session.socket, session);
-            });
-        } else {
-            await chatSyncService.syncExistingChats(botId, session.socket, session);
-        }
+        console.log(`[${botId}] 🔄 Sincronización de chats iniciada...`);
+        
+        // Por ahora, los chats se sincronizarán cuando lleguen nuevos mensajes
+        // La sincronización completa requiere store que no está disponible
+        console.log(`[${botId}] ℹ️ Los leads se crearán/actualizarán al recibir mensajes`);
+        
     } catch (error) {
         console.error(`[${botId}] ❌ Error cargando chats existentes:`, error);
     }
