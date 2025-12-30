@@ -1,8 +1,8 @@
 import React from 'react';
 import { useBots } from '../context/BotsContext';
 import { useAuth } from '../context/AuthContext';
-import ChatInterface from '../components/ChatInterface';
-import PipelineBoard from '../components/PipelineBoard'; // New Component
+import ChatInterface from '../components/ChatInterface';s
+import PipelineBoard from '../components/PipelineBoardEnhanced'; // New Component
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 

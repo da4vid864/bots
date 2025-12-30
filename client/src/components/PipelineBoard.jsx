@@ -117,8 +117,7 @@ export default function PipelineBoard() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // 1. Fetch Pipelines & Leads
-   // 1. Fetch Pipelines & Leads (CORREGIDO)
+  // 1. Fetch Pipelines & Leads (CORREGIDO)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -308,3 +307,117 @@ export default function PipelineBoard() {
     </div>
   );
 }
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs">
+        <div className="text-sm text-gray-500 mb-1">Total Leads</div>
+        <div className="text-xl md:text-2xl font-bold text-gray-900">{totalLeads}</div>
+      </div>
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs">
+        <div className="text-sm text-gray-500 mb-1">Won Leads</div>
+        <div className="text-xl md:text-2xl font-bold text-green-600">{wonLeads}</div>
+      </div>
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs">
+        <div className="text-sm text-gray-500 mb-1">Conversion</div>
+        <div className="text-xl md:text-2xl font-bold text-blue-600">{conversionRate}%</div>
+      </div>
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs">
+        <div className="text-sm text-gray-500 mb-1">Active Stages</div>
+        <div className="text-xl md:text-2xl font-bold text-purple-600">{stages.length}</div>
+      </div>
+    </div>
+  );
+}
+
+// --- MAIN ENHANCED BOARD COMPONENT ---
+export default function PipelineBoard() {
+  const { t } = useTranslation();
+  const [pipelines, setPipelines] = useState([]);
+  const [selectedPipelineId, setSelectedPipelineId] = useState(null);
+  const [leads, setLeads] = useState([]);
+  const [activeDragItem, setActiveDragItem] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  // 1. Fetch Pipelines & Leads
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [pipelinesRes, leadsRes] = await Promise.all([
+          api.get('/pipelines'),
+          api.get('/initial-data')
+        ]);
+
+        // CORRECCIÓN: Asegurar que loadedPipelines sea siempre un Array
+        let loadedPipelines = [];
+        
+        if (Array.isArray(pipelinesRes.data)) {
+          loadedPipelines = pipelinesRes.data;
+        } else if (pipelinesRes.data && Array.isArray(pipelinesRes.data.data)) {
+          loadedPipelines = pipelinesRes.data.data;
+        } else if (pipelinesRes.data && Array.isArray(pipelinesRes.data.pipelines)) {
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs">
+        <div className="text-sm text-gray-500 mb-1">Total Leads</div>
+        <div className="text-xl md:text-2xl font-bold text-gray-900">{totalLeads}</div>
+      </div>
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs">
+        <div className="text-sm text-gray-500 mb-1">Won Leads</div>
+        <div className="text-xl md:text-2xl font-bold text-green-600">{wonLeads}</div>
+      </div>
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs">
+        <div className="text-sm text-gray-500 mb-1">Conversion</div>
+        <div className="text-xl md:text-2xl font-bold text-blue-600">{conversionRate}%</div>
+      </div>
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs">
+        <div className="text-sm text-gray-500 mb-1">Active Stages</div>
+        <div className="text-xl md:text-2xl font-bold text-purple-600">{stages.length}</div>
+      </div>
+    </div>
+  );
+}
+
+// --- MAIN ENHANCED BOARD COMPONENT ---
+export default function PipelineBoard() {
+  const { t } = useTranslation();
+  const [pipelines, setPipelines] = useState([]);
+  const [selectedPipelineId, setSelectedPipelineId] = useState(null);
+  const [leads, setLeads] = useState([]);
+  const [activeDragItem, setActiveDragItem] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  // 1. Fetch Pipelines & Leads
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [pipelinesRes, leadsRes] = await Promise.all([
+          api.get('/pipelines'),
+          api.get('/initial-data')
+        ]);
+
+        // CORRECCIÓN: Asegurar que loadedPipelines sea siempre un Array
+        let loadedPipelines = [];
+        
+        if (Array.isArray(pipelinesRes.data)) {
+          loadedPipelines = pipelinesRes.data;
+        } else if (pipelinesRes.data && Array.isArray(pipelinesRes.data.data)) {
+          loadedPipelines = pipelinesRes.data.data;
+        } else if (pipelinesRes.data && Array.isArray(pipelinesRes.data.pipelines)) {
+
