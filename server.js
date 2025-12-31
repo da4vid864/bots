@@ -146,7 +146,7 @@ app.get('/api/auth/status', (req, res) => {
 // ✅ NUEVO: API para obtener bots (para BotsContext.jsx)
 app.get('/api/bots', requireAuth, async (req, res) => {
   try {
-    console.log('📡 GET /api/bots - User:', req.user?.email);
+    console.log('📡 GET /api/bots - User:', req.user?.email, 'Role:', req.user?.role);
     
     const userEmail = req.user?.email;
     
@@ -154,17 +154,10 @@ app.get('/api/bots', requireAuth, async (req, res) => {
       return res.status(401).json({ error: 'Usuario no autenticado' });
     }
 
-    let bots = [];
-    
-    if (req.user?.role === 'admin') {
-      // Admin ve todos los bots del tenant
-      bots = await botDbService.getAllBots();
-      console.log(`👨‍💼 Admin ${userEmail} gets all bots:`, bots.length);
-    } else {
-      // Usuario normal ve solo sus bots
-      bots = await botDbService.getBotsByOwner(userEmail);
-      console.log(`👤 User ${userEmail} gets own bots:`, bots.length);
-    }
+    // ✅ TODOS los usuarios ven solo los bots que ellos crearon
+    // Admin = jefe de equipo, NO superadmin del sistema
+    const bots = await botDbService.getBotsByOwner(userEmail);
+    console.log(`👤 User ${userEmail} (Role: ${req.user?.role}) gets own bots:`, bots.length);
 
     // Enriquecer con runtimeStatus
     const enrichedBots = bots.map(bot => ({
@@ -334,37 +327,43 @@ async function stopBot(botId) {
 }
 
 // === API: DESHABILITAR BOT ===
-app.post('/api/disable-bot/:id', requireAdmin, async (req, res) => {
+app.post('/api/disable-bot/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const ownerEmail = req.user.email;
+  const userEmail = req.user.email;
 
-  const bot = await botDbService.getBotByIdAndOwner(id, ownerEmail);
-  if (!bot) return res.status(404).json({ message: 'Bot no encontrado' });
+  try {
+    // Verificar propiedad
+    await verifyBotOwnership(id, userEmail);
 
-  await botDbService.updateBotStatus(id, 'disabled');
-  baileysManager.setBotStatus(id, 'disabled');
+    await botDbService.updateBotStatus(id, 'disabled');
+    baileysManager.setBotStatus(id, 'disabled');
 
-  // refrescar stats owner
-  await broadcastStatsUpdate(req.user.email);
-
-  res.json({ message: 'Bot deshabilitado (Pausado)' });
+    await broadcastStatsUpdate(userEmail);
+    res.json({ message: 'Bot deshabilitado (Pausado)' });
+  } catch (error) {
+    console.error('Error disabling bot:', error);
+    res.status(403).json({ message: error.message });
+  }
 });
 
 // === API: HABILITAR BOT ===
-app.post('/api/enable-bot/:id', requireAdmin, async (req, res) => {
+app.post('/api/enable-bot/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const ownerEmail = req.user.email;
+  const userEmail = req.user.email;
 
-  const bot = await botDbService.getBotByIdAndOwner(id, ownerEmail);
-  if (!bot) return res.status(404).json({ message: 'Bot no encontrado' });
+  try {
+    // Verificar propiedad
+    await verifyBotOwnership(id, userEmail);
 
-  await botDbService.updateBotStatus(id, 'enabled');
-  baileysManager.setBotStatus(id, 'enabled');
+    await botDbService.updateBotStatus(id, 'enabled');
+    baileysManager.setBotStatus(id, 'enabled');
 
-  // refrescar stats owner
-  await broadcastStatsUpdate(req.user.email);
-
-  res.json({ message: 'Bot habilitado (Reanudado)' });
+    await broadcastStatsUpdate(userEmail);
+    res.json({ message: 'Bot habilitado (Reanudado)' });
+  } catch (error) {
+    console.error('Error enabling bot:', error);
+    res.status(403).json({ message: error.message });
+  }
 });
 
 // ✅ NUEVO: API para actualizar bot (prompt o nombre)
@@ -452,7 +451,13 @@ async function handleGetLeadMessages(userEmail, leadId) {
     });
   } catch (error) {}
 }
-
+async function verifyBotOwnership(botId, userEmail) {
+  const bot = await botDbService.getBotByIdAndOwner(botId, userEmail);
+  if (!bot) {
+    throw new Error('Bot no encontrado o no tienes permisos');
+  }
+  return bot;
+}
 // === API ENDPOINTS FOR LEAD OPERATIONS ===
 app.post('/api/assign-lead', requireAuth, async (req, res) => {
   const { leadId } = req.body;
@@ -667,38 +672,53 @@ app.post('/api/create-bot', requireAdmin, async (req, res) => {
   }
 });
 
-app.patch('/api/edit-bot/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  const { prompt } = req.body;
+app.patch('/api/edit-bot/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { prompt } = req.body;
+    const userEmail = req.user?.email;
 
-  await botDbService.updateBotPrompt(id, prompt);
-  stopBot(id);
-  const bot = await botDbService.getBotById(id);
-  if (bot.status !== 'disabled') launchBot(bot);
+    // Verificar que el usuario es dueño del bot
+    await verifyBotOwnership(id, userEmail);
 
-  // stats puede cambiar si el bot reconecta
-  const ownerEmail = bot?.owneremail || bot?.ownerEmail;
-  if (ownerEmail) await broadcastStatsUpdate(ownerEmail);
+    await botDbService.updateBotPrompt(id, prompt);
+    stopBot(id);
+    const bot = await botDbService.getBotById(id);
+    if (bot.status !== 'disabled') launchBot(bot);
 
-  res.json({ message: 'Prompt actualizado' });
+    res.json({ message: 'Prompt actualizado' });
+  } catch (error) {
+    console.error('Error editando bot:', error);
+    res.status(403).json({ message: error.message });
+  }
 });
 
-app.delete('/api/delete-bot/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
 
-  stopBot(id);
-  await schedulerService.deleteSchedulesByBot(id);
-  await botConfigService.deleteBotFeatures(id);
+app.delete('/api/delete-bot/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userEmail = req.user?.email;
 
-  const bot = await botDbService.getBotById(id); // para ownerEmail antes de borrar
-  await botDbService.deleteBotById(id);
+    // Verificar que el usuario es dueño del bot
+    await verifyBotOwnership(id, userEmail);
 
-  broadcastToDashboard({ type: 'BOT_DELETED', data: { id } });
+    stopBot(id);
+    await schedulerService.deleteSchedulesByBot(id);
+    await botConfigService.deleteBotFeatures(id);
 
-  const ownerEmail = bot?.owneremail || bot?.ownerEmail || req.user.email;
-  await broadcastStatsUpdate(ownerEmail);
+    const bot = await botDbService.getBotById(id);
+    await botDbService.deleteBotById(id);
 
-  res.json({ message: 'Bot eliminado' });
+    broadcastToDashboard({ type: 'BOT_DELETED', data: { id } });
+
+    const ownerEmail = bot?.owneremail || bot?.ownerEmail || req.user.email;
+    await broadcastStatsUpdate(ownerEmail);
+
+    res.json({ message: 'Bot eliminado' });
+  } catch (error) {
+    console.error('Error deleting bot:', error);
+    res.status(403).json({ message: error.message });
+  }
 });
 
 // === RUTAS IMÁGENES (R2) ===
