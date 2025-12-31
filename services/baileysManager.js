@@ -24,6 +24,7 @@ const botImageService = require('./botImageService');
 const scoringService = require('./scoringService');
 const productService = require('./productService');
 const sseController = require('../controllers/sseController');
+const chatAnalysisService = require('./chatAnalysisService');
 
 const {
     getOrCreateLead,
@@ -637,6 +638,9 @@ async function handleIncomingMessage(botId, msg) {
                 await addLeadMessage(lead.id, 'bot', qualMsg);
 
                 sseController.sendEventToUser(session.botConfig.ownerEmail, 'NEW_QUALIFIED_LEAD', { lead, botId });
+                
+                // 🆕 Analizar el chat completo cuando se califica
+                await analyzeLeadChat(botId, lead, session.tenantId);
                 return;
             }
         } catch (scoringError) {
@@ -666,6 +670,9 @@ async function handleIncomingMessage(botId, msg) {
                 await addLeadMessage(lead.id, 'bot', finalMsg);
 
                 sseController.sendEventToUser(session.botConfig.ownerEmail, 'NEW_QUALIFIED_LEAD', { lead, botId });
+                
+                // 🆕 Analizar el chat completo cuando se califica
+                await analyzeLeadChat(botId, lead, session.tenantId);
                 return;
             }
 
@@ -898,6 +905,66 @@ function getBotStatus(botId) {
     return 'CONNECTED';
 }
 
+/**
+ * Analiza un chat después de procesar mensajes
+ * Se llama automáticamente para crear/actualizar el registro en analyzed_chats
+ */
+async function analyzeLeadChat(botId, lead, tenantId) {
+    try {
+        if (!tenantId || !lead || !lead.id) {
+            return;
+        }
+
+        // Obtener los últimos mensajes del lead
+        const messages = await getLeadMessages(lead.id, 50);
+        if (messages.length < 2) {
+            // Esperar a tener al menos unos mensajes para análisis
+            return;
+        }
+
+        // Formatear mensajes para análisis
+        const formattedMessages = messages.map(m => ({
+            role: m.sender === 'user' ? 'user' : 'assistant',
+            content: m.message
+        }));
+
+        const session = activeSessions.get(botId);
+        const botPrompt = session?.botConfig?.prompt || '';
+
+        // Ejecutar análisis con chatAnalysisService
+        await chatAnalysisService.analyzeChatConversation(
+            {
+                botId,
+                contactPhone: lead.whatsapp_number,
+                contactName: lead.name || null,
+                contactEmail: lead.email || null,
+                messages: formattedMessages,
+                botPrompt
+            },
+            tenantId
+        );
+
+        console.log(`[${botId}] ✅ Chat de ${lead.whatsapp_number} analizado y clasificado`);
+
+        // Notificar al frontend sobre el nuevo chat analizado
+        if (session?.botConfig?.ownerEmail) {
+            sseController.sendEventToUser(
+                session.botConfig.ownerEmail,
+                'CHAT_ANALYZED',
+                {
+                    botId,
+                    leadId: lead.id,
+                    phone: lead.whatsapp_number,
+                    message: 'Chat analizado y clasificado en pipeline'
+                }
+            );
+        }
+    } catch (error) {
+        console.error(`[${botId}] ⚠️ Error analizando chat:`, error.message);
+        // No lanzar error, es una tarea secundaria
+    }
+}
+
 function isBotReady(botId) {
     const session = activeSessions.get(botId);
     return !!(session && session.isReady && !session.isPaused);
@@ -929,4 +996,5 @@ module.exports = {
     isBotReady,
     disconnectBot,
     loadBaileys,
+    analyzeLeadChat,
 };

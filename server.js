@@ -23,6 +23,7 @@ const storageService = require('./services/storageService');
 const statsService = require('./services/statsService');
 const pipelineService = require('./services/pipelineService');
 const deepseekService = require('./services/deepseekService');
+const chatAnalysisService = require('./services/chatAnalysisService');
 
 const { startSchedulerExecutor } = require('./services/schedulerExecutor');
 const authRoutes = require('./routes/authRoutes');
@@ -31,6 +32,7 @@ const complianceRoutes = require('./routes/complianceRoutes');
 const webChatRoutes = require('./routes/webChatRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const dataIntegrityRoutes = require('./routes/dataIntegrityRoutes');
+const analyzedChatsRoutes = require('./routes/analyzedChatsRoutes');
 const { handleStripeWebhook } = require('./controllers/webhookController');
 
 const { attachUser, requireAdmin, requireAuth } = require('./auth/authMiddleware');
@@ -123,6 +125,7 @@ app.use('/api/leads', leadRoutes);
 app.use('/api/web-chat', webChatRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/data-integrity', dataIntegrityRoutes);
+app.use('/api/analyzed-chats', analyzedChatsRoutes);
 
 // === API ROUTES ===
 
