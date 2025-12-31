@@ -136,10 +136,51 @@ app.get('/api/auth/status', (req, res) => {
         email: req.user.email,
         role: req.user.role,
         name: req.user.name,
+        isAdmin: req.user.role === 'admin' // ✅ NUEVO: Para frontend
       },
     });
   }
   res.json({ authenticated: false });
+});
+
+// ✅ NUEVO: API para obtener bots (para BotsContext.jsx)
+app.get('/api/bots', requireAuth, async (req, res) => {
+  try {
+    console.log('📡 GET /api/bots - User:', req.user?.email);
+    
+    const userEmail = req.user?.email;
+    
+    if (!userEmail) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    let bots = [];
+    
+    if (req.user?.role === 'admin') {
+      // Admin ve todos los bots del tenant
+      bots = await botDbService.getAllBots();
+      console.log(`👨‍💼 Admin ${userEmail} gets all bots:`, bots.length);
+    } else {
+      // Usuario normal ve solo sus bots
+      bots = await botDbService.getBotsByOwner(userEmail);
+      console.log(`👤 User ${userEmail} gets own bots:`, bots.length);
+    }
+
+    // Enriquecer con runtimeStatus
+    const enrichedBots = bots.map(bot => ({
+      ...bot,
+      runtimeStatus: getRuntimeStatus(bot)
+    }));
+
+    res.json({
+      success: true,
+      count: enrichedBots.length,
+      bots: enrichedBots
+    });
+  } catch (error) {
+    console.error('❌ Error en GET /api/bots:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Landing page data endpoint
@@ -326,6 +367,48 @@ app.post('/api/enable-bot/:id', requireAdmin, async (req, res) => {
   res.json({ message: 'Bot habilitado (Reanudado)' });
 });
 
+// ✅ NUEVO: API para actualizar bot (prompt o nombre)
+app.put('/api/bots/:id', requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user?.email;
+    const botId = req.params.id;
+    const { name, prompt } = req.body;
+
+    if (!userEmail) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    // Verificar que el bot existe y pertenece al usuario
+    const bot = await botDbService.getBotByIdAndOwner(botId, userEmail);
+    if (!bot) {
+      return res.status(404).json({ error: 'Bot no encontrado o no tienes permisos' });
+    }
+
+    if (prompt) {
+      await botDbService.updateBotPrompt(botId, prompt);
+      
+      // Reiniciar el bot si está activo
+      if (bot.status === 'enabled') {
+        stopBot(botId);
+        setTimeout(() => launchBot(bot), 1000);
+      }
+    }
+
+    // TODO: Actualizar nombre si se implementa ese campo
+
+    const updatedBot = await botDbService.getBotById(botId);
+
+    res.json({
+      success: true,
+      message: 'Bot actualizado',
+      bot: updatedBot
+    });
+  } catch (error) {
+    console.error('❌ Error en PUT /api/bots/:id:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // === MANEJO DE LEADS Y MENSAJES ===
 async function handleAssignLead(leadId, vendorEmail) {
   try {
@@ -405,7 +488,6 @@ app.get('/api/lead-messages/:leadId', requireAuth, async (req, res) => {
 });
 
 // === API ENDPOINTS FOR PIPELINES ===
-
 app.get('/api/pipelines', requireAuth, async (req, res) => {
   try {
     const pipelines = await pipelineService.getPipelines();
@@ -479,10 +561,6 @@ app.post('/api/ai/suggest-reply', requireAuth, async (req, res) => {
       Instruction: Suggest the next reply to move the sale forward. Plain text only.
     `;
 
-    // 4. Call DeepSeek (using existing service wrapper)
-    // We pass history empty array because we included history in the prompt text for better control here,
-    // or we can pass it as history. Let's pass it as a user message block to keep deepseekService simple.
-    
     const prompt = `Here is the conversation history:\n${historyText}\n\nAdditional Context: ${context || ''}\n\nSuggest the next reply.`;
     
     const suggestion = await deepseekService.getChatReply(prompt, [], systemPrompt);
@@ -494,7 +572,6 @@ app.post('/api/ai/suggest-reply', requireAuth, async (req, res) => {
     res.status(500).json({ message: 'Error generating suggestion' });
   }
 });
-
 
 // === INITIAL DATA ENDPOINTS FOR SSE CLIENTS ===
 app.get('/api/initial-data', requireAuth, async (req, res) => {
@@ -520,10 +597,15 @@ app.get('/api/initial-data', requireAuth, async (req, res) => {
     let botsData = [];
     let leadsData = [];
 
+    // ✅ USAR LA MISMA LÓGICA QUE /api/bots
     if (user.role === 'admin') {
       const allBots = await botDbService.getAllBots();
-      const userBots = allBots.filter((bot) => (bot.owneremail ?? bot.ownerEmail) === user.email);
-
+      botsData = allBots.map((bot) => ({
+        ...bot,
+        runtimeStatus: getRuntimeStatus(bot),
+      }));
+    } else {
+      const userBots = await botDbService.getBotsByOwner(user.email);
       botsData = userBots.map((bot) => ({
         ...bot,
         runtimeStatus: getRuntimeStatus(bot),
@@ -864,6 +946,15 @@ app.post('/api/products/:id/image', requireAdmin, upload.single('image'), async 
     console.error('Error subiendo imagen de producto:', error);
     res.status(500).json({ message: 'Error subiendo imagen de producto' });
   }
+});
+
+// ✅ NUEVO: Endpoint de debug para verificar usuario
+app.get('/api/debug/user', (req, res) => {
+  res.json({
+    user: req.user,
+    cookies: req.cookies,
+    headers: req.headers
+  });
 });
 
 // 4. Catch-All for Frontend Routing (MUST BE LAST)
