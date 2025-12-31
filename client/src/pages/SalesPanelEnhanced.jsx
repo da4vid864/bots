@@ -97,7 +97,7 @@ const SalesPanelEnhanced = () => {
           analyzedChats.reduce((sum, c) => sum + (c.lead_score || 0), 0) / (analyzedChats.length || 1)
         ),
         assigned: analyzedChats.filter(c => c.assigned_to).length,
-        converted: analyzedChats.filter(c => c.status === 'converted').length
+        converted: analyzedChats.filter(c => c.lead_score >= 70).length
       };
 
       setStats(chatStats);
@@ -297,8 +297,8 @@ const SalesPanelEnhanced = () => {
             color="bg-emerald-500/10 text-emerald-400"
           />
           <StatCard
-            icon={<Zap className="w-5 h-5" />}
-            label="Convertidos"
+            icon={<Star className="w-5 h-5" />}
+            label="Leads (Score > 70)"
             value={stats.converted}
             color="bg-purple-500/10 text-purple-400"
           />
@@ -358,14 +358,13 @@ const SalesPanelEnhanced = () => {
           )}
 
           {activeTab === 'live' && (
-            <div className="flex items-center justify-center h-96">
-              <div className="text-center">
-                <Zap className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-400">
-                  Interfaz de tiempo real - En desarrollo
-                </p>
-              </div>
-            </div>
+            <RealTimeLeadsPanel
+              chats={analyzedChats.filter(c => c.lead_score >= 70 && c.assigned_to)}
+              categories={pipelineCategories}
+              onChatSelect={setSelectedChat}
+              onCategoryChange={handleCategoryChange}
+              onAssign={handleAssignChat}
+            />
           )}
         </div>
 
@@ -434,5 +433,124 @@ const ExportMenuItem = ({ icon, label, description, onClick, loading }) => (
     </div>
   </button>
 );
+
+/**
+ * RealTimeLeadsPanel - Panel con todos los leads asignados
+ */
+const RealTimeLeadsPanel = ({ chats, categories, onChatSelect, onCategoryChange, onAssign }) => {
+  if (!chats || chats.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <Star className="w-16 h-16 text-slate-600 mb-4" />
+        <p className="text-slate-400 text-lg">No hay leads asignados</p>
+        <p className="text-slate-500 text-sm mt-2">Los leads con puntuación > 70 aparecerán aquí cuando se asignen</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header de leads */}
+      <div className="border-b border-slate-700 p-4 bg-slate-800/50">
+        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <Star className="w-5 h-5 text-yellow-400" />
+          Leads Asignados ({chats.length})
+        </h3>
+        <p className="text-sm text-slate-400 mt-1">Chats con puntuación > 70 asignados a vendedores</p>
+      </div>
+
+      {/* Lista de leads */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 p-4">
+          {chats.map((chat) => (
+            <div
+              key={chat.id}
+              onClick={() => onChatSelect(chat)}
+              className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 hover:bg-slate-800 hover:border-slate-600 transition cursor-pointer"
+            >
+              {/* Header del lead */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <h4 className="font-semibold text-white truncate">
+                    {chat.contact_name || chat.phone}
+                  </h4>
+                  <p className="text-xs text-slate-400">{chat.phone}</p>
+                </div>
+                <div className="ml-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    chat.lead_score >= 85
+                      ? 'bg-red-500/20 text-red-400'
+                      : chat.lead_score >= 75
+                      ? 'bg-yellow-500/20 text-yellow-400'
+                      : 'bg-blue-500/20 text-blue-400'
+                  }`}>
+                    {chat.lead_score?.toFixed(0)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Métrica de análisis */}
+              <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                <div className="bg-slate-700/30 rounded p-2">
+                  <p className="text-slate-400">Engagement</p>
+                  <p className="text-slate-100 font-semibold">{chat.engagement?.toFixed(0)}%</p>
+                </div>
+                <div className="bg-slate-700/30 rounded p-2">
+                  <p className="text-slate-400">Confianza</p>
+                  <p className="text-slate-100 font-semibold">{chat.confidence?.toFixed(0)}%</p>
+                </div>
+              </div>
+
+              {/* Categoría actual */}
+              <div className="mb-3">
+                <p className="text-xs text-slate-400 mb-1">Categoría</p>
+                <select
+                  value={chat.pipeline_category}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    onCategoryChange(chat.id, e.target.value);
+                  }}
+                  className="w-full bg-slate-700 text-slate-100 text-xs rounded px-2 py-1.5 border border-slate-600 focus:outline-none focus:border-blue-500"
+                >
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.name}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Asignado a */}
+              <div className="mb-3 p-2 bg-emerald-500/10 rounded border border-emerald-500/20">
+                <p className="text-xs text-emerald-400 font-semibold">
+                  👤 {chat.assigned_to || 'Sin asignar'}
+                </p>
+              </div>
+
+              {/* Último mensaje */}
+              <div className="text-xs">
+                <p className="text-slate-400 mb-1">Último mensaje:</p>
+                <p className="text-slate-300 truncate">{chat.last_message || 'Sin mensajes'}</p>
+              </div>
+
+              {/* Fecha y contador */}
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-700 text-xs text-slate-400">
+                <span>{chat.message_count || 0} mensajes</span>
+                <span>
+                  {chat.updated_at
+                    ? new Date(chat.updated_at).toLocaleTimeString('es-MX', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })
+                    : 'N/A'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default SalesPanelEnhanced;
