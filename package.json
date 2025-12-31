@@ -4,7 +4,7 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "description": "Dashboard to manage multiple WhatsApp bots with Google Auth. Incluye análisis automático de todos los chats.",
+  "description": "Dashboard to manage multiple WhatsApp bots with Google Auth.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -19,24 +19,8 @@
     "backup": "node scripts/backup-database.js",
     "backup:database-only": "node scripts/backup-database.js --database-only",
     "backup:no-upload": "node scripts/backup-database.js --no-upload",
-    
     "analyze-chats": "node scripts/auto-analyze-chats.js",
-    "analyze-chats:tenant": "node scripts/auto-analyze-chats.js --tenant=TENANT_ID",
-    "analyze-chats:all": "node scripts/auto-analyze-chats.js --all",
-    "analyze-chats:bot": "node scripts/auto-analyze-chats.js --bot=BOT_ID",
-    
-    "cron:analyze": "node scripts/cron-analyze.js",
-    "cron:backup": "node scripts/backup-database.js",
-    "cron:cleanup": "node scripts/cleanup-old-data.js",
-    
-
-    "diagnose:chats": "node scripts/diagnose-chats.js",
-    "stats:analyzed": "node scripts/stats-analyzed.js",
-    "fix:duplicates": "node scripts/fix-duplicate-chats.js",
-    
-    "test:analysis": "node scripts/test-analysis-service.js",
-    "reset:analyzed-chats": "node scripts/reset-analyzed-chats.js",
-    "export:analyzed": "node scripts/export-analyzed-data.js"
+    "diagnose:chats": "node scripts/diagnose-chats.js"
   },
   "author": "",
   "license": "ISC",
@@ -50,10 +34,9 @@
     "clsx": "^2.1.1",
     "compression": "^1.7.4",
     "concurrently": "^9.1.2",
-    "cookie": "^0.6.0",
+    "cookie": "^1.1.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
-    "cron": "^4.0.0", 
     "dotenv": "^16.4.5",
     "express": "^4.18.3",
     "framer-motion": "^12.23.25",
@@ -85,17 +68,8 @@
     "typescript": "^5.9.3",
     "vite": "^6.4.1"
   },
-  
-  "cronJobs": {
-    "analyzeChats": "0 2 * * *", 
-    "backupDatabase": "0 3 * * *", 
-    "cleanupOldData": "0 4 * * 0"
-  },
-  
-  "analysis": {
-    "maxChatsPerBatch": 50,
-    "delayBetweenBatches": 1000,
-    "timeoutPerChat": 30000,
-    "retryAttempts": 3
+  "resolutions": {
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1"
   }
 }
