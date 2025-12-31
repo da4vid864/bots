@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useBots } from '../context/BotsContext';
 import { useTranslation } from 'react-i18next';
-import { BarChart3, MessageSquare, TrendingUp, Zap } from 'lucide-react';
+import { BarChart3, MessageSquare, TrendingUp, Zap, Download, ChevronDown } from 'lucide-react';
 import KanbanPipeline from '../components/organisms/KanbanPipeline';
 import AnalyzedChatsGrid from '../components/organisms/AnalyzedChatsGrid';
 import ChatDetailsPanel from '../components/organisms/ChatDetailsPanel';
@@ -25,6 +25,8 @@ const SalesPanelEnhanced = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     avgScore: 0,
@@ -170,6 +172,35 @@ const SalesPanelEnhanced = () => {
     }
   };
 
+  // Manejar exportación CSV
+  const handleExport = async (endpoint, filename) => {
+    try {
+      setExportLoading(true);
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Error en exportación');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+
+      window.URL.revokeObjectURL(url);
+      setShowExportMenu(false);
+    } catch (error) {
+      console.error('Error exportando:', error);
+      alert('Error al descargar archivo');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col">
       {/* HEADER */}
@@ -184,20 +215,61 @@ const SalesPanelEnhanced = () => {
             </p>
           </div>
 
-          {/* Estado SSE */}
-          <div
-            className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium ${
-              sseConnected
-                ? 'bg-green-500/20 text-green-400 ring-1 ring-green-500/30'
-                : 'bg-red-500/20 text-red-400 ring-1 ring-red-500/30'
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full mr-2 ${
-                sseConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+          <div className="flex items-center gap-3">
+            {/* Estado SSE */}
+            <div
+              className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium ${
+                sseConnected
+                  ? 'bg-green-500/20 text-green-400 ring-1 ring-green-500/30'
+                  : 'bg-red-500/20 text-red-400 ring-1 ring-red-500/30'
               }`}
-            />
-            {sseConnected ? 'Conectado' : 'Desconectado'}
+            >
+              <span
+                className={`w-2 h-2 rounded-full mr-2 ${
+                  sseConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                }`}
+              />
+              {sseConnected ? 'Conectado' : 'Desconectado'}
+            </div>
+
+            {/* Botón de Exportación */}
+            <div className="relative">
+              <button
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                disabled={exportLoading}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 rounded-lg border border-emerald-500/30 text-sm font-semibold transition disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Exportar</span>
+                <ChevronDown className={`w-4 h-4 transition ${showExportMenu ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Menú desplegable */}
+              {showExportMenu && (
+                <div className="absolute right-0 mt-2 w-56 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50">
+                  <div className="p-2">
+                    <ExportMenuItem
+                      label="📥 Todos los Chats"
+                      description="Descarga completa de todos los clientes"
+                      onClick={() => handleExport('/api/analyzed-chats/export/all', 'chats-analizados.csv')}
+                      loading={exportLoading}
+                    />
+                    <ExportMenuItem
+                      label="⭐ Leads Alto Valor"
+                      description="Solo leads con puntuación > 70"
+                      onClick={() => handleExport('/api/analyzed-chats/export/high-value', 'leads-alto-valor.csv')}
+                      loading={exportLoading}
+                    />
+                    <ExportMenuItem
+                      label="📊 Estadísticas"
+                      description="Resumen mensual del pipeline"
+                      onClick={() => handleExport('/api/analyzed-chats/export/statistics', 'estadisticas.csv')}
+                      loading={exportLoading}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -338,6 +410,20 @@ const TabButton = ({ label, active, onClick }) => (
     }`}
   >
     {label}
+  </button>
+);
+
+/**
+ * ExportMenuItem - Elemento del menú de exportación
+ */
+const ExportMenuItem = ({ label, description, onClick, loading }) => (
+  <button
+    onClick={onClick}
+    disabled={loading}
+    className="w-full text-left px-4 py-3 hover:bg-slate-700/50 rounded-lg transition disabled:opacity-50 mb-1"
+  >
+    <p className="text-sm font-semibold text-slate-100">{label}</p>
+    <p className="text-xs text-slate-400 mt-0.5">{description}</p>
   </button>
 );
 
