@@ -10,6 +10,7 @@ const { requireAuth, requireAdmin } = require('../auth/authMiddleware');
 const chatAnalysisService = require('../services/chatAnalysisService');
 const botDbService = require('../services/botDbService');
 const pool = require('../services/db');
+const exportService = require('../services/exportService');
 
 // === MIDDLEWARES ===
 
@@ -349,6 +350,117 @@ router.patch('/:id/unassign', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error desasignando chat:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// === EXPORT ENDPOINTS ===
+
+/**
+ * GET /api/analyzed-chats/export/all
+ * Exporta todos los chats analizados en CSV
+ */
+router.get('/export/all', requireAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenant_id;
+    const { csv, filename, rowCount } = await exportService.exportAnalyzedChatsToCSV(tenantId);
+
+    // Enviar como descarga
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+
+    console.log(`✅ Exportación completada: ${rowCount} chats en ${filename}`);
+  } catch (error) {
+    console.error('Error exportando chats:', error);
+    res.status(500).json({ error: 'Error al exportar datos' });
+  }
+});
+
+/**
+ * GET /api/analyzed-chats/export/category/:category
+ * Exporta chats de una categoría específica en CSV
+ */
+router.get('/export/category/:category', requireAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenant_id;
+    const { category } = req.params;
+
+    const { csv, filename, rowCount } = await exportService.exportChatsByCategoryToCSV(tenantId, category);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+
+    console.log(`✅ Exportación completada: ${rowCount} chats de categoría "${category}"`);
+  } catch (error) {
+    console.error('Error exportando chats por categoría:', error);
+    res.status(500).json({ error: 'Error al exportar datos' });
+  }
+});
+
+/**
+ * GET /api/analyzed-chats/export/high-value
+ * Exporta leads de alto valor (puntuación >= minScore)
+ * Query param: minScore (default: 70)
+ */
+router.get('/export/high-value', requireAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenant_id;
+    const minScore = parseInt(req.query.minScore) || 70;
+
+    const { csv, filename, rowCount } = await exportService.exportHighValueLeadsToCSV(tenantId, minScore);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+
+    console.log(`✅ Exportación completada: ${rowCount} leads con puntuación >= ${minScore}`);
+  } catch (error) {
+    console.error('Error exportando leads de alto valor:', error);
+    res.status(500).json({ error: 'Error al exportar datos' });
+  }
+});
+
+/**
+ * GET /api/analyzed-chats/export/assigned/:assignedTo
+ * Exporta chats asignados a un usuario específico en CSV
+ */
+router.get('/export/assigned/:assignedTo', requireAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenant_id;
+    const { assignedTo } = req.params;
+
+    const { csv, filename, rowCount } = await exportService.exportAssignedChatsToCSV(tenantId, assignedTo);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+
+    console.log(`✅ Exportación completada: ${rowCount} chats asignados a "${assignedTo}"`);
+  } catch (error) {
+    console.error('Error exportando chats asignados:', error);
+    res.status(500).json({ error: 'Error al exportar datos' });
+  }
+});
+
+/**
+ * GET /api/analyzed-chats/export/statistics
+ * Exporta estadísticas del pipeline en CSV
+ */
+router.get('/export/statistics', requireAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenant_id;
+
+    const { csv, filename, rowCount } = await exportService.exportStatisticsToCSV(tenantId);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+
+    console.log(`✅ Estadísticas exportadas: ${rowCount} registros`);
+  } catch (error) {
+    console.error('Error exportando estadísticas:', error);
+    res.status(500).json({ error: 'Error al exportar estadísticas' });
   }
 });
 
