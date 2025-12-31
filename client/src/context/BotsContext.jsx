@@ -44,6 +44,8 @@ export const BotsProvider = ({ children }) => {
   const handleSSEEvent = useCallback((event) => {
     const { type, data } = event;
 
+    console.log('📥 SSE Event received:', type, data ? 'data present' : 'no data');
+
     switch (type) {
       case 'CONNECTED':
         console.log('✅ SSE Connected:', data);
@@ -51,7 +53,9 @@ export const BotsProvider = ({ children }) => {
         break;
 
       case 'INIT':
-        setBots(data.bots || []);
+        console.log('🚀 INIT received for bots initialization');
+        // El sistema espera este evento para inicializar
+        // Los bots se cargan por separado via API
         break;
 
       case 'INIT_LEADS':
@@ -59,19 +63,58 @@ export const BotsProvider = ({ children }) => {
         setLeads(data.leads || []);
         break;
 
-      // ✅ NUEVO: Eventos de leads
-      case 'NEW_LEAD':
-        console.log('📥 NEW_LEAD received:', data.lead);
-        setLeads((prevLeads) => [...prevLeads, data.lead]);
+      // ✅ Eventos del sistema de bots EXISTENTE
+      case 'UPDATE_BOT':
+        console.log('🤖 UPDATE_BOT received:', data.id, data.status);
+        setBots((prevBots) =>
+          prevBots.map((bot) => (bot.id === data.id ? { ...bot, ...data } : bot))
+        );
         break;
 
-      case 'LEAD_UPDATED':
-        console.log('📥 LEAD_UPDATED received:', data.leadId);
+      case 'NEW_BOT':
+        console.log('🤖 NEW_BOT received:', data.id);
+        setBots((prevBots) => [...prevBots, data]);
+        break;
+
+      case 'BOT_DELETED':
+        console.log('🤖 BOT_DELETED received:', data.id);
+        setBots((prevBots) => prevBots.filter((bot) => bot.id !== data.id));
+        break;
+
+      case 'NEW_QUALIFIED_LEAD':
+        console.log('🎯 NEW_QUALIFIED_LEAD received:', data);
+        setLeads((prevLeads) => [...prevLeads, data]);
+        break;
+
+      case 'LEAD_ASSIGNED':
+        console.log('🎯 LEAD_ASSIGNED received:', data);
         setLeads((prevLeads) =>
-          prevLeads.map((lead) => 
-            lead.id === data.leadId ? { ...lead, ...data.lead } : lead
-          )
+          prevLeads.map((lead) => (lead.id === data.id ? { ...lead, ...data } : lead))
         );
+        break;
+
+      case 'NEW_MESSAGE_FOR_SALES':
+        console.log('💬 NEW_MESSAGE_FOR_SALES received for lead:', data.leadId);
+        setLeadMessages((prev) => ({
+          ...prev,
+          [data.leadId]: [...(prev[data.leadId] || []), data],
+        }));
+        break;
+
+      case 'MESSAGE_SENT':
+        console.log('💬 MESSAGE_SENT received for lead:', data.leadId);
+        setLeadMessages((prev) => ({
+          ...prev,
+          [data.leadId]: [...(prev[data.leadId] || []), data],
+        }));
+        break;
+
+      case 'LEAD_MESSAGES':
+        console.log('💬 LEAD_MESSAGES received for lead:', data.leadId);
+        setLeadMessages((prev) => ({
+          ...prev,
+          [data.leadId]: data.messages,
+        }));
         break;
 
       // ✅ NUEVO: Inicialización de métricas
@@ -84,59 +127,8 @@ export const BotsProvider = ({ children }) => {
         setDashboardStats(data?.stats || null);
         break;
 
-      case 'UPDATE_BOT':
-        setBots((prevBots) =>
-          prevBots.map((bot) => (bot.id === data.id ? { ...bot, ...data } : bot))
-        );
-        break;
-
-      case 'NEW_BOT':
-        setBots((prevBots) => [...prevBots, data]);
-        break;
-
-      case 'BOT_DELETED':
-        setBots((prevBots) => prevBots.filter((bot) => bot.id !== data.id));
-        break;
-
-      case 'NEW_QUALIFIED_LEAD':
-        console.log('📥 NEW_QUALIFIED_LEAD received:', data);
-        setLeads((prevLeads) => [...prevLeads, data]);
-        break;
-
-      case 'LEAD_ASSIGNED':
-        console.log('📥 LEAD_ASSIGNED received:', data);
-        setLeads((prevLeads) =>
-          prevLeads.map((lead) => (lead.id === data.id ? { ...lead, ...data } : lead))
-        );
-        break;
-
-      case 'NEW_MESSAGE_FOR_SALES':
-        setLeadMessages((prev) => ({
-          ...prev,
-          [data.leadId]: [...(prev[data.leadId] || []), data],
-        }));
-        break;
-
-      case 'MESSAGE_SENT':
-        setLeadMessages((prev) => ({
-          ...prev,
-          [data.leadId]: [...(prev[data.leadId] || []), data],
-        }));
-        break;
-
-      case 'LEAD_MESSAGES':
-        setLeadMessages((prev) => ({
-          ...prev,
-          [data.leadId]: data.messages,
-        }));
-        break;
-
-      case 'ERROR':
-        console.error('❌ SSE Error:', data);
-        break;
-
       default:
-        console.log('Unhandled SSE event:', type, data);
+        console.log('⚠️ Unhandled SSE event:', type, data);
     }
   }, []);
 
@@ -144,6 +136,8 @@ export const BotsProvider = ({ children }) => {
    * Initializes SSE connection.
    */
   const initializeSSE = useCallback(() => {
+    console.log('🔌 Initializing SSE connection...');
+    
     const es = new EventSource('/api/events', { 
       withCredentials: true 
     });
@@ -151,14 +145,22 @@ export const BotsProvider = ({ children }) => {
     es.onopen = () => {
       console.log('🔗 SSE Connection established');
       setSseConnected(true);
+      
+      // ✅ SOLO si necesitas datos iniciales adicionales
+      // Los bots se cargan por separado
     };
 
     es.onmessage = (event) => {
       try {
+        // El evento 'heartbeat' no es JSON
+        if (event.data.startsWith(': heartbeat')) {
+          return;
+        }
+        
         const payload = JSON.parse(event.data);
         handleSSEEvent(payload);
       } catch (error) {
-        console.error('Error parsing SSE event:', error);
+        console.error('Error parsing SSE event:', error, event.data);
       }
     };
 
@@ -166,13 +168,13 @@ export const BotsProvider = ({ children }) => {
       console.error('❌ SSE Connection error:', error);
       setSseConnected(false);
       
-      // Intentar reconectar después de 5 segundos
+      // Intentar reconectar después de 10 segundos
       setTimeout(() => {
         if (isAuthenticated && user) {
           console.log('🔄 Attempting SSE reconnection...');
           initializeSSE();
         }
-      }, 5000);
+      }, 10000);
       
       es.close();
     };
@@ -182,14 +184,62 @@ export const BotsProvider = ({ children }) => {
   }, [handleSSEEvent, isAuthenticated, user]);
 
   /**
+   * Load initial bots data (separado del SSE)
+   */
+  const loadInitialBots = useCallback(async () => {
+    if (!isAuthenticated || !user) return;
+
+    try {
+      console.log('📡 Loading initial bots...');
+      const response = await fetch('/api/bots', {
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🤖 Bots loaded:', data.bots?.length);
+        setBots(data.bots || []);
+      }
+    } catch (error) {
+      console.error('Error loading bots:', error);
+    }
+  }, [isAuthenticated, user]);
+
+  /**
    * Effect: init SSE when authenticated
    */
   useEffect(() => {
     let es = null;
 
     if (isAuthenticated && user) {
-      console.log('🚀 Initializing SSE for user:', user.email);
+      console.log('🚀 Initializing SSE and loading bots for user:', user.email);
+      
+      // 1. Inicializar SSE
       es = initializeSSE();
+      
+      // 2. Cargar bots iniciales
+      loadInitialBots();
+      
+      // 3. Cargar leads iniciales (si existe el endpoint)
+      const loadInitialLeads = async () => {
+        try {
+          const response = await fetch('/api/leads', {
+            credentials: 'include',
+            headers: { 'Accept': 'application/json' }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('📥 Initial leads loaded via API:', data.leads?.length);
+            setLeads(data.leads || []);
+          }
+        } catch (error) {
+          console.error('Error loading initial leads:', error);
+        }
+      };
+      
+      loadInitialLeads();
     }
 
     return () => {
@@ -204,46 +254,7 @@ export const BotsProvider = ({ children }) => {
       setDashboardStats(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user, initializeSSE]);
-
-  // ===== Helper para cargar leads si SSE falla =====
-  const fetchInitialLeads = useCallback(async () => {
-    if (!isAuthenticated || !user) return;
-
-    try {
-      console.log('📡 Fetching initial leads via API...');
-      const response = await fetch('/api/leads', {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('📥 API leads received:', data.leads?.length, 'leads');
-        setLeads(data.leads || []);
-      } else {
-        console.error('Failed to fetch leads:', response.status);
-      }
-    } catch (error) {
-      console.error('Error fetching initial leads:', error);
-    }
-  }, [isAuthenticated, user]);
-
-  // Si después de 3 segundos no recibimos INIT_LEADS, cargar via API
-  useEffect(() => {
-    if (isAuthenticated && user && leads.length === 0) {
-      const timer = setTimeout(() => {
-        if (leads.length === 0) {
-          console.log('⏰ Timeout reached, fetching leads via API...');
-          fetchInitialLeads();
-        }
-      }, 3000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, user, leads.length, fetchInitialLeads]);
+  }, [isAuthenticated, user, initializeSSE, loadInitialBots]);
 
   // ===== Bot operations =====
   const createBot = async (botData) => {
@@ -303,7 +314,7 @@ export const BotsProvider = ({ children }) => {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
       });
-      
+        
       if (!response.ok) throw new Error('Failed to assign lead');
       
       const data = await response.json();
@@ -330,7 +341,7 @@ export const BotsProvider = ({ children }) => {
         credentials: 'include',
         body: JSON.stringify(updates),
       });
-      
+        
       if (!response.ok) throw new Error('Failed to update lead');
       
       const data = await response.json();
@@ -368,10 +379,23 @@ export const BotsProvider = ({ children }) => {
     return await response.json();
   };
 
-  // ✅ NUEVO: Refrescar leads manualmente
+  // ✅ Refrescar leads manualmente
   const refreshLeads = async () => {
     console.log('🔄 Manually refreshing leads...');
-    await fetchInitialLeads();
+    try {
+      const response = await fetch('/api/leads', {
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' }
+      });
+        
+      if (response.ok) {
+        const data = await response.json();
+        setLeads(data.leads || []);
+        console.log('✅ Leads refreshed:', data.leads?.length);
+      }
+    } catch (error) {
+      console.error('Error refreshing leads:', error);
+    }
   };
 
   const value = {
@@ -392,10 +416,10 @@ export const BotsProvider = ({ children }) => {
     enableBot,
     disableBot,
     assignLead,
-    updateLead,  // ✅ NUEVO
+    updateLead,
     sendMessage,
     getLeadMessages,
-    refreshLeads, // ✅ NUEVO
+    refreshLeads,
   };
 
   return <BotsContext.Provider value={value}>{children}</BotsContext.Provider>;

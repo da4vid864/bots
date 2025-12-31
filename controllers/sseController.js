@@ -8,7 +8,6 @@
  */
 const clientsById = new Map();
 const clientsByUser = new Map();
-const leadDbService = require('../services/leadDbService');
 
 function generateClientId() {
   return `client_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
@@ -57,7 +56,7 @@ function safeWrite(res, payload) {
 /**
  * Handler for GET /api/events that establishes an SSE connection
  */
-async function eventsHandler(req, res) {  // <-- Cambiado a async
+function eventsHandler(req, res) {
   // Nota: /api/events normalmente es same-origin. Si es cross-origin, necesitas CORS correcto.
   const origin = process.env.FRONTEND_URL || 'http://localhost:3001';
 
@@ -105,7 +104,7 @@ async function eventsHandler(req, res) {  // <-- Cambiado a async
   // reconexión sugerida
   safeWrite(res, `retry: 10000\n\n`);
 
-  // evento inicial de conexión
+  // evento inicial
   safeWrite(
     res,
     `data: ${JSON.stringify({
@@ -114,37 +113,17 @@ async function eventsHandler(req, res) {  // <-- Cambiado a async
     })}\n\n`
   );
 
-  // ✅ ENVIAR LEADS INICIALES
-  try {
-    // Obtener tenantId del usuario o headers
-    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
-    
-    if (tenantId) {
-      const initialLeads = await leadDbService.getAllLeads(tenantId);
-      
-      safeWrite(
-        res,
-        `data: ${JSON.stringify({
-          type: 'INIT_LEADS',
-          data: { leads: initialLeads },
-        })}\n\n`
-      );
-      
-      console.log(`📤 Sent ${initialLeads.length} initial leads to client ${clientId}`);
-    } else {
-      console.warn(`⚠️ No tenantId found for client ${clientId}, skipping initial leads`);
-    }
-  } catch (error) {
-    console.error(`❌ Error sending initial leads to client ${clientId}:`, error);
-    // Enviar evento de error pero no romper la conexión
+  // ✅ NUEVO: Enviar evento INIT después de conectar
+  // Esto es lo que el sistema de bots espera
+  setTimeout(() => {
     safeWrite(
       res,
       `data: ${JSON.stringify({
-        type: 'ERROR',
-        data: { message: 'Could not load initial leads', error: error.message },
+        type: 'INIT',
+        data: { message: 'Initializing connection' },
       })}\n\n`
     );
-  }
+  }, 100);
 
   // Heartbeat: comentario cada 25s para evitar cierre por proxies
   client.heartbeat = setInterval(() => {
@@ -235,21 +214,18 @@ function broadcastEvent(type, data) {
 }
 
 /**
- * Send updated lead to all relevant clients
+ * Send bot status update (para sistema de bots existente)
  */
-function sendLeadUpdate(leadId, leadData, tenantId) {
+function sendBotUpdate(botId, status, data = {}) {
   const eventData = JSON.stringify({
-    type: 'LEAD_UPDATED',
-    data: { leadId, lead: leadData, tenantId }
+    type: 'UPDATE_BOT',
+    data: { id: botId, status, ...data }
   });
   
   let sentCount = 0;
   const idsToRemove = [];
 
-  // Enviar a todos los clientes del mismo tenant
   for (const [clientId, client] of clientsById.entries()) {
-    // Verificar si el cliente pertenece al mismo tenant
-    // (Asumiendo que tenantId está disponible en el cliente)
     const ok = safeWrite(client.response, `data: ${eventData}\n\n`);
     if (ok) sentCount++;
     else idsToRemove.push(clientId);
@@ -257,17 +233,17 @@ function sendLeadUpdate(leadId, leadData, tenantId) {
 
   idsToRemove.forEach(removeClient);
 
-  console.log(`📤 Sent lead update [${leadId}] to ${sentCount} clients`);
+  console.log(`🤖 Sent bot update [${botId}:${status}] to ${sentCount} clients`);
   return sentCount > 0;
 }
 
 /**
- * Send new lead to all relevant clients
+ * Send new message for sales (para sistema de bots existente)
  */
-function sendNewLead(leadData, tenantId) {
+function sendNewMessageForSales(leadId, messageData) {
   const eventData = JSON.stringify({
-    type: 'NEW_LEAD',
-    data: { lead: leadData, tenantId }
+    type: 'NEW_MESSAGE_FOR_SALES',
+    data: { leadId, ...messageData }
   });
   
   let sentCount = 0;
@@ -281,7 +257,7 @@ function sendNewLead(leadData, tenantId) {
 
   idsToRemove.forEach(removeClient);
 
-  console.log(`📤 Sent new lead to ${sentCount} clients`);
+  console.log(`💬 Sent new message for sales [${leadId}] to ${sentCount} clients`);
   return sentCount > 0;
 }
 
@@ -299,8 +275,8 @@ module.exports = {
   eventsHandler,
   sendEventToUser,
   broadcastEvent,
-  sendLeadUpdate,  // <-- NUEVO
-  sendNewLead,     // <-- NUEVO
+  sendBotUpdate,          // ✅ Para sistema de bots
+  sendNewMessageForSales, // ✅ Para sistema de bots
   getConnectedClientsCount,
   getClientsByUser,
 };
