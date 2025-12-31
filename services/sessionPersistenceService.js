@@ -6,48 +6,44 @@
 const fs = require('fs');
 const path = require('path');
 const pool = require('./db');
+const { hasValidDBSession, clearDBSession } = require('./baileysAuthService');
 
 const SESSION_STORAGE_TABLE = 'bot_sessions';
 
 /**
  * Verificar si una sesión tiene credenciales válidas sin necesidad de QR
  * @param {string} botId - ID del bot
- * @returns {boolean} true si hay credenciales guardadas
+ * @returns {Promise<boolean>} true si hay credenciales guardadas
  */
-function hasValidSessionCredentials(botId) {
+async function hasValidSessionCredentials(botId) {
+  // 1. Check Database (Priority)
+  const hasDB = await hasValidDBSession(botId);
+  if (hasDB) {
+    console.log(`[${botId}] ✅ Credenciales encontradas en DB`);
+    return true;
+  }
+
+  // 2. Fallback to filesystem (Legacy/Migration)
   try {
     const authDir = path.join(__dirname, '..', 'auth-sessions', botId);
     
-    // Verificar si existe la carpeta de autenticación
     if (!fs.existsSync(authDir)) {
-      console.log(`[${botId}] ⚠️  Sin carpeta auth-sessions`);
       return false;
     }
 
-    // Verificar si existen archivos de credenciales
     const credsPath = path.join(authDir, 'creds.json');
-    const keysPath = path.join(authDir, 'keys');
-
-    const hasCredsFile = fs.existsSync(credsPath);
-    const hasKeysDir = fs.existsSync(keysPath);
-
-    if (!hasCredsFile || !hasKeysDir) {
-      console.log(`[${botId}] ⚠️  Credenciales incompletas - Creds: ${hasCredsFile}, Keys: ${hasKeysDir}`);
+    if (!fs.existsSync(credsPath)) {
       return false;
     }
 
-    // Verificar que las credenciales no estén vacías
     const credsContent = fs.readFileSync(credsPath, 'utf8');
     const creds = JSON.parse(credsContent);
 
-    // Si tiene un me.id, significa que está autenticado
-    if (!creds.me?.id) {
-      console.log(`[${botId}] ⚠️  Credenciales sin autenticar (me.id no existe)`);
-      return false;
+    if (creds.me?.id) {
+      console.log(`[${botId}] ✅ Credenciales locales encontradas (migración pendiente)`);
+      return true;
     }
-
-    console.log(`[${botId}] ✅ Credenciales válidas encontradas para ${creds.me?.name || 'usuario'}`);
-    return true;
+    return false;
   } catch (error) {
     console.error(`[${botId}] ❌ Error verificando credenciales:`, error.message);
     return false;
@@ -113,21 +109,23 @@ async function getSessionMetadata(botId) {
  * Limpiar archivos de sesión inválidos
  * @param {string} botId - ID del bot
  */
-function cleanInvalidSession(botId) {
+async function cleanInvalidSession(botId) {
   try {
+    // Clean DB session
+    await clearDBSession(botId);
+
+    // Clean local files (legacy)
     const authDir = path.join(__dirname, '..', 'auth-sessions', botId);
-    
     if (fs.existsSync(authDir)) {
-      // Renombrar la carpeta como backup
       const backupDir = `${authDir}.backup.${Date.now()}`;
       fs.renameSync(authDir, backupDir);
-      console.log(`[${botId}] 🗑️  Sesión inválida movida a: ${backupDir}`);
-      return true;
+      console.log(`[${botId}] 🗑️  Sesión local inválida movida a: ${backupDir}`);
     }
+    return true;
   } catch (error) {
     console.error(`[${botId}] ❌ Error limpiando sesión:`, error.message);
+    return false;
   }
-  return false;
 }
 
 /**

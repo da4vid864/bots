@@ -26,6 +26,7 @@ const productService = require('./productService');
 const sseController = require('../controllers/sseController');
 const chatAnalysisService = require('./chatAnalysisService');
 const sessionPersistenceService = require('./sessionPersistenceService');
+const { usePostgresAuthState } = require('./baileysAuthService');
 
 const {
     getOrCreateLead,
@@ -53,7 +54,7 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
     console.log(`[${botId}] 🔍 Inicializando conexión Baileys para: ${botName}`);
 
     // 🆕 Verificar si hay credenciales válidas guardadas
-    const hasValidCreds = sessionPersistenceService.hasValidSessionCredentials(botId);
+    const hasValidCreds = await sessionPersistenceService.hasValidSessionCredentials(botId);
     if (hasValidCreds) {
         console.log(`[${botId}] ♻️  Reutilizando sesión anterior (sin necesidad de QR)`);
     }
@@ -69,18 +70,13 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
         const { baileys } = await loadBaileys();
         const {
             makeWASocket,
-            useMultiFileAuthState,
             DisconnectReason,
             fetchLatestBaileysVersion,
             makeCacheableSignalKeyStore,
         } = baileys;
 
-        const authDir = path.join(__dirname, '..', 'auth-sessions', botId);
-        if (!fs.existsSync(authDir)) {
-            fs.mkdirSync(authDir, { recursive: true });
-        }
-
-        const { state, saveCreds } = await useMultiFileAuthState(authDir);
+        // Use Postgres Auth State
+        const { state, saveCreds } = await usePostgresAuthState(botId);
 
         const { version, isLatest } = await fetchLatestBaileysVersion();
         console.log(`[${botId}] 📦 Usando Baileys v${version.join('.')}, latest: ${isLatest}`);
@@ -153,9 +149,8 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
             const botOwnerEmail = session.botConfig.ownerEmail;
 
             // 🆕 Guardar metadata de sesión para persistencia
-            const credsPath = path.join(__dirname, '..', 'auth-sessions', botId, 'creds.json');
             try {
-                const creds = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
+                const creds = session.socket?.authState?.creds || {};
                 await sessionPersistenceService.saveSessionMetadata(botId, {
                     phoneNumber: creds.me?.id || null,
                     status: 'connected',
@@ -166,7 +161,7 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
                     }
                 });
             } catch (err) {
-                console.log(`[${botId}] ℹ️  No se pudo guardar metadata (tabla no existe aún)`);
+                console.log(`[${botId}] ℹ️  No se pudo guardar metadata: ${err.message}`);
             }
 
             sseController.sendEventToUser(botOwnerEmail, 'CONNECTED', {
@@ -205,12 +200,13 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
 
             // 🆕 Indicar si se necesitará QR en el próximo intento
             if (shouldReconnect) {
-                const hasValidCreds = sessionPersistenceService.hasValidSessionCredentials(botId);
-                if (hasValidCreds) {
-                    console.log(`[${botId}] ℹ️  Próximo reconexión: sin QR (credenciales válidas)`);
-                } else {
-                    console.log(`[${botId}] ⚠️  Próximo reconexión: necesitará escanear QR`);
-                }
+                sessionPersistenceService.hasValidSessionCredentials(botId).then(hasValidCreds => {
+                    if (hasValidCreds) {
+                        console.log(`[${botId}] ℹ️  Próximo reconexión: sin QR (credenciales válidas)`);
+                    } else {
+                        console.log(`[${botId}] ⚠️  Próximo reconexión: necesitará escanear QR`);
+                    }
+                });
             }
 
             const botOwnerEmail = session.botConfig.ownerEmail;

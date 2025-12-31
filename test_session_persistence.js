@@ -6,6 +6,7 @@
 
 const path = require('path');
 const fs = require('fs');
+require('dotenv').config();
 const sessionPersistenceService = require('./services/sessionPersistenceService');
 
 async function testSessionPersistence() {
@@ -18,7 +19,7 @@ async function testSessionPersistence() {
     console.log('═'.repeat(60));
     
     for (const botId of testBots) {
-        const hasValid = sessionPersistenceService.hasValidSessionCredentials(botId);
+        const hasValid = await sessionPersistenceService.hasValidSessionCredentials(botId);
         const status = hasValid ? '✅ SÍ' : '❌ NO';
         const authDir = path.join(__dirname, 'auth-sessions', botId);
         const exists = fs.existsSync(authDir) ? 'EXISTE' : 'NO EXISTE';
@@ -46,9 +47,9 @@ async function testSessionPersistence() {
     try {
         const pool = require('./services/db');
         const result = await pool.query(`
-            SELECT bot_id, phone, status, last_activity, authenticated_at 
-            FROM bot_sessions 
-            ORDER BY last_activity DESC 
+            SELECT bot_id, phone, status, last_activity, authenticated_at
+            FROM bot_sessions
+            ORDER BY last_activity DESC
             LIMIT 5
         `);
         
@@ -66,7 +67,12 @@ async function testSessionPersistence() {
             }
         }
         
-        await pool.end();
+        // pool is exported as 'pool' property or default if module.exports = pool
+        if (pool.pool && typeof pool.pool.end === 'function') {
+            await pool.pool.end();
+        } else if (typeof pool.end === 'function') {
+            await pool.end();
+        }
     } catch (error) {
         console.error('❌ Error consultando BD:', error.message);
     }
