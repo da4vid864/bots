@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useBots } from '../context/BotsContext';
 import { useTranslation } from 'react-i18next';
-import { BarChart3, MessageSquare, TrendingUp, Zap, Download, ChevronDown } from 'lucide-react';
+import { BarChart3, MessageSquare, TrendingUp, Zap, Download, ChevronDown, Star, FileText } from 'lucide-react';
 import KanbanPipeline from '../components/organisms/KanbanPipeline';
 import AnalyzedChatsGrid from '../components/organisms/AnalyzedChatsGrid';
 import ChatDetailsPanel from '../components/organisms/ChatDetailsPanel';
@@ -249,19 +249,22 @@ const SalesPanelEnhanced = () => {
                 <div className="absolute right-0 mt-2 w-56 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50">
                   <div className="p-2">
                     <ExportMenuItem
-                      label="📥 Todos los Chats"
+                      icon={<Download className="w-5 h-5" />}
+                      label="Todos los Chats"
                       description="Descarga completa de todos los clientes"
                       onClick={() => handleExport('/api/analyzed-chats/export/all', 'chats-analizados.csv')}
                       loading={exportLoading}
                     />
                     <ExportMenuItem
-                      label="⭐ Leads Alto Valor"
+                      icon={<Star className="w-5 h-5" />}
+                      label="Leads Alto Valor"
                       description="Solo leads con puntuación > 70"
                       onClick={() => handleExport('/api/analyzed-chats/export/high-value', 'leads-alto-valor.csv')}
                       loading={exportLoading}
                     />
                     <ExportMenuItem
-                      label="📊 Estadísticas"
+                      icon={<FileText className="w-5 h-5" />}
+                      label="Estadísticas"
                       description="Resumen mensual del pipeline"
                       onClick={() => handleExport('/api/analyzed-chats/export/statistics', 'estadisticas.csv')}
                       loading={exportLoading}
@@ -416,14 +419,19 @@ const TabButton = ({ label, active, onClick }) => (
 /**
  * ExportMenuItem - Elemento del menú de exportación
  */
-const ExportMenuItem = ({ label, description, onClick, loading }) => (
+const ExportMenuItem = ({ icon, label, description, onClick, loading }) => (
   <button
     onClick={onClick}
     disabled={loading}
-    className="w-full text-left px-4 py-3 hover:bg-slate-700/50 rounded-lg transition disabled:opacity-50 mb-1"
+    className="w-full text-left px-4 py-3 hover:bg-slate-700/50 rounded-lg transition disabled:opacity-50 mb-1 flex items-start gap-3"
   >
-    <p className="text-sm font-semibold text-slate-100">{label}</p>
-    <p className="text-xs text-slate-400 mt-0.5">{description}</p>
+    <div className="text-emerald-400 mt-0.5">
+      {icon}
+    </div>
+    <div className="flex-1">
+      <p className="text-sm font-semibold text-slate-100">{label}</p>
+      <p className="text-xs text-slate-400 mt-0.5">{description}</p>
+    </div>
   </button>
 );
 
