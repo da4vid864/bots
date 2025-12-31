@@ -42,7 +42,8 @@ async function analyzeChatConversation(chatData, tenantId) {
       botPrompt = ''
     } = chatData;
 
-    console.log(`📊 Analizando chat de ${contactPhone} (Bot: ${botId})`);
+    console.log(`📊 [CHAT_ANALYSIS] Iniciando análisis de ${contactPhone} (Bot: ${botId})`);
+    console.log(`📊 [CHAT_ANALYSIS] Mensajes a analizar: ${messages.length}`);
 
     // 1. Obtener el bot para contexto
     const bot = await botDbService.getBotById(botId);
@@ -50,10 +51,14 @@ async function analyzeChatConversation(chatData, tenantId) {
       throw new Error(`Bot ${botId} no encontrado`);
     }
 
+    console.log(`📊 [CHAT_ANALYSIS] Bot encontrado: ${bot.name}`);
+
     // 2. Preparar datos para análisis
     const conversationText = formatConversationForAnalysis(messages);
     const contextPrompt = buildAnalysisPrompt(bot, botPrompt);
 
+    console.log(`📊 [CHAT_ANALYSIS] Llamando DeepSeek API...`);
+    
     // 3. Ejecutar análisis con DeepSeek
     const analysisResult = await performDeepseekAnalysis(
       conversationText,
@@ -61,8 +66,12 @@ async function analyzeChatConversation(chatData, tenantId) {
       messages
     );
 
+    console.log(`📊 [CHAT_ANALYSIS] DeepSeek respondió - Intención: ${analysisResult.intension}, Confianza: ${analysisResult.confianza}`);
+
     // 4. Calcular lead score
     const leadScore = calculateLeadScore(analysisResult);
+
+    console.log(`📊 [CHAT_ANALYSIS] Score calculado: ${leadScore}`);
 
     // 5. Clasificar en categoría del pipeline
     const pipelineCategory = classifyIntoPipelineCategory(
@@ -70,11 +79,15 @@ async function analyzeChatConversation(chatData, tenantId) {
       leadScore
     );
 
+    console.log(`📊 [CHAT_ANALYSIS] Categoría clasificada: ${pipelineCategory}`);
+
     // 6. Extraer productos mencionados
     const productsMentioned = extractProductMentions(
       analysisResult,
       conversationText
     );
+
+    console.log(`📊 [CHAT_ANALYSIS] Productos mencionados: ${productsMentioned.length}`);
 
     // 7. Guardar análisis detallado en BD
     const analyzedChat = await saveAnalyzedChat({
@@ -89,6 +102,8 @@ async function analyzeChatConversation(chatData, tenantId) {
       pipelineCategory,
       productsMentioned
     });
+
+    console.log(`📊 [CHAT_ANALYSIS] Chat guardado en BD con ID: ${analyzedChat.id}`);
 
     // 8. Guardar detalles del análisis
     await saveAnalysisDetails(analyzedChat.id, tenantId, analysisResult);

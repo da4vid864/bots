@@ -204,11 +204,23 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
 
     socket.ev.on('messages.upsert', async (messageUpdate) => {
         const currentSession = activeSessions.get(botId);
-        if (!currentSession || !currentSession.isReady || currentSession.isPaused) return;
+        console.log(`[${botId}] 📨 messages.upsert evento - Ready: ${currentSession?.isReady}, Paused: ${currentSession?.isPaused}`);
+        
+        if (!currentSession || !currentSession.isReady || currentSession.isPaused) {
+            console.log(`[${botId}] ⏭️  Ignorando mensaje: ${!currentSession ? 'sin sesión' : currentSession.isReady ? 'pausado' : 'no listo'}`);
+            return;
+        }
 
         const { messages, type } = messageUpdate;
-        if (type !== 'notify') return;
+        console.log(`[${botId}] 📨 Mensajes recibidos: ${messages.length}, tipo: ${type}`);
+        
+        if (type !== 'notify') {
+            console.log(`[${botId}] ⏭️  Tipo de mensaje ignorado: ${type} (solo 'notify' se procesa)`);
+            return;
+        }
 
+        console.log(`[${botId}] ✅ Procesando ${messages.length} mensaje(s) de tipo 'notify'`);
+        
         for (const msg of messages) {
             if (currentSession.tenantId) {
                 const { runWithTenant } = require('./db');
@@ -620,7 +632,7 @@ async function handleIncomingMessage(botId, msg) {
 
             if (evaluation.scoreDelta !== 0 || evaluation.tags.length > 0) {
                 lead = await scoringService.applyScoring(lead.id, evaluation);
-                console.log(`[${botId}] 🎯 Scoring: ${evaluation.scoreDelta} pts, Tags: ${evaluation.tags.join(', ')}`);
+                console.log(`[${botId}] 🎯 Scoring: ${evaluation.scoreDelta} pts, Tags: ${evaluation.tags.join(', ')}, Score actual: ${lead.score}`);
             }
 
             if (evaluation.responses && evaluation.responses.length > 0) {
@@ -631,7 +643,10 @@ async function handleIncomingMessage(botId, msg) {
                 skipAiGeneration = true;
             }
 
+            console.log(`[${botId}] 📊 Check calificación - Score: ${lead.score} (>=50?), Status: ${lead.status} (capturing?)`);
+            
             if (lead.score >= 50 && lead.status === 'capturing') {
+                console.log(`[${botId}] ✅ CALIFICANDO LEAD: ${senderId}`);
                 lead = await qualifyLead(lead.id);
                 const qualMsg = '¡Felicidades! Has calificado para atención prioritaria. Un asesor revisará tu caso pronto.';
                 await sendMessage(botId, senderId, qualMsg);
@@ -640,6 +655,7 @@ async function handleIncomingMessage(botId, msg) {
                 sseController.sendEventToUser(session.botConfig.ownerEmail, 'NEW_QUALIFIED_LEAD', { lead, botId });
                 
                 // 🆕 Analizar el chat completo cuando se califica
+                console.log(`[${botId}] 📊 Llamando analyzeLeadChat después de calificación...`);
                 await analyzeLeadChat(botId, lead, session.tenantId);
                 return;
             }
@@ -912,13 +928,18 @@ function getBotStatus(botId) {
 async function analyzeLeadChat(botId, lead, tenantId) {
     try {
         if (!tenantId || !lead || !lead.id) {
+            console.log(`[${botId}] ⏭️  analyzeLeadChat abortado: tenantId=${!!tenantId}, lead=${!!lead}, leadId=${lead?.id}`);
             return;
         }
 
+        console.log(`[${botId}] 🔍 Iniciando análisis de chat para lead ${lead.whatsapp_number}...`);
+
         // Obtener los últimos mensajes del lead
         const messages = await getLeadMessages(lead.id, 50);
+        console.log(`[${botId}] 📝 Mensajes encontrados: ${messages.length}`);
+        
         if (messages.length < 2) {
-            // Esperar a tener al menos unos mensajes para análisis
+            console.log(`[${botId}] ⏭️  Insuficientes mensajes para análisis (${messages.length} < 2)`);
             return;
         }
 
@@ -931,6 +952,8 @@ async function analyzeLeadChat(botId, lead, tenantId) {
         const session = activeSessions.get(botId);
         const botPrompt = session?.botConfig?.prompt || '';
 
+        console.log(`[${botId}] 🤖 Llamando chatAnalysisService.analyzeChatConversation...`);
+        
         // Ejecutar análisis con chatAnalysisService
         await chatAnalysisService.analyzeChatConversation(
             {
