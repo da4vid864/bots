@@ -1,4 +1,4 @@
-// services/baileysManager.js
+// services/baileysManager.js - VERSIÓN COMPLETA CON ANÁLISIS AUTOMÁTICO
 let baileys;
 let Boom;
 const path = require('path');
@@ -27,6 +27,7 @@ const sseController = require('../controllers/sseController');
 const chatAnalysisService = require('./chatAnalysisService');
 const sessionPersistenceService = require('./sessionPersistenceService');
 const { usePostgresAuthState } = require('./baileysAuthService');
+const bulkAnalysisService = require('./bulkAnalysisService'); // NUEVO SERVICIO
 
 const {
     getOrCreateLead,
@@ -183,15 +184,24 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
                 runtimeStatus: statusReport,
             });
 
-            // 🆕 SIEMPRE sincronizar al conectar
+            // 🆕 ANALIZAR TODOS LOS CHATS AUTOMÁTICAMENTE AL CONECTAR
             if (!session.isPaused) {
                 console.log(`[${botId}] 🔄 Iniciando sincronización forzada...`);
+                
+                // Esperar 5 segundos para que carguen los chats
                 setTimeout(async () => {
-                    await forceHistorySync(botId);
-                    // 🆕 NUEVO: Sincronizar y analizar TODOS los chats históricos
-                    setTimeout(async () => {
-                        await syncAndAnalyzeAllChats(botId, socket, session.tenantId);
-                    }, 2000);
+                    try {
+                        await forceHistorySync(botId);
+                        
+                        // 🆕 NUEVO: Sincronizar y analizar TODOS los chats históricos
+                        setTimeout(async () => {
+                            console.log(`[${botId}] 🚀 Iniciando análisis automático de TODOS los chats...`);
+                            await autoAnalyzeAllChatsOnConnect(botId, socket, session);
+                        }, 2000);
+                        
+                    } catch (error) {
+                        console.error(`[${botId}] ❌ Error en sincronización:`, error);
+                    }
                 }, 3000);
             }
 
@@ -271,7 +281,6 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
                 });
             } else {
                 // Intento fallback de obtener el tenantId de la sesión si no está en el if
-                // Esto es redundante si currentSession.tenantId ya es null, pero por seguridad
                 console.warn(`[${botId}] ⚠️ Procesando mensaje SIN contexto de tenant explícito`);
                 await handleIncomingMessage(botId, msg);
             }
@@ -281,6 +290,51 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
     socket.ev.on('messages.update', async (updates) => {
         // Listener for message status changes
     });
+}
+
+/**
+ * 🆕 Función para analizar automáticamente TODOS los chats al conectar
+ */
+async function autoAnalyzeAllChatsOnConnect(botId, socket, session) {
+    try {
+        console.log(`[${botId}] 🤖 Iniciando análisis automático de TODOS los chats...`);
+        
+        const tenantId = session.tenantId;
+        
+        if (!tenantId) {
+            console.log(`[${botId}] ⚠️ No se encontró tenantId para análisis automático`);
+            return;
+        }
+
+        console.log(`[${botId}] 📊 Analizando todos los chats para tenant: ${tenantId}`);
+        
+        // Usar el nuevo servicio de análisis masivo
+        const result = await bulkAnalysisService.analyzeAllBotChats(botId, tenantId, socket);
+        
+        console.log(`[${botId}] ✅ Análisis automático completado:`);
+        console.log(`[${botId}]    - Procesados: ${result.processed}`);
+        console.log(`[${botId}]    - Nuevos analizados: ${result.created}`);
+        console.log(`[${botId}]    - Actualizados: ${result.updated}`);
+        console.log(`[${botId}]    - Errores: ${result.errors}`);
+        
+        // Notificar al frontend
+        const botOwnerEmail = session.botConfig?.ownerEmail;
+        if (botOwnerEmail) {
+            sseController.sendEventToUser(
+                botOwnerEmail,
+                'AUTO_ANALYSIS_COMPLETED',
+                { 
+                    botId, 
+                    message: 'Todos los chats han sido analizados automáticamente',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                }
+            );
+        }
+        
+    } catch (error) {
+        console.error(`[${botId}] ❌ Error en análisis automático:`, error);
+    }
 }
 
 /**
@@ -1054,26 +1108,6 @@ async function analyzeLeadChat(botId, lead, tenantId) {
     }
 }
 
-function isBotReady(botId) {
-    const session = activeSessions.get(botId);
-    return !!(session && session.isReady && !session.isPaused);
-}
-
-async function disconnectBot(botId) {
-    const session = activeSessions.get(botId);
-    if (!session || !session.socket) return;
-
-    try {
-        const { Boom } = await loadBaileys();
-        await session.socket.end(new Boom('Bot disconnected by user'));
-        console.log(`[${botId}] 🔌 Desconectado`);
-    } catch (error) {
-        console.error(`[${botId}] ❌ Error desconectando:`, error);
-    } finally {
-        activeSessions.delete(botId);
-    }
-}
-
 /**
  * 🆕 Sincronizar y analizar TODOS los chats históricos cuando se conecta
  * @param {string} botId - ID del bot
@@ -1251,6 +1285,26 @@ function extractMessageContent(msg) {
     }
 }
 
+function isBotReady(botId) {
+    const session = activeSessions.get(botId);
+    return !!(session && session.isReady && !session.isPaused);
+}
+
+async function disconnectBot(botId) {
+    const session = activeSessions.get(botId);
+    if (!session || !session.socket) return;
+
+    try {
+        const { Boom } = await loadBaileys();
+        await session.socket.end(new Boom('Bot disconnected by user'));
+        console.log(`[${botId}] 🔌 Desconectado`);
+    } catch (error) {
+        console.error(`[${botId}] ❌ Error desconectando:`, error);
+    } finally {
+        activeSessions.delete(botId);
+    }
+}
+
 module.exports = {
     initializeBaileysConnection,
     sendMessage,
@@ -1264,4 +1318,5 @@ module.exports = {
     loadBaileys,
     analyzeLeadChat,
     syncAndAnalyzeAllChats,
+    autoAnalyzeAllChatsOnConnect, // 🆕 EXPORTAR LA NUEVA FUNCIÓN
 };

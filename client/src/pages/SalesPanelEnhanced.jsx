@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useBots } from '../context/BotsContext';
 import { useTranslation } from 'react-i18next';
-import { BarChart3, MessageSquare, TrendingUp, Zap, Download, ChevronDown, Star, FileText } from 'lucide-react';
+import { BarChart3, MessageSquare, TrendingUp, Zap, Download, ChevronDown, Star, FileText, RefreshCw, AlertCircle } from 'lucide-react';
 import KanbanPipeline from '../components/organisms/KanbanPipeline';
 import AnalyzedChatsGrid from '../components/organisms/AnalyzedChatsGrid';
 import ChatDetailsPanel from '../components/organisms/ChatDetailsPanel';
@@ -10,6 +10,7 @@ import ChatDetailsPanel from '../components/organisms/ChatDetailsPanel';
 /**
  * SalesPanelEnhanced.jsx - Sales Panel mejorado con análisis de chats
  * Integra Kanban, Grid de chats analizados, y detalles de leads
+ * Ahora incluye análisis masivo de todos los chats
  */
 
 const SalesPanelEnhanced = () => {
@@ -17,7 +18,7 @@ const SalesPanelEnhanced = () => {
   const { sseConnected } = useBots();
   const { t } = useTranslation();
 
-  // Estados
+  // Estados principales
   const [activeTab, setActiveTab] = useState('kanban'); // kanban, grid, live
   const [analyzedChats, setAnalyzedChats] = useState([]);
   const [pipelineCategories, setPipelineCategories] = useState([]);
@@ -34,11 +35,21 @@ const SalesPanelEnhanced = () => {
     converted: 0
   });
 
+  // 🆕 ESTADOS NUEVOS PARA ANÁLISIS MASIVO
+  const [bulkAnalysisStatus, setBulkAnalysisStatus] = useState(null);
+  const [unprocessedCount, setUnprocessedCount] = useState(0);
+  const [bulkAnalysisProgress, setBulkAnalysisProgress] = useState({
+    total: 0,
+    processed: 0,
+    percent: 0
+  });
+
   // Cargar datos iniciales
   useEffect(() => {
     console.log('📊 SalesPanelEnhanced cargando...');
     loadAnalyzedChats();
     loadCategories();
+    loadUnprocessedCount(); // 🆕 Cargar conteo de no procesados
   }, []);
 
   // Cargar estadísticas cuando los chats cambien
@@ -124,6 +135,102 @@ const SalesPanelEnhanced = () => {
     } catch (error) {
       console.error('❌ Error cargando estadísticas:', error);
     }
+  };
+
+  // 🆕 Cargar conteo de chats no procesados
+  const loadUnprocessedCount = async () => {
+    try {
+      console.log('🔍 Contando chats no procesados...');
+      const response = await fetch('/api/analyzed-chats/unprocessed-count', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        console.log('⚠️ No se pudo obtener conteo de no procesados');
+        return;
+      }
+
+      const data = await response.json();
+      const count = data.data?.unprocessed_count || 0;
+      console.log(`📊 Chats no procesados: ${count}`);
+      setUnprocessedCount(count);
+    } catch (error) {
+      console.error('Error obteniendo conteo no procesado:', error);
+    }
+  };
+
+  // 🆕 Ejecutar análisis masivo de todos los chats
+  const handleBulkAnalyze = async () => {
+    try {
+      setBulkAnalysisStatus({ 
+        loading: true, 
+        message: 'Iniciando análisis de todos los chats...',
+        success: null 
+      });
+      
+      setBulkAnalysisProgress({ total: 0, processed: 0, percent: 0 });
+
+      const response = await fetch('/api/analyzed-chats/analyze-unprocessed', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Error iniciando análisis');
+
+      const data = await response.json();
+      setBulkAnalysisStatus({ 
+        loading: false, 
+        success: true, 
+        message: data.message || 'Análisis completado'
+      });
+
+      // Configurar progreso simulado (puedes hacerlo real con WebSockets)
+      if (data.processed > 0) {
+        simulateProgress(data.processed);
+      }
+
+      // Recargar chats después de 5 segundos
+      setTimeout(() => {
+        loadAnalyzedChats();
+        loadUnprocessedCount();
+        setBulkAnalysisStatus(null);
+        setBulkAnalysisProgress({ total: 0, processed: 0, percent: 0 });
+      }, 5000);
+      
+    } catch (error) {
+      console.error('Error en análisis masivo:', error);
+      setBulkAnalysisStatus({ 
+        loading: false, 
+        success: false, 
+        message: 'Error: ' + error.message 
+      });
+    }
+  };
+
+  // 🆕 Simular progreso del análisis
+  const simulateProgress = (total) => {
+    setBulkAnalysisProgress({ total, processed: 0, percent: 0 });
+    
+    let processed = 0;
+    const interval = setInterval(() => {
+      processed += Math.floor(total / 20); // 5% por intervalo
+      if (processed > total) processed = total;
+      
+      const percent = Math.round((processed / total) * 100);
+      setBulkAnalysisProgress({ 
+        total, 
+        processed, 
+        percent 
+      });
+      
+      if (processed >= total) {
+        clearInterval(interval);
+      }
+    }, 500);
   };
 
   // Manejar cambio de categoría (Drag & Drop)
@@ -242,7 +349,7 @@ const SalesPanelEnhanced = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Estado SSE */}
             <div
               className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium ${
@@ -258,6 +365,34 @@ const SalesPanelEnhanced = () => {
               />
               {sseConnected ? 'Conectado' : 'Desconectado'}
             </div>
+
+            {/* 🆕 Botón de Análisis Masivo */}
+            {unprocessedCount > 0 && (
+              <div className="relative">
+                <button
+                  onClick={handleBulkAnalyze}
+                  disabled={bulkAnalysisStatus?.loading}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-lg border border-purple-500/30 text-sm font-semibold transition disabled:opacity-50"
+                >
+                  {bulkAnalysisStatus?.loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-400"></div>
+                      <span>Analizando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Analizar Todos ({unprocessedCount})</span>
+                    </>
+                  )}
+                </button>
+                
+                {/* Badge con conteo */}
+                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
+                  {unprocessedCount}
+                </div>
+              </div>
+            )}
 
             {/* Botón de Exportación */}
             <div className="relative">
@@ -302,6 +437,44 @@ const SalesPanelEnhanced = () => {
             </div>
           </div>
         </div>
+
+        {/* 🆕 Barra de progreso del análisis masivo */}
+        {bulkAnalysisProgress.total > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+              <span>Analizando chats: {bulkAnalysisProgress.processed}/{bulkAnalysisProgress.total}</span>
+              <span>{bulkAnalysisProgress.percent}%</span>
+            </div>
+            <div className="w-full bg-slate-700 rounded-full h-2">
+              <div 
+                className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${bulkAnalysisProgress.percent}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
+
+        {/* 🆕 Estado del análisis */}
+        {bulkAnalysisStatus && (
+          <div className={`mb-4 p-3 rounded-lg border ${
+            bulkAnalysisStatus.success === true ? 'bg-green-500/10 border-green-500/30' :
+            bulkAnalysisStatus.success === false ? 'bg-red-500/10 border-red-500/30' :
+            'bg-blue-500/10 border-blue-500/30'
+          }`}>
+            <div className="flex items-center gap-2">
+              {bulkAnalysisStatus.loading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+              ) : bulkAnalysisStatus.success === true ? (
+                <span className="text-green-400">✓</span>
+              ) : bulkAnalysisStatus.success === false ? (
+                <AlertCircle className="w-4 h-4 text-red-400" />
+              ) : (
+                <span className="text-blue-400">⏳</span>
+              )}
+              <p className="text-sm">{bulkAnalysisStatus.message}</p>
+            </div>
+          </div>
+        )}
 
         {/* STATS */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">

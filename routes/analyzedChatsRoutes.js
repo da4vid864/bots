@@ -543,5 +543,110 @@ router.patch('/:id/unassign', requireAuth, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// === ANÁLISIS MASIVO - NUEVAS RUTAS ===
 
+/**
+ * POST /api/analyzed-chats/bulk-analyze/:botId
+ * Analiza MASIVAMENTE todos los chats de un bot
+ */
+router.post('/bulk-analyze/:botId', requireAuth, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    const tenantId = req.user?.tenant_id;
+    
+    // Verificar que el usuario tiene acceso al bot
+    const bot = await botDbService.getBotById(botId);
+    if (!bot) {
+      return res.status(404).json({ error: 'Bot no encontrado' });
+    }
+    
+    // Iniciar análisis en segundo plano
+    const bulkAnalysisService = require('../services/bulkAnalysisService');
+    bulkAnalysisService.analyzeAllBotChats(botId, tenantId)
+      .then(result => {
+        console.log('✅ Análisis masivo completado:', result);
+        
+        // Notificar al usuario via SSE
+        const sseController = require('../controllers/sseController');
+        sseController.sendEventToUser(
+          req.user.email,
+          'BULK_ANALYSIS_COMPLETED',
+          { botId, ...result }
+        );
+      })
+      .catch(error => {
+        console.error('❌ Error en análisis masivo:', error);
+      });
+    
+    res.json({
+      success: true,
+      message: 'Análisis masivo iniciado en segundo plano',
+      botId,
+      startedAt: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Error iniciando análisis masivo:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/analyzed-chats/unprocessed-count
+ * Obtiene cantidad de chats no analizados
+ */
+router.get('/unprocessed-count', requireAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenant_id;
+    
+    const result = await pool.query(
+      `SELECT 
+        COUNT(DISTINCT l.whatsapp_number) as unprocessed_count,
+        COUNT(DISTINCT l.bot_id) as bots_with_unprocessed
+      FROM leads l
+      WHERE l.bot_id IN (
+        SELECT id FROM bots WHERE tenant_id = $1
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM analyzed_chats ac 
+        WHERE ac.bot_id = l.bot_id 
+        AND ac.contact_phone = l.whatsapp_number
+        AND ac.tenant_id = $1
+      )`,
+      [tenantId]
+    );
+    
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
+    
+  } catch (error) {
+    console.error('Error obteniendo conteo no procesado:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/analyzed-chats/analyze-unprocessed
+ * Analiza automáticamente chats no procesados
+ */
+router.post('/analyze-unprocessed', requireAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenant_id;
+    
+    const bulkAnalysisService = require('../services/bulkAnalysisService');
+    const processed = await bulkAnalysisService.checkAndAnalyzeUnprocessedChats(tenantId);
+    
+    res.json({
+      success: true,
+      message: `Se analizaron ${processed} chats no procesados`,
+      processed
+    });
+    
+  } catch (error) {
+    console.error('Error analizando no procesados:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 module.exports = router;
