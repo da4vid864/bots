@@ -185,6 +185,10 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
                 console.log(`[${botId}] 🔄 Iniciando sincronización forzada...`);
                 setTimeout(async () => {
                     await forceHistorySync(botId);
+                    // 🆕 NUEVO: Sincronizar y analizar TODOS los chats históricos
+                    setTimeout(async () => {
+                        await syncAndAnalyzeAllChats(botId, socket, session.tenantId);
+                    }, 2000);
                 }, 3000);
             }
 
@@ -1047,6 +1051,183 @@ async function disconnectBot(botId) {
     }
 }
 
+/**
+ * 🆕 Sincronizar y analizar TODOS los chats históricos cuando se conecta
+ * @param {string} botId - ID del bot
+ * @param {object} socket - Socket de Baileys
+ * @param {string} tenantId - ID del tenant
+ */
+async function syncAndAnalyzeAllChats(botId, socket, tenantId) {
+    try {
+        console.log(`[${botId}] 📚 Iniciando sincronización de TODOS los chats históricos...`);
+
+        if (!socket || !socket.store || !socket.store.chats) {
+            console.log(`[${botId}] ⚠️  No hay datos de chats disponibles en el socket`);
+            return;
+        }
+
+        const allChats = socket.store.chats.all ? socket.store.chats.all() : [];
+        
+        if (!allChats || allChats.length === 0) {
+            console.log(`[${botId}] ℹ️  Sin chats para sincronizar`);
+            return;
+        }
+
+        console.log(`[${botId}] 📊 Encontrados ${allChats.length} chats para sincronizar`);
+
+        let processedCount = 0;
+        let analyzedCount = 0;
+        let errorCount = 0;
+
+        // Procesar cada chat
+        for (const chat of allChats) {
+            try {
+                // Solo procesar chats individuales (@c.us o @s.whatsapp.net)
+                if (!chat.id.endsWith('@c.us') && !chat.id.endsWith('@s.whatsapp.net')) {
+                    continue; // Saltar grupos y canales
+                }
+
+                const contactPhone = chat.id.replace(/@c\.us|@s\.whatsapp\.net/g, '');
+                const contactName = chat.name || contactPhone;
+
+                console.log(`[${botId}] 📱 Procesando: ${contactName}`);
+
+                // Obtener mensajes de este chat
+                const messages = await getMessagesFromChat(socket, chat.id, contactPhone);
+
+                if (messages.length < 2) {
+                    console.log(`[${botId}] ⏭️  Sin suficientes mensajes: ${contactPhone}`);
+                    continue;
+                }
+
+                // Formatear para análisis
+                const formattedMessages = messages.map(m => ({
+                    role: m.sender === 'user' ? 'user' : 'assistant',
+                    content: m.message,
+                    timestamp: m.timestamp
+                }));
+
+                console.log(`[${botId}] 🔍 Analizando ${messages.length} mensajes de ${contactPhone}...`);
+
+                // Analizar chat
+                await chatAnalysisService.analyzeChatConversation(
+                    {
+                        botId,
+                        contactPhone,
+                        contactName,
+                        contactEmail: null,
+                        messages: formattedMessages,
+                        botPrompt: ''
+                    },
+                    tenantId
+                );
+
+                console.log(`[${botId}] ✅ Chat analizado: ${contactPhone}`);
+                analyzedCount++;
+
+                processedCount++;
+
+                // Pausa para no sobrecargar
+                if (processedCount % 5 === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
+            } catch (error) {
+                errorCount++;
+                console.error(`[${botId}] ❌ Error procesando chat:`, error.message);
+            }
+        }
+
+        console.log(`[${botId}] 🎉 Sincronización completada:`);
+        console.log(`[${botId}]    - Total chats: ${allChats.length}`);
+        console.log(`[${botId}]    - Procesados: ${processedCount}`);
+        console.log(`[${botId}]    - Analizados: ${analyzedCount}`);
+        console.log(`[${botId}]    - Errores: ${errorCount}`);
+
+    } catch (error) {
+        console.error(`[${botId}] ❌ Error en sincronización de chats:`, error.message);
+    }
+}
+
+/**
+ * Obtener mensajes de un chat específico
+ * @param {object} socket - Socket de Baileys
+ * @param {string} chatId - ID del chat
+ * @param {string} contactPhone - Teléfono del contacto
+ * @returns {Promise<array>} Mensajes formateados
+ */
+async function getMessagesFromChat(socket, chatId, contactPhone) {
+    try {
+        if (!socket || !socket.store || !socket.store.messages) {
+            return [];
+        }
+
+        const messages = socket.store.messages.all ? socket.store.messages.all() : [];
+        
+        if (!messages || messages.length === 0) {
+            return [];
+        }
+
+        // Filtrar mensajes de este chat
+        const chatMessages = messages
+            .filter(msg => {
+                const msgChatId = msg.key?.remoteJid;
+                return msgChatId === chatId || msgChatId === `${contactPhone}@c.us` || msgChatId === `${contactPhone}@s.whatsapp.net`;
+            })
+            .sort((a, b) => (a.messageTimestamp || 0) - (b.messageTimestamp || 0))
+            .slice(-100); // Últimos 100 mensajes
+
+        // Extraer y formatear contenido
+        return chatMessages
+            .map(msg => {
+                const text = extractMessageContent(msg);
+                return {
+                    sender: msg.key?.fromMe ? 'bot' : 'user',
+                    message: text,
+                    timestamp: msg.messageTimestamp ? msg.messageTimestamp * 1000 : Date.now()
+                };
+            })
+            .filter(msg => msg.message && msg.message.trim().length > 0);
+
+    } catch (error) {
+        console.error('Error obteniendo mensajes:', error.message);
+        return [];
+    }
+}
+
+/**
+ * Extraer contenido de texto de un mensaje
+ * @param {object} msg - Mensaje de Baileys
+ * @returns {string} Texto extraído
+ */
+function extractMessageContent(msg) {
+    try {
+        if (!msg || !msg.message) return '';
+
+        if (msg.message.conversation) {
+            return msg.message.conversation;
+        }
+        if (msg.message.extendedTextMessage?.text) {
+            return msg.message.extendedTextMessage.text;
+        }
+        if (msg.message.imageMessage?.caption) {
+            return msg.message.imageMessage.caption;
+        }
+        if (msg.message.videoMessage?.caption) {
+            return msg.message.videoMessage.caption;
+        }
+        if (msg.message.documentMessage?.fileName) {
+            return `[Archivo: ${msg.message.documentMessage.fileName}]`;
+        }
+        if (msg.message.audioMessage) {
+            return '[Nota de voz]';
+        }
+        return '';
+    } catch (error) {
+        return '';
+    }
+}
+
 module.exports = {
     initializeBaileysConnection,
     sendMessage,
@@ -1059,4 +1240,5 @@ module.exports = {
     disconnectBot,
     loadBaileys,
     analyzeLeadChat,
+    syncAndAnalyzeAllChats,
 };
