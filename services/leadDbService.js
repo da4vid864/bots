@@ -268,10 +268,240 @@ function isLeadComplete(lead) {
     if (!lead) return false;
     return !!(lead.name && lead.email && lead.location);
 }
+// Añadir al final del archivo, antes del module.exports:
 
+/**
+ * Gets all leads for the current tenant with pipeline/stage information
+ * 
+ * @param {string} tenantId - Tenant ID
+ * @returns {Promise<Lead[]>} Array of leads with pipeline data
+ */
+async function getAllLeads(tenantId) {
+    try {
+        const result = await pool.query(
+            `SELECT 
+                l.*,
+                p.name as pipeline_name,
+                ps.name as stage_name,
+                ps.color as stage_color,
+                ps.type as stage_type
+             FROM leads l
+             LEFT JOIN pipelines p ON l.pipeline_id = p.id
+             LEFT JOIN pipeline_stages ps ON l.stage_id = ps.id
+             WHERE l.tenant_id = $1
+             ORDER BY l.last_message_at DESC`,
+            [tenantId]
+        );
+        return result.rows;
+    } catch (error) {
+        console.error('Error in getAllLeads:', error);
+        return [];
+    }
+}
+
+/**
+ * Updates lead information including pipeline and stage
+ * 
+ * @param {number} leadId - Lead ID
+ * @param {string} tenantId - Tenant ID
+ * @param {Object} updates - Updates object
+ * @returns {Promise<Lead>} Updated lead
+ */
+async function updateLead(leadId, tenantId, updates) {
+    try {
+        const {
+            name,
+            email,
+            phone,
+            pipeline_id,
+            stage_id,
+            score,
+            status,
+            assigned_to,
+            notes
+        } = updates;
+
+        const updateFields = [];
+        const values = [];
+        let paramIndex = 1;
+
+        if (name !== undefined) {
+            updateFields.push(`name = $${paramIndex++}`);
+            values.push(name);
+        }
+        if (email !== undefined) {
+            updateFields.push(`email = $${paramIndex++}`);
+            values.push(email);
+        }
+        if (phone !== undefined) {
+            updateFields.push(`phone = $${paramIndex++}`);
+            values.push(phone);
+        }
+        if (pipeline_id !== undefined) {
+            updateFields.push(`pipeline_id = $${paramIndex++}`);
+            values.push(pipeline_id);
+        }
+        if (stage_id !== undefined) {
+            updateFields.push(`stage_id = $${paramIndex++}`);
+            values.push(stage_id);
+        }
+        if (score !== undefined) {
+            updateFields.push(`score = $${paramIndex++}`);
+            values.push(score);
+        }
+        if (status !== undefined) {
+            updateFields.push(`status = $${paramIndex++}`);
+            values.push(status);
+        }
+        if (assigned_to !== undefined) {
+            updateFields.push(`assigned_to = $${paramIndex++}`);
+            values.push(assigned_to);
+        }
+        if (notes !== undefined) {
+            updateFields.push(`notes = $${paramIndex++}`);
+            values.push(notes);
+        }
+
+        // Always update timestamp
+        updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+        if (updateFields.length === 0) {
+            return await getLeadById(leadId);
+        }
+
+        values.push(leadId, tenantId);
+        
+        const query = `
+            UPDATE leads 
+            SET ${updateFields.join(', ')}
+            WHERE id = $${paramIndex++} AND tenant_id = $${paramIndex}
+            RETURNING *
+        `;
+        
+        const result = await pool.query(query, values);
+        return result.rows[0];
+    } catch (error) {
+        console.error('Error in updateLead:', error);
+        throw error;
+    }
+}
+
+/**
+ * Gets leads by pipeline
+ * 
+ * @param {string} tenantId - Tenant ID
+ * @param {string} pipelineId - Pipeline ID
+ * @returns {Promise<Lead[]>} Array of leads in the pipeline
+ */
+async function getLeadsByPipeline(tenantId, pipelineId) {
+    try {
+        const result = await pool.query(
+            `SELECT l.*, ps.name as stage_name, ps.color as stage_color
+             FROM leads l
+             LEFT JOIN pipeline_stages ps ON l.stage_id = ps.id
+             WHERE l.tenant_id = $1 AND l.pipeline_id = $2
+             ORDER BY l.last_message_at DESC`,
+            [tenantId, pipelineId]
+        );
+        return result.rows;
+    } catch (error) {
+        console.error('Error in getLeadsByPipeline:', error);
+        return [];
+    }
+}
+
+/**
+ * Searches leads by various criteria
+ * 
+ * @param {string} tenantId - Tenant ID
+ * @param {Object} filters - Search filters
+ * @returns {Promise<Lead[]>} Array of matching leads
+ */
+async function searchLeads(tenantId, filters = {}) {
+    try {
+        const {
+            search,
+            pipeline_id,
+            stage_id,
+            status,
+            assigned_to,
+            min_score,
+            max_score
+        } = filters;
+
+        let query = `
+            SELECT l.*, p.name as pipeline_name, ps.name as stage_name
+            FROM leads l
+            LEFT JOIN pipelines p ON l.pipeline_id = p.id
+            LEFT JOIN pipeline_stages ps ON l.stage_id = ps.id
+            WHERE l.tenant_id = $1
+        `;
+        
+        const values = [tenantId];
+        let paramIndex = 2;
+
+        if (search) {
+            query += ` AND (
+                l.name ILIKE $${paramIndex} OR
+                l.email ILIKE $${paramIndex} OR
+                l.phone ILIKE $${paramIndex} OR
+                l.whatsapp_number ILIKE $${paramIndex}
+            )`;
+            values.push(`%${search}%`);
+            paramIndex++;
+        }
+
+        if (pipeline_id) {
+            query += ` AND l.pipeline_id = $${paramIndex}`;
+            values.push(pipeline_id);
+            paramIndex++;
+        }
+
+        if (stage_id) {
+            query += ` AND l.stage_id = $${paramIndex}`;
+            values.push(stage_id);
+            paramIndex++;
+        }
+
+        if (status) {
+            query += ` AND l.status = $${paramIndex}`;
+            values.push(status);
+            paramIndex++;
+        }
+
+        if (assigned_to) {
+            query += ` AND l.assigned_to = $${paramIndex}`;
+            values.push(assigned_to);
+            paramIndex++;
+        }
+
+        if (min_score !== undefined) {
+            query += ` AND l.score >= $${paramIndex}`;
+            values.push(min_score);
+            paramIndex++;
+        }
+
+        if (max_score !== undefined) {
+            query += ` AND l.score <= $${paramIndex}`;
+            values.push(max_score);
+            paramIndex++;
+        }
+
+        query += ` ORDER BY l.last_message_at DESC`;
+        
+        const result = await pool.query(query, values);
+        return result.rows;
+    } catch (error) {
+        console.error('Error in searchLeads:', error);
+        return [];
+    }
+}
+
+// Añadir al module.exports:
 module.exports = {
     getOrCreateLead,
     updateLeadInfo,
+    updateLead,          // <-- NUEVA
     qualifyLead,
     assignLead,
     getLeadById,
@@ -280,5 +510,8 @@ module.exports = {
     getLeadsByVendor,
     addLeadMessage,
     getLeadMessages,
-    isLeadComplete
+    isLeadComplete,
+    getAllLeads,         // <-- NUEVA
+    getLeadsByPipeline,  // <-- NUEVA
+    searchLeads          // <-- NUEVA
 };

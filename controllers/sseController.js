@@ -8,6 +8,7 @@
  */
 const clientsById = new Map();
 const clientsByUser = new Map();
+const leadDbService = require('../services/leadDbService');
 
 function generateClientId() {
   return `client_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
@@ -56,7 +57,7 @@ function safeWrite(res, payload) {
 /**
  * Handler for GET /api/events that establishes an SSE connection
  */
-function eventsHandler(req, res) {
+async function eventsHandler(req, res) {  // <-- Cambiado a async
   // Nota: /api/events normalmente es same-origin. Si es cross-origin, necesitas CORS correcto.
   const origin = process.env.FRONTEND_URL || 'http://localhost:3001';
 
@@ -104,7 +105,7 @@ function eventsHandler(req, res) {
   // reconexión sugerida
   safeWrite(res, `retry: 10000\n\n`);
 
-  // evento inicial
+  // evento inicial de conexión
   safeWrite(
     res,
     `data: ${JSON.stringify({
@@ -112,6 +113,38 @@ function eventsHandler(req, res) {
       data: { clientId, message: 'SSE connection established' },
     })}\n\n`
   );
+
+  // ✅ ENVIAR LEADS INICIALES
+  try {
+    // Obtener tenantId del usuario o headers
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
+    
+    if (tenantId) {
+      const initialLeads = await leadDbService.getAllLeads(tenantId);
+      
+      safeWrite(
+        res,
+        `data: ${JSON.stringify({
+          type: 'INIT_LEADS',
+          data: { leads: initialLeads },
+        })}\n\n`
+      );
+      
+      console.log(`📤 Sent ${initialLeads.length} initial leads to client ${clientId}`);
+    } else {
+      console.warn(`⚠️ No tenantId found for client ${clientId}, skipping initial leads`);
+    }
+  } catch (error) {
+    console.error(`❌ Error sending initial leads to client ${clientId}:`, error);
+    // Enviar evento de error pero no romper la conexión
+    safeWrite(
+      res,
+      `data: ${JSON.stringify({
+        type: 'ERROR',
+        data: { message: 'Could not load initial leads', error: error.message },
+      })}\n\n`
+    );
+  }
 
   // Heartbeat: comentario cada 25s para evitar cierre por proxies
   client.heartbeat = setInterval(() => {
@@ -201,6 +234,57 @@ function broadcastEvent(type, data) {
   return sentCount > 0;
 }
 
+/**
+ * Send updated lead to all relevant clients
+ */
+function sendLeadUpdate(leadId, leadData, tenantId) {
+  const eventData = JSON.stringify({
+    type: 'LEAD_UPDATED',
+    data: { leadId, lead: leadData, tenantId }
+  });
+  
+  let sentCount = 0;
+  const idsToRemove = [];
+
+  // Enviar a todos los clientes del mismo tenant
+  for (const [clientId, client] of clientsById.entries()) {
+    // Verificar si el cliente pertenece al mismo tenant
+    // (Asumiendo que tenantId está disponible en el cliente)
+    const ok = safeWrite(client.response, `data: ${eventData}\n\n`);
+    if (ok) sentCount++;
+    else idsToRemove.push(clientId);
+  }
+
+  idsToRemove.forEach(removeClient);
+
+  console.log(`📤 Sent lead update [${leadId}] to ${sentCount} clients`);
+  return sentCount > 0;
+}
+
+/**
+ * Send new lead to all relevant clients
+ */
+function sendNewLead(leadData, tenantId) {
+  const eventData = JSON.stringify({
+    type: 'NEW_LEAD',
+    data: { lead: leadData, tenantId }
+  });
+  
+  let sentCount = 0;
+  const idsToRemove = [];
+
+  for (const [clientId, client] of clientsById.entries()) {
+    const ok = safeWrite(client.response, `data: ${eventData}\n\n`);
+    if (ok) sentCount++;
+    else idsToRemove.push(clientId);
+  }
+
+  idsToRemove.forEach(removeClient);
+
+  console.log(`📤 Sent new lead to ${sentCount} clients`);
+  return sentCount > 0;
+}
+
 function getConnectedClientsCount() {
   return clientsById.size;
 }
@@ -215,6 +299,8 @@ module.exports = {
   eventsHandler,
   sendEventToUser,
   broadcastEvent,
+  sendLeadUpdate,  // <-- NUEVO
+  sendNewLead,     // <-- NUEVO
   getConnectedClientsCount,
   getClientsByUser,
 };

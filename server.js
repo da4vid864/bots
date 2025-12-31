@@ -35,6 +35,7 @@ const { handleStripeWebhook } = require('./controllers/webhookController');
 
 const { attachUser, requireAdmin, requireAuth } = require('./auth/authMiddleware');
 const tenantMiddleware = require('./middleware/tenantMiddleware');
+const leadRoutes = require('./routes/leadRoutes');
 
 require('./auth/passport');
 
@@ -118,6 +119,7 @@ app.use((req, res, next) => {
 app.use('/auth', authRoutes);
 app.use('/subs', subscriptionRoutes);
 app.use('/api/compliance', complianceRoutes);
+app.use('/api/leads', leadRoutes);
 app.use('/api/web-chat', webChatRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/data-integrity', dataIntegrityRoutes);
