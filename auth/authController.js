@@ -56,7 +56,8 @@ const handleGoogleCallback = async (req, res) => {
     
     // 3. Generar Token JWT
     const tokenPayload = {
-      id: req.user.profile.id, // Google ID
+      id: dbUser?.id || req.user.profile.id, // Prefer DB ID (Integer/UUID) over Google ID
+      googleId: req.user.profile.id,         // Store Google ID explicitly
       dbId: dbUser?.id,        // DB UUID
       displayName: req.user.profile.displayName,
       email: email,

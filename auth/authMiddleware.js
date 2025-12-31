@@ -22,8 +22,10 @@ const attachUser = async (req, res, next) => {
           console.log(`Creating new admin user: ${decoded.email}`);
           dbUser = await userService.createUser(decoded.email, 'admin', 'system');
         }
-        if (dbUser && dbUser.tenant_id) {
-          decoded.tenant_id = dbUser.tenant_id;
+        if (dbUser) {
+          if (dbUser.tenant_id) decoded.tenant_id = dbUser.tenant_id;
+          // Ensure ID is the database ID
+          if (dbUser.id) decoded.id = dbUser.id;
         } else {
           console.warn(`⚠️  Admin user ${decoded.email} has no tenant_id`);
         }
@@ -46,6 +48,13 @@ const attachUser = async (req, res, next) => {
         decoded.addedBy = dbUser.added_by;
         decoded.tenant_id = dbUser.tenant_id; // CRITICAL: Preserve tenant_id from DB
         
+        // Ensure req.user.id is the internal Database ID, not the Google ID
+        // This prevents "value out of range" errors when inserting into integer columns
+        if (dbUser.id) {
+            decoded.googleId = decoded.id; // Preserve Google ID just in case
+            decoded.id = dbUser.id;
+        }
+
         if (!decoded.tenant_id) {
           console.warn(`⚠️  User ${decoded.email} has no tenant_id after DB lookup`);
         }
