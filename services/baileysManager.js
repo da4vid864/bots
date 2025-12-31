@@ -25,6 +25,7 @@ const scoringService = require('./scoringService');
 const productService = require('./productService');
 const sseController = require('../controllers/sseController');
 const chatAnalysisService = require('./chatAnalysisService');
+const sessionPersistenceService = require('./sessionPersistenceService');
 
 const {
     getOrCreateLead,
@@ -50,6 +51,12 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
     const { id: botId, name: botName } = botConfig;
 
     console.log(`[${botId}] 🔍 Inicializando conexión Baileys para: ${botName}`);
+
+    // 🆕 Verificar si hay credenciales válidas guardadas
+    const hasValidCreds = sessionPersistenceService.hasValidSessionCredentials(botId);
+    if (hasValidCreds) {
+        console.log(`[${botId}] ♻️  Reutilizando sesión anterior (sin necesidad de QR)`);
+    }
 
     try {
         let fullBotConfig = botConfig;
@@ -145,6 +152,23 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
             const statusReport = session.isPaused ? 'DISABLED' : 'CONNECTED';
             const botOwnerEmail = session.botConfig.ownerEmail;
 
+            // 🆕 Guardar metadata de sesión para persistencia
+            const credsPath = path.join(__dirname, '..', 'auth-sessions', botId, 'creds.json');
+            try {
+                const creds = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
+                await sessionPersistenceService.saveSessionMetadata(botId, {
+                    phoneNumber: creds.me?.id || null,
+                    status: 'connected',
+                    authenticatedAt: new Date(),
+                    metadata: {
+                        version: require('../package.json').version,
+                        connectedAt: new Date().toISOString()
+                    }
+                });
+            } catch (err) {
+                console.log(`[${botId}] ℹ️  No se pudo guardar metadata (tabla no existe aún)`);
+            }
+
             sseController.sendEventToUser(botOwnerEmail, 'CONNECTED', {
                 status: session.isPaused ? 'disabled' : 'enabled',
                 runtimeStatus: statusReport,
@@ -174,6 +198,16 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
             );
 
             session.isReady = false;
+
+            // 🆕 Indicar si se necesitará QR en el próximo intento
+            if (shouldReconnect) {
+                const hasValidCreds = sessionPersistenceService.hasValidSessionCredentials(botId);
+                if (hasValidCreds) {
+                    console.log(`[${botId}] ℹ️  Próximo reconexión: sin QR (credenciales válidas)`);
+                } else {
+                    console.log(`[${botId}] ⚠️  Próximo reconexión: necesitará escanear QR`);
+                }
+            }
 
             const botOwnerEmail = session.botConfig.ownerEmail;
             sseController.sendEventToUser(botOwnerEmail, 'DISCONNECTED', { botId });
