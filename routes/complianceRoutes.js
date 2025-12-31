@@ -22,7 +22,7 @@ router.post('/requests/:id/review', requireAdmin, complianceController.reviewReq
  */
 router.get('/status', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
 
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID requerido' });
@@ -46,7 +46,7 @@ router.get('/status', async (req, res) => {
  */
 router.get('/alerts', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
     const { limit = 20 } = req.query;
 
     if (!tenantId) {
@@ -74,7 +74,7 @@ router.get('/alerts', async (req, res) => {
  */
 router.post('/check-consents', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
 
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID requerido' });
@@ -98,7 +98,7 @@ router.post('/check-consents', async (req, res) => {
  */
 router.post('/scan-pii', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
 
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID requerido' });
@@ -122,7 +122,7 @@ router.post('/scan-pii', async (req, res) => {
  */
 router.post('/check-arco', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
 
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID requerido' });
@@ -146,7 +146,7 @@ router.post('/check-arco', async (req, res) => {
  */
 router.post('/check-access', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
 
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID requerido' });
@@ -170,7 +170,7 @@ router.post('/check-access', async (req, res) => {
  */
 router.get('/report', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
     const { startDate, endDate } = req.query;
 
     if (!tenantId || !startDate || !endDate) {
@@ -199,7 +199,7 @@ router.get('/report', async (req, res) => {
  */
 router.post('/start-monitoring', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
 
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID requerido' });

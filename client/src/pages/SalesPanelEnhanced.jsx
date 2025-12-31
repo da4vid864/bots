@@ -36,26 +36,37 @@ const SalesPanelEnhanced = () => {
 
   // Cargar datos iniciales
   useEffect(() => {
+    console.log('📊 SalesPanelEnhanced cargando...');
     loadAnalyzedChats();
     loadCategories();
-    loadStatistics();
   }, []);
+
+  // Cargar estadísticas cuando los chats cambien
+  useEffect(() => {
+    console.log(`📈 Actualizando estadísticas con ${analyzedChats.length} chats`);
+    loadStatistics();
+  }, [analyzedChats]);
 
   const loadAnalyzedChats = async () => {
     try {
       setLoading(true);
+      console.log('📥 Cargando chats analizados...');
       const response = await fetch('/api/analyzed-chats?limit=100', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 
-      if (!response.ok) throw new Error('Error cargando chats');
+      if (!response.ok) {
+        throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
+      }
 
       const data = await response.json();
+      console.log(`✅ Chats cargados: ${data.data?.length || 0} chats`);
       setAnalyzedChats(data.data || []);
     } catch (error) {
-      console.error('Error cargando chats analizados:', error);
+      console.error('❌ Error cargando chats analizados:', error);
+      setAnalyzedChats([]);
     } finally {
       setLoading(false);
     }
@@ -63,34 +74,42 @@ const SalesPanelEnhanced = () => {
 
   const loadCategories = async () => {
     try {
+      console.log('📂 Cargando categorías del pipeline...');
       const response = await fetch('/api/analyzed-chats/categories', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 
-      if (!response.ok) throw new Error('Error cargando categorías');
+      if (!response.ok) {
+        throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
+      }
 
       const data = await response.json();
+      console.log(`✅ Categorías cargadas: ${data.data?.length || 0} categorías`);
       setPipelineCategories(data.data || []);
     } catch (error) {
-      console.error('Error cargando categorías:', error);
+      console.error('❌ Error cargando categorías:', error);
+      setPipelineCategories([]);
     }
   };
 
   const loadStatistics = async () => {
     try {
+      console.log('📊 Cargando estadísticas...');
       const response = await fetch('/api/analyzed-chats/statistics', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 
-      if (!response.ok) throw new Error('Error cargando estadísticas');
+      if (!response.ok) {
+        throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
+      }
 
       const data = await response.json();
       
-      // Calcular estadísticas
+      // Calcular estadísticas desde los chats locales
       const chatStats = {
         total: analyzedChats.length,
         avgScore: Math.round(
@@ -100,9 +119,10 @@ const SalesPanelEnhanced = () => {
         converted: analyzedChats.filter(c => c.lead_score >= 70).length
       };
 
+      console.log(`✅ Estadísticas calculadas:`, chatStats);
       setStats(chatStats);
     } catch (error) {
-      console.error('Error cargando estadísticas:', error);
+      console.error('❌ Error cargando estadísticas:', error);
     }
   };
 
@@ -203,6 +223,13 @@ const SalesPanelEnhanced = () => {
 
   return (
     <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col">
+      {/* DEBUG INFO */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-slate-800/50 border-b border-slate-700 px-4 py-2 text-xs text-slate-300">
+          <p>🔍 DEBUG: Chats={analyzedChats.length} | Categories={pipelineCategories.length} | Loading={loading ? 'yes' : 'no'}</p>
+        </div>
+      )}
+
       {/* HEADER */}
       <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">

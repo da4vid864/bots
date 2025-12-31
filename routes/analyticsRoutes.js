@@ -14,7 +14,7 @@ const complianceAlertsService = require('../services/complianceAlertsService');
  */
 router.get('/dashboard', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
     const { days = 30 } = req.query;
 
     if (!tenantId) {
@@ -72,7 +72,7 @@ router.get('/dashboard', async (req, res) => {
  */
 router.get('/health', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
 
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID requerido' });
@@ -96,7 +96,7 @@ router.get('/health', async (req, res) => {
  */
 router.get('/trends/:metricType', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
     const { metricType } = req.params;
     const { days = 7 } = req.query;
 
@@ -128,7 +128,7 @@ router.get('/trends/:metricType', async (req, res) => {
  */
 router.get('/channels', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
     const { days = 30 } = req.query;
 
     if (!tenantId) {
@@ -166,7 +166,7 @@ router.get('/channels', async (req, res) => {
  */
 router.post('/event', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
     const { eventType, data } = req.body;
 
     if (!tenantId || !eventType) {

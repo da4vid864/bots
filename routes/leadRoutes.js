@@ -14,7 +14,7 @@ const pipelineService = require('../services/pipelineService');
  */
 router.get('/', async (req, res) => {
     try {
-        const tenantId = req.headers['x-tenant-id'];
+        const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
         if (!tenantId) {
             return res.status(400).json({ error: 'Tenant ID requerido' });
         }
@@ -38,7 +38,7 @@ router.get('/', async (req, res) => {
  */
 router.get('/search', async (req, res) => {
     try {
-        const tenantId = req.headers['x-tenant-id'];
+        const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
         const filters = req.query;
 
         if (!tenantId) {
@@ -72,7 +72,7 @@ router.get('/search', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
     try {
-        const tenantId = req.headers['x-tenant-id'];
+        const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
         const leadId = req.params.id;
 
         if (!tenantId) {
@@ -104,7 +104,7 @@ router.get('/:id', async (req, res) => {
  */
 router.put('/:id', async (req, res) => {
     try {
-        const tenantId = req.headers['x-tenant-id'];
+        const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
         const leadId = req.params.id;
         const updates = req.body;
 
@@ -134,7 +134,7 @@ router.put('/:id', async (req, res) => {
  */
 router.get('/pipeline/:pipelineId', async (req, res) => {
     try {
-        const tenantId = req.headers['x-tenant-id'];
+        const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
         const pipelineId = req.params.pipelineId;
 
         if (!tenantId) {
@@ -160,7 +160,7 @@ router.get('/pipeline/:pipelineId', async (req, res) => {
  */
 router.post('/:id/assign', async (req, res) => {
     try {
-        const tenantId = req.headers['x-tenant-id'];
+        const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'];
         const leadId = req.params.id;
         const userEmail = req.user?.email;
 
