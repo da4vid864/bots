@@ -63,8 +63,16 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
         let fullBotConfig = botConfig;
         if (!botConfig.tenantId && !botConfig.tenant_id) {
             const botDbService = require('./botDbService');
+            // Al no establecer un contexto, esto se ejecuta en el contexto del sistema/público
+            // Si las políticas RLS lo permiten, obtendremos el bot.
+            // Si necesitamos tenant_id, el bot devuelto debe tenerlo.
             const fullBot = await botDbService.getBotById(botId);
-            fullBotConfig = fullBot;
+            if (fullBot) {
+                fullBotConfig = fullBot;
+                console.log(`[${botId}] ✅ Tenant ID recuperado: ${fullBot.tenantId || fullBot.tenant_id}`);
+            } else {
+                console.warn(`[${botId}] ⚠️ No se pudo obtener configuración completa del bot (¿Problema de RLS?)`);
+            }
         }
 
         const { baileys } = await loadBaileys();
@@ -262,6 +270,9 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
                     await handleIncomingMessage(botId, msg);
                 });
             } else {
+                // Intento fallback de obtener el tenantId de la sesión si no está en el if
+                // Esto es redundante si currentSession.tenantId ya es null, pero por seguridad
+                console.warn(`[${botId}] ⚠️ Procesando mensaje SIN contexto de tenant explícito`);
                 await handleIncomingMessage(botId, msg);
             }
         }
@@ -578,10 +589,26 @@ async function handleIncomingMessage(botId, msg) {
     console.log(`[${botId}] 📩 Mensaje de ${senderId}: ${userMessage}`);
 
     try {
-        let lead = await getOrCreateLead(botId, senderId);
-        if (!lead || !lead.id) return;
+        let lead;
+        
+        // Función auxiliar para operaciones con leads
+        const processLeadOperations = async () => {
+            lead = await getOrCreateLead(botId, senderId);
+            if (!lead || !lead.id) return;
+    
+            await addLeadMessage(lead.id, 'user', userMessage);
+        };
 
-        await addLeadMessage(lead.id, 'user', userMessage);
+        // Si tenemos tenantId en la sesión y NO estamos ya en un contexto (chequeo simple), usamos runWithTenant
+        // Nota: Si handleIncomingMessage ya fue llamado dentro de runWithTenant en upsert, esto es anidado seguro.
+        if (session.tenantId) {
+             const { runWithTenant } = require('./db');
+             await runWithTenant(session.tenantId, processLeadOperations);
+        } else {
+             await processLeadOperations();
+        }
+        
+        if (!lead || !lead.id) return;
 
         let skipAiGeneration = false;
 
