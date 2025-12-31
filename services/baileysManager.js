@@ -664,6 +664,11 @@ async function handleIncomingMessage(botId, msg) {
         }
 
         if (lead.status === 'assigned') {
+            console.log(`[${botId}] 📊 Lead asignado - Analizando chat incrementalmente...`);
+            
+            // 🆕 Analizar chats de leads asignados para mantener pipeline actualizado
+            await analyzeLeadChat(botId, lead, session.tenantId);
+            
             sseController.sendEventToUser(session.botConfig.ownerEmail, 'NEW_MESSAGE_FOR_SALES', {
                 leadId: lead.id,
                 from: senderId,
