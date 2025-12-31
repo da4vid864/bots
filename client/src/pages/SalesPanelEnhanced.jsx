@@ -470,7 +470,7 @@ const RealTimeLeadsPanel = ({ chats, categories, onChatSelect, onCategoryChange,
       <div className="flex flex-col items-center justify-center h-full">
         <Star className="w-16 h-16 text-slate-600 mb-4" />
         <p className="text-slate-400 text-lg">No hay leads asignados</p>
-        <p className="text-slate-500 text-sm mt-2">Los leads con puntuación > 70 aparecerán aquí cuando se asignen</p>
+        <p className="text-slate-500 text-sm mt-2">Los leads con puntuación  70 aparecerán aquí cuando se asignen</p>
       </div>
     );
   }
@@ -483,7 +483,7 @@ const RealTimeLeadsPanel = ({ chats, categories, onChatSelect, onCategoryChange,
           <Star className="w-5 h-5 text-yellow-400" />
           Leads Asignados ({chats.length})
         </h3>
-        <p className="text-sm text-slate-400 mt-1">Chats con puntuación > 70 asignados a vendedores</p>
+        <p className="text-sm text-slate-400 mt-1">Chats con puntuación  70 asignados a vendedores</p>
       </div>
 
       {/* Lista de leads */}

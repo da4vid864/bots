@@ -334,11 +334,11 @@ async function saveAnalyzedChat(data) {
       `INSERT INTO analyzed_chats (
         tenant_id, bot_id, contact_phone, contact_name, contact_email,
         analysis_results, lead_score, pipeline_category,
-        messages_count, last_message_content, products_mentioned,
+        messages_count, last_message_content, last_message_at, products_mentioned,
         status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      ON CONFLICT (tenant_id, bot_id, contact_phone) 
-      DO UPDATE SET 
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ON CONFLICT (tenant_id, bot_id, contact_phone)
+      DO UPDATE SET
         contact_name = EXCLUDED.contact_name,
         contact_email = EXCLUDED.contact_email,
         analysis_results = EXCLUDED.analysis_results,
@@ -346,6 +346,7 @@ async function saveAnalyzedChat(data) {
         pipeline_category = EXCLUDED.pipeline_category,
         messages_count = EXCLUDED.messages_count,
         last_message_content = EXCLUDED.last_message_content,
+        last_message_at = EXCLUDED.last_message_at,
         products_mentioned = EXCLUDED.products_mentioned,
         analyzed_at = CURRENT_TIMESTAMP,
         updated_at = CURRENT_TIMESTAMP
@@ -361,6 +362,7 @@ async function saveAnalyzedChat(data) {
         pipelineCategory,
         messages.length,
         messages[messages.length - 1]?.content || '',
+        messages[messages.length - 1]?.timestamp || new Date().toISOString(),
         JSON.stringify(productsMentioned),
         'analyzed'
       ]
