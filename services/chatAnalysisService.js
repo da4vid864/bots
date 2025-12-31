@@ -162,7 +162,8 @@ Analiza la conversación y proporciona un JSON con el siguiente formato (SOLO JS
           { role: 'user', content: conversationText }
         ],
         temperature: 0.3,
-        max_tokens: 1000
+        max_tokens: 1000,
+        response_format: { type: "json_object" } // 🆕 FORZAR RESPUESTA JSON
       },
       {
         headers: {
@@ -174,31 +175,54 @@ Analiza la conversación y proporciona un JSON con el siguiente formato (SOLO JS
     );
 
     const content = response.data.choices[0].message.content;
+    console.log('📄 Raw DeepSeek response:', content.substring(0, 200) + '...');
     
-    // Extraer JSON de la respuesta
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No se pudo extraer JSON de la respuesta de DeepSeek');
+    // Intentar parsear directamente
+    let analysis;
+    try {
+      analysis = JSON.parse(content);
+    } catch (parseError) {
+      // Si falla, extraer JSON del texto
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        analysis = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No se pudo extraer JSON de la respuesta');
+      }
     }
-
-    const analysis = JSON.parse(jsonMatch[0]);
-    return analysis;
+    
+    // 🆕 VALIDAR Y COMPLETAR CAMPOS FALTANTES
+    return {
+      intencion: analysis.intencion || 'consulta',
+      confianza: analysis.confianza || 0.5,
+      engagement: analysis.engagement || 0.5,
+      interesProducto: analysis.interesProducto || false,
+      urgencia: analysis.urgencia || 0.5,
+      sentimiento: analysis.sentimiento || 0,
+      productosInteresados: analysis.productosInteresados || [],
+      proximoPaso: analysis.proximoPaso || 'Seguimiento en 24 horas',
+      resumen: analysis.resumen || 'Conversación analizada',
+      puntosClave: analysis.puntosClave || [],
+      banderaBuena: analysis.banderaBuena || [],
+      banderaRoja: analysis.banderaRoja || []
+    };
+    
   } catch (error) {
     console.error('❌ Error en DeepSeek analysis:', error.message);
-    // Retornar análisis por defecto en caso de error
+    // Retornar análisis por defecto mejorado
     return {
       intencion: 'consulta',
-      confianza: 0.3,
+      confianza: 0.5,
       engagement: 0.5,
       interesProducto: false,
-      urgencia: 0.3,
+      urgencia: 0.5,
       sentimiento: 0,
       productosInteresados: [],
       proximoPaso: 'Recontactar en 24 horas',
       resumen: 'Conversación analizada automáticamente',
       puntosClave: [],
       banderaBuena: [],
-      banderaRoja: ['Análisis incompleto']
+      banderaRoja: ['Análisis automático por fallo en API']
     };
   }
 }

@@ -1,195 +1,47 @@
-// routes/analyzedChatsRoutes.js
-/**
- * Routes for analyzed chats and pipeline management
- * Integrates with chatAnalysisService and ChatInterface
- */
-
+// routes/analyzedChatsRoutes.js - VERSIÓN CORREGIDA COMPLETA
 const express = require('express');
 const router = express.Router();
-const { requireAuth, requireAdmin } = require('../auth/authMiddleware');
+const { requireAuth } = require('../auth/authMiddleware');
 const chatAnalysisService = require('../services/chatAnalysisService');
 const botDbService = require('../services/botDbService');
 const pool = require('../services/db');
-const exportService = require('../services/exportService');
 
-// === MIDDLEWARES ===
-
-/**
- * Middleware para validar que el usuario es admin o propietario del bot
- */
-async function verifyBotAccess(req, res, next) {
-  try {
-    const { botId } = req.params;
-    const userEmail = req.user?.email;
-
-    if (req.user?.role === 'admin') {
-      return next();
-    }
-
-    const bot = await botDbService.getBotById(botId);
-    if (!bot || bot.owner_email !== userEmail) {
-      return res.status(403).json({ error: 'No tienes acceso a este bot' });
-    }
-
-    next();
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
-
-// === GET ENDPOINTS ===
+// ========== GET ENDPOINTS (RUTAS ESPECÍFICAS PRIMERO) ==========
 
 /**
- * GET /api/analyzed-chats
- * Obtiene todos los chats analizados del tenant
- * Query params: category, botId, minScore, searchTerm, assignedTo, limit, offset
+ * GET /api/analyzed-chats/unprocessed-count
+ * Obtiene cantidad de chats no analizados
+ * IMPORTANTE: Esta ruta debe estar ANTES de /:id
  */
-router.get('/', requireAuth, async (req, res) => {
+router.get('/unprocessed-count', requireAuth, async (req, res) => {
   try {
     const tenantId = req.user?.tenant_id;
-    const {
-      category,
-      botId,
-      minScore,
-      searchTerm,
-      assignedTo,
-      limit = 50,
-      offset = 0
-    } = req.query;
-
-    const filters = {};
-    if (category) filters.category = category;
-    if (botId) filters.botId = botId;
-    if (minScore) filters.minScore = parseInt(minScore);
-    if (searchTerm) filters.searchTerm = searchTerm;
-    if (assignedTo) filters.assignedTo = assignedTo;
-
-    const chats = await chatAnalysisService.getAllAnalyzedChats(
-      tenantId,
-      filters,
-      parseInt(limit),
-      parseInt(offset)
+    
+    const result = await pool.query(
+      `SELECT 
+        COUNT(DISTINCT l.whatsapp_number) as unprocessed_count,
+        COUNT(DISTINCT l.bot_id) as bots_with_unprocessed
+      FROM leads l
+      WHERE l.bot_id IN (
+        SELECT id FROM bots WHERE tenant_id = $1
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM analyzed_chats ac 
+        WHERE ac.bot_id = l.bot_id 
+        AND ac.contact_phone = l.whatsapp_number
+        AND ac.tenant_id = $1
+      )`,
+      [tenantId]
     );
-
+    
     res.json({
       success: true,
-      data: chats,
-      pagination: { limit: parseInt(limit), offset: parseInt(offset) }
+      data: result.rows[0] || { unprocessed_count: 0, bots_with_unprocessed: 0 }
     });
+    
   } catch (error) {
-    console.error('Error obteniendo chats analizados:', error);
+    console.error('Error obteniendo conteo no procesado:', error);
     res.status(500).json({ error: error.message });
-  }
-});
-
-// === EXPORT ENDPOINTS (BEFORE /:id) ===
-
-/**
- * GET /api/analyzed-chats/export/all
- * Exporta todos los chats analizados en CSV
- */
-router.get('/export/all', requireAuth, async (req, res) => {
-  try {
-    const tenantId = req.user?.tenant_id;
-    const { csv, filename, rowCount } = await exportService.exportAnalyzedChatsToCSV(tenantId);
-
-    // Enviar como descarga
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(csv);
-
-    console.log(`✅ Exportación completada: ${rowCount} chats en ${filename}`);
-  } catch (error) {
-    console.error('Error exportando chats:', error);
-    res.status(500).json({ error: 'Error al exportar datos' });
-  }
-});
-
-/**
- * GET /api/analyzed-chats/export/category/:category
- * Exporta chats de una categoría específica en CSV
- */
-router.get('/export/category/:category', requireAuth, async (req, res) => {
-  try {
-    const tenantId = req.user?.tenant_id;
-    const { category } = req.params;
-
-    const { csv, filename, rowCount } = await exportService.exportChatsByCategoryToCSV(tenantId, category);
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(csv);
-
-    console.log(`✅ Exportación completada: ${rowCount} chats de categoría "${category}"`);
-  } catch (error) {
-    console.error('Error exportando chats por categoría:', error);
-    res.status(500).json({ error: 'Error al exportar datos' });
-  }
-});
-
-/**
- * GET /api/analyzed-chats/export/high-value
- * Exporta leads de alto valor (puntuación >= minScore)
- * Query param: minScore (default: 70)
- */
-router.get('/export/high-value', requireAuth, async (req, res) => {
-  try {
-    const tenantId = req.user?.tenant_id;
-    const minScore = parseInt(req.query.minScore) || 70;
-
-    const { csv, filename, rowCount } = await exportService.exportHighValueLeadsToCSV(tenantId, minScore);
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(csv);
-
-    console.log(`✅ Exportación completada: ${rowCount} leads con puntuación >= ${minScore}`);
-  } catch (error) {
-    console.error('Error exportando leads de alto valor:', error);
-    res.status(500).json({ error: 'Error al exportar datos' });
-  }
-});
-
-/**
- * GET /api/analyzed-chats/export/assigned/:assignedTo
- * Exporta chats asignados a un usuario específico en CSV
- */
-router.get('/export/assigned/:assignedTo', requireAuth, async (req, res) => {
-  try {
-    const tenantId = req.user?.tenant_id;
-    const { assignedTo } = req.params;
-
-    const { csv, filename, rowCount } = await exportService.exportAssignedChatsToCSV(tenantId, assignedTo);
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(csv);
-
-    console.log(`✅ Exportación completada: ${rowCount} chats asignados a "${assignedTo}"`);
-  } catch (error) {
-    console.error('Error exportando chats asignados:', error);
-    res.status(500).json({ error: 'Error al exportar datos' });
-  }
-});
-
-/**
- * GET /api/analyzed-chats/export/statistics
- * Exporta estadísticas del pipeline en CSV
- */
-router.get('/export/statistics', requireAuth, async (req, res) => {
-  try {
-    const tenantId = req.user?.tenant_id;
-
-    const { csv, filename, rowCount } = await exportService.exportStatisticsToCSV(tenantId);
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(csv);
-
-    console.log(`✅ Estadísticas exportadas: ${rowCount} registros`);
-  } catch (error) {
-    console.error('Error exportando estadísticas:', error);
-    res.status(500).json({ error: 'Error al exportar estadísticas' });
   }
 });
 
@@ -203,7 +55,7 @@ router.get('/categories', requireAuth, async (req, res) => {
 
     const result = await pool.query(
       `SELECT * FROM pipeline_categories 
-       WHERE tenant_id = $1 AND is_active = true
+       WHERE (tenant_id = $1 OR tenant_id IS NULL) AND is_active = true
        ORDER BY position ASC`,
       [tenantId]
     );
@@ -273,9 +125,255 @@ router.get('/category/:category', requireAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/analyzed-chats
+ * Obtiene todos los chats analizados del tenant
+ * Query params: category, botId, minScore, searchTerm, assignedTo, limit, offset
+ */
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenant_id;
+    const {
+      category,
+      botId,
+      minScore,
+      searchTerm,
+      assignedTo,
+      limit = 100,
+      offset = 0
+    } = req.query;
+
+    const filters = {};
+    if (category) filters.category = category;
+    if (botId) filters.botId = botId;
+    if (minScore) filters.minScore = parseInt(minScore);
+    if (searchTerm) filters.searchTerm = searchTerm;
+    if (assignedTo) filters.assignedTo = assignedTo;
+
+    const chats = await chatAnalysisService.getAllAnalyzedChats(
+      tenantId,
+      filters,
+      parseInt(limit),
+      parseInt(offset)
+    );
+
+    res.json({
+      success: true,
+      data: chats,
+      pagination: { limit: parseInt(limit), offset: parseInt(offset) }
+    });
+  } catch (error) {
+    console.error('Error obteniendo chats analizados:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ========== EXPORT ENDPOINTS ==========
+
+/**
+ * GET /api/analyzed-chats/export/all
+ * Exporta todos los chats analizados en CSV
+ */
+router.get('/export/all', requireAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenant_id;
+    
+    // Obtener chats
+    const chats = await chatAnalysisService.getAllAnalyzedChats(tenantId, {}, 1000, 0);
+    
+    // Convertir a CSV simple
+    const headers = ['ID', 'Teléfono', 'Nombre', 'Score', 'Categoría', 'Asignado a', 'Fecha Análisis'];
+    const csvRows = [
+      headers.join(','),
+      ...chats.map(chat => [
+        chat.id,
+        `"${chat.contact_phone || ''}"`,
+        `"${chat.contact_name || ''}"`,
+        chat.lead_score || 0,
+        `"${chat.pipeline_category || ''}"`,
+        `"${chat.assigned_to || ''}"`,
+        `"${chat.analyzed_at || ''}"`
+      ].join(','))
+    ];
+    
+    const csv = csvRows.join('\n');
+    const filename = `chats-analizados-${Date.now()}.csv`;
+    
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+
+    console.log(`✅ Exportación completada: ${chats.length} chats`);
+  } catch (error) {
+    console.error('Error exportando chats:', error);
+    res.status(500).json({ error: 'Error al exportar datos' });
+  }
+});
+
+/**
+ * GET /api/analyzed-chats/export/high-value
+ * Exporta leads de alto valor (puntuación >= minScore)
+ */
+router.get('/export/high-value', requireAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenant_id;
+    const minScore = parseInt(req.query.minScore) || 70;
+
+    const chats = await chatAnalysisService.getAllAnalyzedChats(
+      tenantId, 
+      { minScore }, 
+      1000, 
+      0
+    );
+    
+    const headers = ['ID', 'Teléfono', 'Nombre', 'Score', 'Categoría', 'Análisis'];
+    const csvRows = [
+      headers.join(','),
+      ...chats.map(chat => [
+        chat.id,
+        `"${chat.contact_phone || ''}"`,
+        `"${chat.contact_name || ''}"`,
+        chat.lead_score || 0,
+        `"${chat.pipeline_category || ''}"`,
+        `"${JSON.stringify(chat.analysis_results || {}).replace(/"/g, '""')}"`
+      ].join(','))
+    ];
+    
+    const csv = csvRows.join('\n');
+    const filename = `leads-alto-valor-${Date.now()}.csv`;
+    
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+
+    console.log(`✅ Exportación completada: ${chats.length} leads con puntuación >= ${minScore}`);
+  } catch (error) {
+    console.error('Error exportando leads de alto valor:', error);
+    res.status(500).json({ error: 'Error al exportar datos' });
+  }
+});
+
+// ========== POST ENDPOINTS ==========
+
+/**
+ * POST /api/analyzed-chats/analyze-unprocessed
+ * Analiza automáticamente chats no procesados
+ */
+router.post('/analyze-unprocessed', requireAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenant_id;
+    
+    // Obtener conteo de no procesados
+    const countResult = await pool.query(
+      `SELECT COUNT(DISTINCT l.whatsapp_number) as unprocessed_count
+       FROM leads l
+       WHERE l.bot_id IN (
+         SELECT id FROM bots WHERE tenant_id = $1
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM analyzed_chats ac 
+         WHERE ac.bot_id = l.bot_id 
+         AND ac.contact_phone = l.whatsapp_number
+         AND ac.tenant_id = $1
+       )`,
+      [tenantId]
+    );
+    
+    const unprocessedCount = countResult.rows[0]?.unprocessed_count || 0;
+    
+    if (unprocessedCount === 0) {
+      return res.json({
+        success: true,
+        message: 'No hay chats pendientes por analizar',
+        processed: 0
+      });
+    }
+    
+    // Obtener bots del tenant
+    const bots = await pool.query(
+      `SELECT id, name FROM bots WHERE tenant_id = $1 AND status = 'enabled'`,
+      [tenantId]
+    );
+    
+    let totalProcessed = 0;
+    
+    for (const bot of bots.rows) {
+      // Obtener chats no analizados de este bot
+      const unprocessedChats = await pool.query(
+        `SELECT DISTINCT l.whatsapp_number as contact_phone, l.name as contact_name
+         FROM leads l
+         WHERE l.bot_id = $1
+         AND NOT EXISTS (
+           SELECT 1 FROM analyzed_chats ac 
+           WHERE ac.bot_id = l.bot_id 
+           AND ac.contact_phone = l.whatsapp_number
+           AND ac.tenant_id = $2
+         )
+         LIMIT 50`,
+        [bot.id, tenantId]
+      );
+      
+      // Procesar cada chat
+      for (const chat of unprocessedChats.rows) {
+        try {
+          // Obtener mensajes del lead
+          const messages = await pool.query(
+            `SELECT sender, message, timestamp 
+             FROM lead_messages lm
+             JOIN leads l ON lm.lead_id = l.id
+             WHERE l.bot_id = $1 AND l.whatsapp_number = $2
+             ORDER BY timestamp ASC
+             LIMIT 50`,
+            [bot.id, chat.contact_phone]
+          );
+          
+          if (messages.rows.length > 0) {
+            // Formatear mensajes para análisis
+            const formattedMessages = messages.rows.map(msg => ({
+              role: msg.sender === 'bot' ? 'assistant' : 'user',
+              content: msg.message,
+              timestamp: msg.timestamp
+            }));
+            
+            // Ejecutar análisis
+            await chatAnalysisService.analyzeChatConversation(
+              {
+                botId: bot.id,
+                contactPhone: chat.contact_phone,
+                contactName: chat.contact_name,
+                contactEmail: null,
+                messages: formattedMessages,
+                botPrompt: ''
+              },
+              tenantId
+            );
+            
+            totalProcessed++;
+            console.log(`✅ Chat analizado: ${chat.contact_phone}`);
+          }
+        } catch (error) {
+          console.error(`❌ Error analizando ${chat.contact_phone}:`, error.message);
+        }
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Se analizaron ${totalProcessed} chats no procesados`,
+      processed: totalProcessed
+    });
+    
+  } catch (error) {
+    console.error('Error analizando no procesados:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ========== RUTAS CON PARÁMETROS (DEBEN IR AL FINAL) ==========
+
+/**
  * GET /api/analyzed-chats/:id
  * Obtiene un chat analizado específico
- * NOTA: Esta ruta debe estar al final de todas las rutas con parametros específicos
+ * IMPORTANTE: Esta ruta debe estar AL FINAL
  */
 router.get('/:id', requireAuth, async (req, res) => {
   try {
@@ -318,144 +416,8 @@ router.get('/:id', requireAuth, async (req, res) => {
 });
 
 /**
- * GET /api/analyzed-chats/category/:category
- * Obtiene chats por categoría del pipeline
- */
-router.get('/category/:category', requireAuth, async (req, res) => {
-  try {
-    const { category } = req.params;
-    const { limit = 50, offset = 0 } = req.query;
-    const tenantId = req.user?.tenant_id;
-
-    const chats = await chatAnalysisService.getChatsByCategory(
-      tenantId,
-      category,
-      parseInt(limit),
-      parseInt(offset)
-    );
-
-    res.json({
-      success: true,
-      data: chats,
-      category,
-      pagination: { limit: parseInt(limit), offset: parseInt(offset) }
-    });
-  } catch (error) {
-    console.error('Error obteniendo chats por categoría:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/**
- * GET /api/pipeline/statistics
- * Obtiene estadísticas del pipeline
- */
-router.get('/statistics', requireAuth, async (req, res) => {
-  try {
-    const tenantId = req.user?.tenant_id;
-    const { dateFrom, dateTo } = req.query;
-
-    const stats = await chatAnalysisService.getPipelineStatistics(
-      tenantId,
-      dateFrom || null,
-      dateTo || null
-    );
-
-    res.json({
-      success: true,
-      data: stats
-    });
-  } catch (error) {
-    console.error('Error obteniendo estadísticas:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/**
- * GET /api/pipeline/categories
- * Obtiene todas las categorías del pipeline del tenant
- */
-router.get('/categories', requireAuth, async (req, res) => {
-  try {
-    const tenantId = req.user?.tenant_id;
-
-    const result = await pool.query(
-      `SELECT * FROM pipeline_categories 
-       WHERE tenant_id = $1 AND is_active = true
-       ORDER BY position ASC`,
-      [tenantId]
-    );
-
-    res.json({
-      success: true,
-      data: result.rows
-    });
-  } catch (error) {
-    console.error('Error obteniendo categorías:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// === POST ENDPOINTS ===
-
-/**
- * POST /api/analyzed-chats/analyze
- * Analiza un chat manualmente
- * Body: { botId, contactPhone, contactName?, contactEmail?, messages }
- */
-router.post('/analyze', requireAuth, async (req, res) => {
-  try {
-    const tenantId = req.user?.tenant_id;
-    const {
-      botId,
-      contactPhone,
-      contactName,
-      contactEmail,
-      messages,
-      botPrompt
-    } = req.body;
-
-    if (!botId || !contactPhone || !messages) {
-      return res.status(400).json({
-        error: 'Parámetros requeridos: botId, contactPhone, messages'
-      });
-    }
-
-    // Verificar acceso al bot
-    const bot = await botDbService.getBotById(botId);
-    if (!bot) {
-      return res.status(404).json({ error: 'Bot no encontrado' });
-    }
-
-    // Ejecutar análisis
-    const result = await chatAnalysisService.analyzeChatConversation(
-      {
-        botId,
-        contactPhone,
-        contactName,
-        contactEmail,
-        messages,
-        botPrompt: botPrompt || bot.prompt
-      },
-      tenantId
-    );
-
-    res.json({
-      success: true,
-      data: result
-    });
-  } catch (error) {
-    console.error('Error analizando chat:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// === PUT/PATCH ENDPOINTS ===
-
-/**
  * PATCH /api/analyzed-chats/:id/category
  * Cambia la categoría de un chat en el pipeline
- * Body: { newCategory, reason? }
  */
 router.patch('/:id/category', requireAuth, async (req, res) => {
   try {
@@ -489,7 +451,6 @@ router.patch('/:id/category', requireAuth, async (req, res) => {
 /**
  * PATCH /api/analyzed-chats/:id/assign
  * Asigna un chat a un vendedor
- * Body: { userId }
  */
 router.patch('/:id/assign', requireAuth, async (req, res) => {
   try {
@@ -543,110 +504,5 @@ router.patch('/:id/unassign', requireAuth, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-// === ANÁLISIS MASIVO - NUEVAS RUTAS ===
 
-/**
- * POST /api/analyzed-chats/bulk-analyze/:botId
- * Analiza MASIVAMENTE todos los chats de un bot
- */
-router.post('/bulk-analyze/:botId', requireAuth, async (req, res) => {
-  try {
-    const { botId } = req.params;
-    const tenantId = req.user?.tenant_id;
-    
-    // Verificar que el usuario tiene acceso al bot
-    const bot = await botDbService.getBotById(botId);
-    if (!bot) {
-      return res.status(404).json({ error: 'Bot no encontrado' });
-    }
-    
-    // Iniciar análisis en segundo plano
-    const bulkAnalysisService = require('../services/bulkAnalysisService');
-    bulkAnalysisService.analyzeAllBotChats(botId, tenantId)
-      .then(result => {
-        console.log('✅ Análisis masivo completado:', result);
-        
-        // Notificar al usuario via SSE
-        const sseController = require('../controllers/sseController');
-        sseController.sendEventToUser(
-          req.user.email,
-          'BULK_ANALYSIS_COMPLETED',
-          { botId, ...result }
-        );
-      })
-      .catch(error => {
-        console.error('❌ Error en análisis masivo:', error);
-      });
-    
-    res.json({
-      success: true,
-      message: 'Análisis masivo iniciado en segundo plano',
-      botId,
-      startedAt: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('Error iniciando análisis masivo:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/**
- * GET /api/analyzed-chats/unprocessed-count
- * Obtiene cantidad de chats no analizados
- */
-router.get('/unprocessed-count', requireAuth, async (req, res) => {
-  try {
-    const tenantId = req.user?.tenant_id;
-    
-    const result = await pool.query(
-      `SELECT 
-        COUNT(DISTINCT l.whatsapp_number) as unprocessed_count,
-        COUNT(DISTINCT l.bot_id) as bots_with_unprocessed
-      FROM leads l
-      WHERE l.bot_id IN (
-        SELECT id FROM bots WHERE tenant_id = $1
-      )
-      AND NOT EXISTS (
-        SELECT 1 FROM analyzed_chats ac 
-        WHERE ac.bot_id = l.bot_id 
-        AND ac.contact_phone = l.whatsapp_number
-        AND ac.tenant_id = $1
-      )`,
-      [tenantId]
-    );
-    
-    res.json({
-      success: true,
-      data: result.rows[0]
-    });
-    
-  } catch (error) {
-    console.error('Error obteniendo conteo no procesado:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/**
- * POST /api/analyzed-chats/analyze-unprocessed
- * Analiza automáticamente chats no procesados
- */
-router.post('/analyze-unprocessed', requireAuth, async (req, res) => {
-  try {
-    const tenantId = req.user?.tenant_id;
-    
-    const bulkAnalysisService = require('../services/bulkAnalysisService');
-    const processed = await bulkAnalysisService.checkAndAnalyzeUnprocessedChats(tenantId);
-    
-    res.json({
-      success: true,
-      message: `Se analizaron ${processed} chats no procesados`,
-      processed
-    });
-    
-  } catch (error) {
-    console.error('Error analizando no procesados:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
 module.exports = router;

@@ -151,61 +151,63 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
         }
 
         if (connection === 'open') {
-            console.log(`[${botId}] ✅ WhatsApp conectado!`);
-            session.isReady = true;
+  console.log(`[${botId}] ✅ WhatsApp conectado!`);
+  session.isReady = true;
 
-            const statusReport = session.isPaused ? 'DISABLED' : 'CONNECTED';
-            const botOwnerEmail = session.botConfig.ownerEmail;
+  const statusReport = session.isPaused ? 'DISABLED' : 'CONNECTED';
+  const botOwnerEmail = session.botConfig.ownerEmail;
 
-            // 🆕 Guardar metadata de sesión para persistencia
-            try {
-                const creds = session.socket?.authState?.creds || {};
-                await sessionPersistenceService.saveSessionMetadata(botId, {
-                    phoneNumber: creds.me?.id || null,
-                    status: 'connected',
-                    authenticatedAt: new Date(),
-                    metadata: {
-                        version: require('../package.json').version,
-                        connectedAt: new Date().toISOString()
-                    }
-                });
-            } catch (err) {
-                console.log(`[${botId}] ℹ️  No se pudo guardar metadata: ${err.message}`);
-            }
+  // 🆕 CORREGIDO: Solo guardar metadata si hay tenantId
+  try {
+    const creds = session.socket?.authState?.creds || {};
+    const tenantId = session.tenantId;
+    
+    if (tenantId) {
+      await sessionPersistenceService.saveSessionMetadata(botId, {
+        phoneNumber: creds.me?.id || null,
+        status: 'connected',
+        authenticatedAt: new Date(),
+        metadata: {
+          version: require('../package.json').version,
+          connectedAt: new Date().toISOString()
+        }
+      });
+    } else {
+      console.log(`[${botId}] ℹ️  Skipping session metadata - no tenantId`);
+    }
+  } catch (err) {
+    console.log(`[${botId}] ℹ️  No se pudo guardar metadata: ${err.message}`);
+  }
 
-            sseController.sendEventToUser(botOwnerEmail, 'CONNECTED', {
-                status: session.isPaused ? 'disabled' : 'enabled',
-                runtimeStatus: statusReport,
-                botId,
-            });
+  sseController.sendEventToUser(botOwnerEmail, 'CONNECTED', {
+    status: session.isPaused ? 'disabled' : 'enabled',
+    runtimeStatus: statusReport,
+    botId,
+  });
 
-            onStatusUpdate('CONNECTED', {
-                status: session.isPaused ? 'disabled' : 'enabled',
-                runtimeStatus: statusReport,
-            });
+  onStatusUpdate('CONNECTED', {
+    status: session.isPaused ? 'disabled' : 'enabled',
+    runtimeStatus: statusReport,
+  });
 
-            // 🆕 ANALIZAR TODOS LOS CHATS AUTOMÁTICAMENTE AL CONECTAR
-            if (!session.isPaused) {
-                console.log(`[${botId}] 🔄 Iniciando sincronización forzada...`);
-                
-                // Esperar 5 segundos para que carguen los chats
-                setTimeout(async () => {
-                    try {
-                        await forceHistorySync(botId);
-                        
-                        // 🆕 NUEVO: Sincronizar y analizar TODOS los chats históricos
-                        setTimeout(async () => {
-                            console.log(`[${botId}] 🚀 Iniciando análisis automático de TODOS los chats...`);
-                            await autoAnalyzeAllChatsOnConnect(botId, socket, session);
-                        }, 2000);
-                        
-                    } catch (error) {
-                        console.error(`[${botId}] ❌ Error en sincronización:`, error);
-                    }
-                }, 3000);
-            }
-
-        } else if (connection === 'close') {
+  // 🆕 NUEVO: Sincronizar y analizar TODOS los chats históricos
+  if (!session.isPaused && session.tenantId) {
+    console.log(`[${botId}] 🔄 Iniciando sincronización forzada...`);
+    setTimeout(async () => {
+      await forceHistorySync(botId);
+      
+      // Análisis masivo solo si hay tenantId
+      setTimeout(async () => {
+        if (session.tenantId) {
+          console.log(`[${botId}] 🚀 Iniciando análisis automático de TODOS los chats...`);
+          await autoAnalyzeAllChatsOnConnect(botId, socket, session);
+        } else {
+          console.log(`[${botId}] ⚠️  Skipping auto-analysis - no tenantId`);
+        }
+      }, 2000);
+    }, 3000);
+  }
+} else if (connection === 'close') {
             const shouldReconnect =
                 lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
 

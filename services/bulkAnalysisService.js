@@ -146,10 +146,10 @@ async function processSingleChatAnalysis(bot, chat, tenantId, socket) {
       banderaRoja: ['Chat sin interacción']
     };
     
-    const leadScore = 25; // Score bajo por falta de interacción
+    const leadScore = 25;
     
     // Guardar en BD
-    return await chatAnalysisService.saveAnalyzedChat({
+    const result = await chatAnalysisService.saveAnalyzedChat({
       tenantId,
       botId: bot.id,
       contactPhone,
@@ -164,16 +164,30 @@ async function processSingleChatAnalysis(bot, chat, tenantId, socket) {
       pipelineCategory: 'nuevos_contactos',
       productsMentioned: []
     });
+    
+    return {
+      success: true,
+      score: leadScore,
+      created: true,
+      updated: false
+    };
   }
   
   // 2. Análisis completo con mensajes existentes
-  return await chatAnalysisService.analyzeChatConversation({
+  const result = await chatAnalysisService.analyzeChatConversation({
     botId: bot.id,
     contactPhone,
     contactName,
     messages,
     botPrompt: bot.prompt || ''
   }, tenantId);
+  
+  return {
+    success: true,
+    score: result.leadScore,
+    created: result.created || false,
+    updated: result.updated || false
+  };
 }
 
 /**
