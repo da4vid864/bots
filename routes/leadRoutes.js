@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const leadDbService = require('../services/leadDbService');
 const pipelineService = require('../services/pipelineService');
+const sseController = require('../controllers/sseController');
 
 /**
  * GET /api/leads
@@ -118,6 +119,9 @@ router.put('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Lead no encontrado' });
         }
 
+        // Broadcast update via SSE
+        sseController.broadcastEvent('LEAD_UPDATED', updatedLead);
+
         res.json({
             success: true,
             lead: updatedLead
@@ -173,6 +177,9 @@ router.post('/:id/assign', async (req, res) => {
         if (!lead) {
             return res.status(404).json({ error: 'Lead no encontrado' });
         }
+
+        // Broadcast update via SSE
+        sseController.broadcastEvent('LEAD_UPDATED', lead);
 
         res.json({
             success: true,

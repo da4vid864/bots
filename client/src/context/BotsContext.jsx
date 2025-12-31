@@ -93,6 +93,17 @@ export const BotsProvider = ({ children }) => {
         );
         break;
 
+      case 'LEAD_UPDATED':
+        console.log('🔄 LEAD_UPDATED received:', data.id);
+        setLeads((prevLeads) =>
+          prevLeads.map((lead) => (lead.id === data.id ? { ...lead, ...data } : lead))
+        );
+        // Update selected lead if it matches
+        setSelectedLead((prevSelected) =>
+          prevSelected?.id === data.id ? { ...prevSelected, ...data } : prevSelected
+        );
+        break;
+
       case 'NEW_MESSAGE_FOR_SALES':
         console.log('💬 NEW_MESSAGE_FOR_SALES received for lead:', data.leadId);
         setLeadMessages((prev) => ({
