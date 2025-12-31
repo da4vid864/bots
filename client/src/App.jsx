@@ -6,7 +6,7 @@ import Sidebar from './components/Sidebar';
 
 // --- Lazy Loading for Performance Optimization ---
 const Dashboard = lazy(() => import('./pages/Dashboard'));
-const SalesPanel = lazy(() => import('./pages/SalesPanel'));
+const SalesPanelEnhanced = lazy(() => import('./pages/SalesPanelEnhanced'));
 const Login = lazy(() => import('./pages/Login'));
 const PrivacyPortal = lazy(() => import('./pages/PrivacyPortal'));
 
@@ -164,7 +164,7 @@ const AppContent = () => {
         {/* Gated Content (Require Pro) */}
         <Route path="/sales" element={
           <RequirePro>
-            <SalesPanel />
+            <SalesPanelEnhanced />
           </RequirePro>
         } />
       </Route>
