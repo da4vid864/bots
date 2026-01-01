@@ -1,6 +1,7 @@
 // controllers/webhookController.js
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const subscriptionService = require('../services/subscriptionService');
+import Stripe from 'stripe';
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+import subscriptionService from '../services/subscriptionService.js';
 
 async function handleStripeWebhook(req, res) {
     const sig = req.headers['stripe-signature'];
@@ -53,4 +54,4 @@ async function handleStripeWebhook(req, res) {
     }
 }
 
-module.exports = { handleStripeWebhook };
+export { handleStripeWebhook };

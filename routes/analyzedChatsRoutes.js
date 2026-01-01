@@ -1,10 +1,10 @@
 // routes/analyzedChatsRoutes.js - VERSIÓN CORREGIDA COMPLETA
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { requireAuth } = require('../auth/authMiddleware');
-const chatAnalysisService = require('../services/chatAnalysisService');
-const botDbService = require('../services/botDbService');
-const pool = require('../services/db');
+import { requireAuth } from '../auth/authMiddleware.js';
+import chatAnalysisService from '../services/chatAnalysisService.js';
+import botDbService from '../services/botDbService.js';
+import pool from '../services/db.js';
 
 // ========== GET ENDPOINTS (RUTAS ESPECÍFICAS PRIMERO) ==========
 
@@ -505,4 +505,4 @@ router.patch('/:id/unassign', requireAuth, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

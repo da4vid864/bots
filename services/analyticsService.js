@@ -4,8 +4,8 @@
  * Extiende funcionalidades existentes de statsService
  */
 
-const pool = require('./db');
-const { EventEmitter } = require('events');
+import { query as pool } from './db.js';
+import { EventEmitter } from 'events';
 
 class AnalyticsService extends EventEmitter {
   constructor() {
@@ -31,7 +31,7 @@ class AnalyticsService extends EventEmitter {
       this._updateInMemoryMetric(eventType, data);
 
       // Persistir en BD para análisis histórico
-      await pool.query(
+      await pool(
         `INSERT INTO analytics_events 
           (tenant_id, event_type, event_data, created_at) 
          VALUES ($1, $2, $3, $4)`,
@@ -71,7 +71,7 @@ class AnalyticsService extends EventEmitter {
 
       query += ` GROUP BY event_type ORDER BY count DESC`;
 
-      const result = await pool.query(query, params);
+      const result = await pool(query, params);
       return result.rows;
     } catch (error) {
       console.error('❌ Error en getMetricsReport:', error.message);
@@ -93,7 +93,7 @@ class AnalyticsService extends EventEmitter {
 
       // Estado de canales en última hora
       const lastHour = new Date(Date.now() - 3600000);
-      const channelEvents = await pool.query(
+      const channelEvents = await pool(
         `SELECT event_type, COUNT(*) as count, 
                 COALESCE(SUM(CASE WHEN event_data->>'error' IS NOT NULL THEN 1 ELSE 0 END), 0) as errors
          FROM analytics_events
@@ -170,7 +170,7 @@ class AnalyticsService extends EventEmitter {
     try {
       const startDate = new Date(Date.now() - days * 24 * 3600000);
       
-      const result = await pool.query(
+      const result = await pool(
         `SELECT 
           DATE_TRUNC('day', created_at) as date,
           COUNT(*) as count
@@ -202,7 +202,7 @@ class AnalyticsService extends EventEmitter {
 
   async _checkDeepseekHealth() {
     try {
-      const recentErrors = await pool.query(
+      const recentErrors = await pool(
         `SELECT COUNT(*) as error_count FROM analytics_events
          WHERE event_type = 'ai_request' 
          AND created_at > NOW() - INTERVAL '5 minutes'
@@ -228,4 +228,4 @@ class AnalyticsService extends EventEmitter {
   }
 }
 
-module.exports = new AnalyticsService();
+export default new AnalyticsService();

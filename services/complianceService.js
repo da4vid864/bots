@@ -1,4 +1,5 @@
-const db = require('./db');
+// services/complianceService.js
+import { query as db } from './db.js';
 
 /**
  * Creates a new privacy request
@@ -15,7 +16,7 @@ async function createPrivacyRequest(tenantId, requesterEmail, type, details) {
     RETURNING *
   `;
   const values = [tenantId, requesterEmail, type, details];
-  const result = await db.query(query, values);
+  const result = await db(query, values);
   return result.rows[0];
 }
 
@@ -45,7 +46,7 @@ async function getPrivacyRequests(tenantId, status = null, requesterEmail = null
 
   query += ` ORDER BY created_at DESC`;
 
-  const result = await db.query(query, values);
+  const result = await db(query, values);
   return result.rows;
 }
 
@@ -56,7 +57,7 @@ async function getPrivacyRequests(tenantId, status = null, requesterEmail = null
  */
 async function getPrivacyRequestById(requestId, tenantId) {
     const query = `SELECT * FROM privacy_requests WHERE id = $1 AND tenant_id = $2`;
-    const result = await db.query(query, [requestId, tenantId]);
+    const result = await db(query, [requestId, tenantId]);
     return result.rows[0];
 }
 
@@ -78,7 +79,7 @@ async function logAudit(tenantId, userEmail, action, details, resourceId = null,
   `;
   const values = [tenantId, userEmail, action, details, resourceId, ipAddress, userAgent];
   try {
-      await db.query(query, values);
+      await db(query, values);
   } catch (err) {
       console.error('Failed to write audit log:', err);
       // We don't throw here to avoid failing the main operation if logging fails
@@ -119,7 +120,7 @@ async function processPrivacyRequest(requestId, tenantId, action, resultData = {
             // In a real implementation, this would gather data from users, leads, etc.
             // For now, we assume the admin or system has generated the data or we schedule a job.
             // If resultData contains the export url or data, we save it.
-        } 
+        }
         
         // For 'DELETE' (Right to be Forgotten)
         if (request.request_type === 'DELETE') {
@@ -138,11 +139,19 @@ async function processPrivacyRequest(requestId, tenantId, action, resultData = {
     // Merge existing details with new resultData
     const updateDetails = { ...resultData, processed_at: new Date().toISOString() };
     
-    const result = await db.query(query, [newStatus, resolvedAt, JSON.stringify(updateDetails), requestId, tenantId]);
+    const result = await db(query, [newStatus, resolvedAt, JSON.stringify(updateDetails), requestId, tenantId]);
     return result.rows[0];
 }
 
-module.exports = {
+export {
+  createPrivacyRequest,
+  getPrivacyRequests,
+  getPrivacyRequestById,
+  processPrivacyRequest,
+  logAudit
+};
+
+export default {
   createPrivacyRequest,
   getPrivacyRequests,
   getPrivacyRequestById,

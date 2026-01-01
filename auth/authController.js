@@ -1,9 +1,9 @@
 // auth/authController.js
-const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = process.env;
-const userService = require('../services/userService');
-const subscriptionService = require('../services/subscriptionService');
-const { runWithTenant } = require('../services/db');
+import jwt from 'jsonwebtoken';
+const JWT_SECRET = process.env.JWT_SECRET;
+import userService from '../services/userService.js';
+import subscriptionService from '../services/subscriptionService.js';
+import { runWithTenant } from '../services/db.js';
 
 const handleGoogleCallback = async (req, res) => {
   try {
@@ -131,4 +131,4 @@ const logout = (req, res) => {
   res.json({ success: true, message: 'Sesión cerrada' });
 };
 
-module.exports = { handleGoogleCallback, logout };
+export { handleGoogleCallback, logout };

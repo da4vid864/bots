@@ -1,11 +1,12 @@
 /**
+ * bulkAnalysisService.js
  * Servicio para análisis masivo de chats
  * Analiza TODOS los chats de WhatsApp y los guarda en analyzed_chats
  */
 
-const chatAnalysisService = require('./chatAnalysisService');
-const botDbService = require('./botDbService');
-const pool = require('./db');
+import * as chatAnalysisService from './chatAnalysisService.js';
+import * as botDbService from './botDbService.js';
+import { query as pool } from './db.js';
 
 /**
  * Analiza TODOS los chats de un bot y los guarda en analyzed_chats
@@ -93,7 +94,7 @@ async function getAllWhatsAppChats(botId, socket) {
 
     // Método 2: Desde BD de leads (backup)
     if (chats.length === 0) {
-      const leadResult = await pool.query(
+      const leadResult = await pool(
         `SELECT DISTINCT whatsapp_number as contact_phone, name as contact_name
          FROM leads WHERE bot_id = $1`,
         [botId]
@@ -148,21 +149,15 @@ async function processSingleChatAnalysis(bot, chat, tenantId, socket) {
     
     const leadScore = 25;
     
-    // Guardar en BD
-    const result = await chatAnalysisService.saveAnalyzedChat({
+    // Guardar en BD - usar la función interna del servicio
+    const result = await saveAnalyzedChatBasic({
       tenantId,
       botId: bot.id,
       contactPhone,
       contactName,
-      messages: [{
-        role: 'user',
-        content: 'Cliente registrado en sistema',
-        timestamp: new Date()
-      }],
       analysisResults: basicAnalysis,
       leadScore,
       pipelineCategory: 'nuevos_contactos',
-      productsMentioned: []
     });
     
     return {
@@ -188,6 +183,49 @@ async function processSingleChatAnalysis(bot, chat, tenantId, socket) {
     created: result.created || false,
     updated: result.updated || false
   };
+}
+
+/**
+ * Función auxiliar para guardar análisis básico
+ */
+async function saveAnalyzedChatBasic(data) {
+  const { tenantId, botId, contactPhone, contactName, analysisResults, leadScore, pipelineCategory } = data;
+  
+  try {
+    const result = await pool(
+      `INSERT INTO analyzed_chats (
+        tenant_id, bot_id, contact_phone, contact_name,
+        analysis_results, lead_score, pipeline_category,
+        messages_count, last_message_content, last_message_at,
+        status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ON CONFLICT (tenant_id, bot_id, contact_phone)
+      DO UPDATE SET
+        analysis_results = EXCLUDED.analysis_results,
+        lead_score = EXCLUDED.lead_score,
+        pipeline_category = EXCLUDED.pipeline_category,
+        analyzed_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *`,
+      [
+        tenantId,
+        botId,
+        contactPhone,
+        contactName,
+        JSON.stringify(analysisResults),
+        leadScore,
+        pipelineCategory,
+        1,
+        'Cliente registrado en sistema',
+        new Date().toISOString(),
+        'analyzed'
+      ]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error guardando análisis básico:', error);
+    throw error;
+  }
 }
 
 /**
@@ -221,7 +259,7 @@ async function getChatMessages(botId, contactPhone, socket) {
     
     // Si no hay mensajes en store, buscar en BD
     if (messages.length === 0) {
-      const dbMessages = await pool.query(
+      const dbMessages = await pool(
         `SELECT sender, message, timestamp 
          FROM lead_messages lm
          JOIN leads l ON lm.lead_id = l.id
@@ -272,7 +310,7 @@ async function checkAndAnalyzeUnprocessedChats(tenantId) {
     console.log(`🔍 Buscando chats no analizados para tenant: ${tenantId}`);
     
     // Obtener bots del tenant
-    const bots = await pool.query(
+    const bots = await pool(
       `SELECT id, name FROM bots WHERE tenant_id = $1 AND status = 'enabled'`,
       [tenantId]
     );
@@ -288,7 +326,7 @@ async function checkAndAnalyzeUnprocessedChats(tenantId) {
       console.log(`🤖 Procesando bot: ${bot.name} (${bot.id})`);
       
       // Obtener chats de WhatsApp que no están en analyzed_chats
-      const unprocessedChats = await pool.query(
+      const unprocessedChats = await pool(
         `SELECT DISTINCT l.whatsapp_number as contact_phone, l.name as contact_name
          FROM leads l
          WHERE l.bot_id = $1
@@ -337,7 +375,13 @@ async function checkAndAnalyzeUnprocessedChats(tenantId) {
   }
 }
 
-module.exports = {
+export {
+  analyzeAllBotChats,
+  checkAndAnalyzeUnprocessedChats,
+  getAllWhatsAppChats
+};
+
+export default {
   analyzeAllBotChats,
   checkAndAnalyzeUnprocessedChats,
   getAllWhatsAppChats

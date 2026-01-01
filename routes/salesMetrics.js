@@ -5,9 +5,9 @@
  * Phase 1: Database & Backend Foundation
  */
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const metricsService = require('../services/metricsService');
+import metricsService from '../services/metricsService.js';
 
 /**
  * Middleware to get tenant ID from request
@@ -299,4 +299,4 @@ router.post('/record', async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

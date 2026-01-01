@@ -3,14 +3,14 @@
  * API endpoints para chat web widget y captura de leads omnicanal
  */
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const pool = require('../services/db');
-const analyticsService = require('../services/analyticsService');
-const predictiveEngineService = require('../services/predictiveEngineService');
-const emailAutomationService = require('../services/emailAutomationService');
-const { getChatReply } = require('../services/deepseekService');
-const { extractLeadInfo } = require('../services/leadExtractionService');
+import pool from '../services/db.js';
+import analyticsService from '../services/analyticsService.js';
+import predictiveEngineService from '../services/predictiveEngineService.js';
+import emailAutomationService from '../services/emailAutomationService.js';
+import { getChatReply } from '../services/deepseekService.js';
+import { extractLeadInfo } from '../services/leadExtractionService.js';
 
 /**
  * POST /api/web-chat/init
@@ -324,4 +324,4 @@ router.get('/analytics', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

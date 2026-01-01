@@ -5,7 +5,7 @@
  * SQL injection, XSS, and data corruption in the WhatsApp bot system.
  */
 
-const { validationSchemas, validateTransactionData } = require('../services/transactionUtils');
+import { validationSchemas, validateTransactionData } from '../services/transactionUtils.js';
 
 /**
  * Sanitize input to prevent XSS and injection attacks
@@ -374,7 +374,7 @@ const commonSchemas = {
     createBot: validationSchemas.bot
 };
 
-module.exports = {
+export {
     sanitizeInput,
     validateBody,
     validateQuery,

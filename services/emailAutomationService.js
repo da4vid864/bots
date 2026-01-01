@@ -4,7 +4,7 @@
  * Integración preparada para SendGrid/Mailchimp (implementación futura)
  */
 
-const pool = require('./db');
+import { query as pool } from './db.js';
 
 class EmailAutomationService {
   constructor() {
@@ -38,7 +38,7 @@ class EmailAutomationService {
       };
 
       // Persistir en BD
-      const result = await pool.query(
+      const result = await pool(
         `INSERT INTO email_history 
          (tenant_id, lead_id, recipient_email, subject, status, created_at)
          VALUES ($1, $2, $3, $4, $5, $6)
@@ -58,7 +58,7 @@ class EmailAutomationService {
 
       if (sendResult.success) {
         // Actualizar estado
-        await pool.query(
+        await pool(
           `UPDATE email_history SET status = $1, sent_at = $2, external_id = $3
            WHERE id = $4`,
           ['sent', new Date(), sendResult.externalId, emailId]
@@ -67,7 +67,7 @@ class EmailAutomationService {
         console.log(`✅ Email enviado: ${recipientEmail} (ID: ${emailId})`);
         return { success: true, emailId, externalId: sendResult.externalId };
       } else {
-        await pool.query(
+        await pool(
           `UPDATE email_history SET status = $1, error_message = $2 WHERE id = $3`,
           ['failed', sendResult.error, emailId]
         );
@@ -91,7 +91,7 @@ class EmailAutomationService {
         }
       }
 
-      const result = await pool.query(
+      const result = await pool(
         `INSERT INTO email_sequences 
          (tenant_id, name, steps, status, created_at)
          VALUES ($1, $2, $3, $4, $5)
@@ -117,7 +117,7 @@ class EmailAutomationService {
    */
   async assignLeadToSequence(tenantId, leadId, sequenceId) {
     try {
-      const lead = await pool.query(
+      const lead = await pool(
         'SELECT email FROM leads WHERE id = $1 AND tenant_id = $2',
         [leadId, tenantId]
       );
@@ -132,7 +132,7 @@ class EmailAutomationService {
       }
 
       // Crear registro de asignación
-      const assignment = await pool.query(
+      const assignment = await pool(
         `INSERT INTO email_sequence_assignments 
          (tenant_id, lead_id, sequence_id, status, started_at)
          VALUES ($1, $2, $3, $4, $5)
@@ -143,7 +143,7 @@ class EmailAutomationService {
       const assignmentId = assignment.rows[0].id;
 
       // Obtener sequence
-      const sequence = await pool.query(
+      const sequence = await pool(
         'SELECT steps FROM email_sequences WHERE id = $1',
         [sequenceId]
       );
@@ -175,7 +175,7 @@ class EmailAutomationService {
     try {
       const scheduledTime = new Date(Date.now() + step.delayHours * 3600000);
 
-      await pool.query(
+      await pool(
         `INSERT INTO email_schedule 
          (tenant_id, lead_id, assignment_id, sequence_id, step_index, scheduled_time, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -195,7 +195,7 @@ class EmailAutomationService {
   async processScheduledEmails() {
     try {
       // Obtener emails pendientes de envío
-      const pending = await pool.query(
+      const pending = await pool(
         `SELECT es.*, email_seq.steps 
          FROM email_schedule es
          JOIN email_sequences email_seq ON es.sequence_id = email_seq.id
@@ -209,7 +209,7 @@ class EmailAutomationService {
           const currentStep = steps[record.step_index];
 
           // Obtener email del lead
-          const lead = await pool.query(
+          const lead = await pool(
             'SELECT email FROM leads WHERE id = $1',
             [record.lead_id]
           );
@@ -229,7 +229,7 @@ class EmailAutomationService {
 
           if (result.success) {
             // Marcar como enviado
-            await pool.query(
+            await pool(
               'UPDATE email_schedule SET status = $1, sent_at = $2 WHERE id = $3',
               ['sent', new Date(), record.id]
             );
@@ -247,14 +247,14 @@ class EmailAutomationService {
               );
             } else {
               // Marcar secuencia como completa
-              await pool.query(
+              await pool(
                 `UPDATE email_sequence_assignments SET status = $1, completed_at = $2
                  WHERE id = $3`,
                 ['completed', new Date(), record.assignment_id]
               );
             }
           } else {
-            await pool.query(
+            await pool(
               'UPDATE email_schedule SET status = $1 WHERE id = $2',
               ['failed', record.id]
             );
@@ -275,7 +275,7 @@ class EmailAutomationService {
    */
   async getSequenceStats(tenantId, sequenceId) {
     try {
-      const stats = await pool.query(
+      const stats = await pool(
         `SELECT 
           COUNT(*) as total_sent,
           SUM(CASE WHEN opened_at IS NOT NULL THEN 1 ELSE 0 END) as opened,
@@ -350,4 +350,4 @@ class EmailAutomationService {
   }
 }
 
-module.exports = new EmailAutomationService();
+export default new EmailAutomationService();

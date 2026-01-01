@@ -4,10 +4,10 @@
  * Uses DeepSeek AI for intelligent analysis and classification.
  */
 
-const axios = require('axios');
-const pool = require('./db');
-const deepseekService = require('./deepseekService');
-const botDbService = require('./botDbService');
+import axios from 'axios';
+import { query as pool } from './db.js';
+import { getChatReply } from './deepseekService.js';
+import * as botDbService from './botDbService.js';
 
 // Categorías predeterminadas del pipeline
 const DEFAULT_CATEGORIES = {
@@ -354,7 +354,7 @@ async function saveAnalyzedChat(data) {
   } = data;
 
   try {
-    const result = await pool.query(
+    const result = await pool(
       `INSERT INTO analyzed_chats (
         tenant_id, bot_id, contact_phone, contact_name, contact_email,
         analysis_results, lead_score, pipeline_category,
@@ -404,7 +404,7 @@ async function saveAnalyzedChat(data) {
  */
 async function saveAnalysisDetails(chatId, tenantId, analysisResults) {
   try {
-    await pool.query(
+    await pool(
       `INSERT INTO chat_analysis_details (
         tenant_id, chat_id, raw_analysis,
         intent_classification, sentiment_score, engagement_level
@@ -429,7 +429,7 @@ async function saveAnalysisDetails(chatId, tenantId, analysisResults) {
  */
 async function getChatsByCategory(tenantId, category, limit = 50, offset = 0) {
   try {
-    const result = await pool.query(
+    const result = await pool(
       `SELECT 
         ac.*,
         u.email as assigned_to_email,
@@ -507,7 +507,7 @@ async function getAllAnalyzedChats(tenantId, filters = {}, limit = 100, offset =
     query += ` ORDER BY ac.lead_score DESC, ac.analyzed_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
     params.push(limit, offset);
 
-    const result = await pool.query(query, params);
+    const result = await pool(query, params);
     return result.rows;
   } catch (error) {
     console.error('Error obteniendo chats analizados:', error);
@@ -520,7 +520,7 @@ async function getAllAnalyzedChats(tenantId, filters = {}, limit = 100, offset =
  */
 async function getAnalyzedChatById(chatId, tenantId) {
   try {
-    const result = await pool.query(
+    const result = await pool(
       `SELECT 
         ac.*,
         u.email as assigned_to_email,
@@ -553,14 +553,14 @@ async function updateChatCategory(chatId, newCategory, tenantId, movedBy, reason
     const oldCategory = chat.pipeline_category;
 
     // Actualizar el chat
-    await pool.query(
+    await pool(
       `UPDATE analyzed_chats SET pipeline_category = $1, updated_at = CURRENT_TIMESTAMP
        WHERE id = $2 AND tenant_id = $3`,
       [newCategory, chatId, tenantId]
     );
 
     // Registrar el movimiento
-    await pool.query(
+    await pool(
       `INSERT INTO pipeline_movements (
         tenant_id, chat_id, from_category, to_category, moved_by, reason
       ) VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -579,7 +579,7 @@ async function updateChatCategory(chatId, newCategory, tenantId, movedBy, reason
  */
 async function assignChatToUser(chatId, userId, tenantId) {
   try {
-    const result = await pool.query(
+    const result = await pool(
       `UPDATE analyzed_chats 
        SET assigned_to = $1, assigned_at = CURRENT_TIMESTAMP, status = 'assigned', updated_at = CURRENT_TIMESTAMP
        WHERE id = $2 AND tenant_id = $3
@@ -610,7 +610,7 @@ async function getPipelineStatistics(tenantId, dateFrom = null, dateTo = null) {
       WHERE tenant_id = $1
         AND status IN ('analyzed', 'classified', 'assigned', 'converted')
         ${dateFrom ? 'AND created_at >= $2' : ''}
-        ${dateTo ? `AND created_at <= $${dateFrom ? '3' : '2'}` : ''}
+        ${dateTo ? `AND created_at <= ${dateFrom ? '$3' : '$2'}` : ''}
       GROUP BY pipeline_category
       ORDER BY COUNT(*) DESC
     `;
@@ -619,7 +619,7 @@ async function getPipelineStatistics(tenantId, dateFrom = null, dateTo = null) {
     if (dateFrom) params.push(dateFrom);
     if (dateTo) params.push(dateTo);
 
-    const result = await pool.query(query, params);
+    const result = await pool(query, params);
     return result.rows;
   } catch (error) {
     console.error('Error obteniendo estadísticas:', error);
@@ -627,7 +627,18 @@ async function getPipelineStatistics(tenantId, dateFrom = null, dateTo = null) {
   }
 }
 
-module.exports = {
+export {
+  analyzeChatConversation,
+  getChatsByCategory,
+  getAllAnalyzedChats,
+  getAnalyzedChatById,
+  updateChatCategory,
+  assignChatToUser,
+  getPipelineStatistics,
+  DEFAULT_CATEGORIES
+};
+
+export default {
   analyzeChatConversation,
   getChatsByCategory,
   getAllAnalyzedChats,

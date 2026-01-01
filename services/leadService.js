@@ -5,7 +5,7 @@
  * Phase 1: Database & Backend Foundation
  */
 
-const pool = require('./db');
+import { query as pool } from './db.js';
 
 /**
  * @typedef {Object} Lead
@@ -36,7 +36,7 @@ const pool = require('./db');
  * @returns {Promise<string>} Tenant UUID
  */
 async function getCurrentTenantId() {
-    const result = await pool.query(
+    const result = await pool(
         "SELECT current_setting('app.current_tenant', true)::uuid as tenant_id"
     );
     return result.rows[0]?.tenant_id;
@@ -68,7 +68,7 @@ async function createLead(data) {
     }
 
     // Check if lead already exists for this bot and phone
-    const existingLead = await pool.query(
+    const existingLead = await pool(
         `SELECT id FROM leads 
          WHERE tenant_id = $1 AND bot_id = $2 AND contact_phone = $3`,
         [tenantId, bot_id, contact_phone]
@@ -79,14 +79,14 @@ async function createLead(data) {
     }
 
     // Get default pipeline stage (first 'new' stage)
-    const defaultStage = await pool.query(
+    const defaultStage = await pool(
         `SELECT id FROM pipeline_stages 
          WHERE tenant_id = $1 AND stage_type = 'new' AND is_active = true 
          ORDER BY display_order ASC LIMIT 1`,
         [tenantId]
     );
 
-    const result = await pool.query(
+    const result = await pool(
         `INSERT INTO leads (
             tenant_id, bot_id, pipeline_stage_id, contact_phone, 
             contact_name, contact_email, source, tags, lead_score
@@ -228,7 +228,7 @@ async function getLeads(filters = {}, pagination = {}) {
 
     // Count total leads
     const countQuery = `SELECT COUNT(*) FROM leads l WHERE ${whereConditions.join(' AND ')}`;
-    const countResult = await pool.query(countQuery, params);
+    const countResult = await pool(countQuery, params);
     const total = parseInt(countResult.rows[0].count, 10);
 
     // Get leads with pagination
@@ -252,7 +252,7 @@ async function getLeads(filters = {}, pagination = {}) {
     `;
 
     params.push(limit, offset);
-    const result = await pool.query(selectQuery, params);
+    const result = await pool(selectQuery, params);
 
     return {
         leads: result.rows,
@@ -277,7 +277,7 @@ async function getLeadById(leadId) {
         throw new Error('Tenant context not available');
     }
 
-    const result = await pool.query(
+    const result = await pool(
         `SELECT l.*,
                 ps.display_name as stage_name,
                 ps.color_code as stage_color,
@@ -363,7 +363,7 @@ async function updateLead(leadId, data) {
     updateFields.push(`updated_at = NOW()`);
     params.push(leadId, tenantId);
 
-    const result = await pool.query(
+    const result = await pool(
         `UPDATE leads 
          SET ${updateFields.join(', ')}
          WHERE id = $${paramIndex++} AND tenant_id = $${paramIndex}
@@ -386,7 +386,7 @@ async function deleteLead(leadId) {
         throw new Error('Tenant context not available');
     }
 
-    const result = await pool.query(
+    const result = await pool(
         'DELETE FROM leads WHERE id = $1 AND tenant_id $2 RETURNING id',
         [leadId, tenantId]
     );
@@ -409,7 +409,7 @@ async function updateLeadStage(leadId, stageId, userId = null) {
     }
 
     // Get current stage
-    const currentLead = await pool.query(
+    const currentLead = await pool(
         'SELECT pipeline_stage_id FROM leads WHERE id = $1 AND tenant_id = $2',
         [leadId, tenantId]
     );
@@ -421,7 +421,7 @@ async function updateLeadStage(leadId, stageId, userId = null) {
     const oldStageId = currentLead.rows[0].pipeline_stage_id;
 
     // Update stage
-    const result = await pool.query(
+    const result = await pool(
         `UPDATE leads 
          SET pipeline_stage_id = $1, updated_at = NOW()
          WHERE id = $2 AND tenant_id = $3
@@ -436,13 +436,13 @@ async function updateLeadStage(leadId, stageId, userId = null) {
     }, userId);
 
     // If moving to 'won' stage, update qualification status
-    const stageResult = await pool.query(
+    const stageResult = await pool(
         'SELECT stage_type FROM pipeline_stages WHERE id = $1',
         [stageId]
     );
 
     if (stageResult.rows[0]?.stage_type === 'won') {
-        await pool.query(
+        await pool(
             `UPDATE leads 
              SET qualification_status = 'converted', converted_at = NOW(), updated_at = NOW()
              WHERE id = $1`,
@@ -453,7 +453,7 @@ async function updateLeadStage(leadId, stageId, userId = null) {
 
     // If moving to 'lost' stage, update qualification status
     if (stageResult.rows[0]?.stage_type === 'lost') {
-        await pool.query(
+        await pool(
             `UPDATE leads 
              SET qualification_status = 'disqualified', updated_at = NOW()
              WHERE id = $1`,
@@ -478,7 +478,7 @@ async function assignLead(leadId, userId) {
         throw new Error('Tenant context not available');
     }
 
-    const result = await pool.query(
+    const result = await pool(
         `UPDATE leads 
          SET assigned_to = $1, assigned_at = NOW(), updated_at = NOW()
          WHERE id = $2 AND tenant_id = $3
@@ -539,7 +539,7 @@ async function calculateLeadScore(leadId) {
     breakdown.completeness = completeness;
 
     // Activity scoring - count recent activities
-    const activityCount = await pool.query(
+    const activityCount = await pool(
         `SELECT COUNT(*) FROM lead_activities 
          WHERE lead_id = $1 AND created_at > NOW() - INTERVAL '7 days'`,
         [leadId]
@@ -548,7 +548,7 @@ async function calculateLeadScore(leadId) {
     breakdown.recent_activities = Math.min(recentActivities * 2, 10);
 
     // Conversation scoring
-    const messageCount = await pool.query(
+    const messageCount = await pool(
         `SELECT COUNT(*) FROM lead_conversations 
          WHERE lead_id = $1 AND message_direction = 'inbound'`,
         [leadId]
@@ -567,7 +567,7 @@ async function calculateLeadScore(leadId) {
         'lost': 0
     };
     
-    const stageResult = await pool.query(
+    const stageResult = await pool(
         `SELECT ps.stage_type FROM leads l
          JOIN pipeline_stages ps ON l.pipeline_stage_id = ps.id
          WHERE l.id = $1`,
@@ -580,7 +580,7 @@ async function calculateLeadScore(leadId) {
     totalScore = Math.min(totalScore, 100); // Cap at 100
 
     // Update lead with new score
-    await pool.query(
+    await pool(
         `UPDATE leads SET lead_score = $1, score_breakdown = $2, updated_at = NOW()
          WHERE id = $3`,
         [totalScore, JSON.stringify(breakdown), leadId]
@@ -607,7 +607,7 @@ async function qualifyLead(leadId) {
         throw new Error('Tenant context not available');
     }
 
-    const result = await pool.query(
+    const result = await pool(
         `UPDATE leads 
          SET qualification_status = 'qualified', updated_at = NOW()
          WHERE id = $1 AND tenant_id = $2
@@ -653,7 +653,7 @@ async function getLeadConversations(leadId, options = {}) {
     query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(limit, offset);
 
-    const result = await pool.query(query, params);
+    const result = await pool(query, params);
     return result.rows;
 }
 
@@ -666,7 +666,7 @@ async function getLeadConversations(leadId, options = {}) {
  */
 async function addLeadNote(leadId, note, userId = null) {
     // Update lead notes
-    await pool.query(
+    await pool(
         `UPDATE leads SET notes = CONCAT(COALESCE(notes, ''), '\n', $1), updated_at = NOW()
          WHERE id = $2`,
         [note, leadId]
@@ -685,7 +685,7 @@ async function addLeadNote(leadId, note, userId = null) {
  * @returns {Promise<Object>} Activity record
  */
 async function logActivity(leadId, activityType, activityData = {}, performedBy = null) {
-    const result = await pool.query(
+    const result = await pool(
         `INSERT INTO lead_activities (lead_id, activity_type, activity_data, performed_by)
          VALUES ($1, $2, $3, $4)
          RETURNING *`,
@@ -702,7 +702,7 @@ async function logActivity(leadId, activityType, activityData = {}, performedBy 
  * @returns {Promise<Object[]>} Activities
  */
 async function getLeadActivities(leadId, limit = 50) {
-    const result = await pool.query(
+    const result = await pool(
         `SELECT la.*, au.name as user_name, au.email as user_email
          FROM lead_activities la
          LEFT JOIN auth_users au ON la.performed_by = au.id
@@ -744,12 +744,12 @@ async function getLeadsByStage(pipelineId = null) {
 
     query += ` GROUP BY ps.id ORDER BY ps.display_order`;
 
-    const result = await pool.query(query, params);
+    const result = await pool(query, params);
 
     // Get leads for each stage
     const stagesWithLeads = await Promise.all(
         result.rows.map(async (stage) => {
-            const leadsResult = await pool.query(
+            const leadsResult = await pool(
                 `SELECT l.*, 
                         au.name as assigned_user_name
                  FROM leads l
@@ -770,7 +770,23 @@ async function getLeadsByStage(pipelineId = null) {
     return stagesWithLeads;
 }
 
-module.exports = {
+export {
+    createLead,
+    getLeads,
+    getLeadById,
+    updateLead,
+    deleteLead,
+    updateLeadStage,
+    assignLead,
+    calculateLeadScore,
+    qualifyLead,
+    getLeadConversations,
+    addLeadNote,
+    getLeadActivities,
+    getLeadsByStage
+};
+
+export default {
     createLead,
     getLeads,
     getLeadById,

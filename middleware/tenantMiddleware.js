@@ -1,5 +1,5 @@
 // middleware/tenantMiddleware.js
-const { runWithTenant } = require('../services/db');
+import { runWithTenant } from '../services/db.js';
 
 /**
  * Middleware to establish the tenant context for the request.
@@ -31,4 +31,4 @@ const tenantMiddleware = (req, res, next) => {
     }
 };
 
-module.exports = tenantMiddleware;
+export default tenantMiddleware;

@@ -1,6 +1,6 @@
 // services/schedulerExecutor.js
-const schedulerService = require('./schedulerService');
-const db = require('./db');
+import schedulerService from './schedulerService.js';
+import db from './db.js';
 
 let executorInterval = null;
 let cleanupInterval = null;
@@ -128,7 +128,14 @@ async function runDataMinimization() {
     }
 }
 
-module.exports = {
+export {
+    startSchedulerExecutor,
+    stopSchedulerExecutor,
+    checkAndExecutePendingTasks,
+    runDataMinimization
+};
+
+export default {
     startSchedulerExecutor,
     stopSchedulerExecutor,
     checkAndExecutePendingTasks,

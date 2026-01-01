@@ -1,5 +1,5 @@
 // services/botDbService.js
-const pool = require('./db');
+import { pool } from './db.js';
 
 /**
  * Normalizar bot object para el frontend
@@ -129,7 +129,19 @@ async function deleteBotById(id) {
     await pool.query(query, [id]);
 }
 
-module.exports = {
+export {
+    addBot,
+    getBotById,
+    getAllBots,
+    getBotsByOwner,
+    getBotByIdAndOwner,
+    getLastPort,
+    updateBotStatus,
+    deleteBotById,
+    updateBotPrompt
+};
+
+export default {
     addBot,
     getBotById,
     getAllBots,

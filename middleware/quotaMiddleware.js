@@ -1,5 +1,5 @@
 // middleware/quotaMiddleware.js
-const subscriptionService = require('../services/subscriptionService');
+import subscriptionService from '../services/subscriptionService.js';
 
 /**
  * Middleware para verificar cuota de bots
@@ -118,7 +118,7 @@ const checkTrialExpiry = async (req, res, next) => {
     }
 };
 
-module.exports = {
+export {
     checkBotQuota,
     checkLeadsQuota,
     checkTrialExpiry

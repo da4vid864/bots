@@ -1,6 +1,8 @@
 // services/db.js
-const { Pool } = require('pg');
-const { AsyncLocalStorage } = require('async_hooks');
+import pg from 'pg';
+import { AsyncLocalStorage } from 'async_hooks';
+
+const { Pool } = pg;
 
 // AsyncLocalStorage to store tenant context per request/execution flow
 const tenantStorage = new AsyncLocalStorage();
@@ -10,7 +12,7 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-const pool = new Pool({
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: false
@@ -25,7 +27,7 @@ const pool = new Pool({
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Helper to safely set tenant context using parameterized queries
-async function setTenantContext(client, tenantId) {
+export async function setTenantContext(client, tenantId) {
   if (!tenantId) {
     // Clear tenant context
     await client.query("RESET app.current_tenant");
@@ -45,7 +47,7 @@ async function setTenantContext(client, tenantId) {
 }
 
 // Wrapper to execute code within a tenant context
-const runWithTenant = (tenantId, callback) => {
+export const runWithTenant = (tenantId, callback) => {
   return tenantStorage.run(tenantId, callback);
 };
 
@@ -111,11 +113,17 @@ pool.on('error', (err) => {
   console.error('❌ Error inesperado en PostgreSQL:', err);
 });
 
-module.exports = {
-  query: pool.query,
-  pool, // Export the modified pool
-  runWithTenant,
-  setTenantContext,
-  // Helper to expose the raw pool if absolutely needed
-  rawPool: pool
+export const query = pool.query;
+export const dbPool = pool;
+export const dbRunWithTenant = runWithTenant;
+export const dbSetTenantContext = setTenantContext;
+export const rawPool = pool;
+
+export default {
+  query,
+  pool,
+  dbPool,
+  dbRunWithTenant,
+  dbSetTenantContext,
+  rawPool
 };

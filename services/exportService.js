@@ -3,9 +3,13 @@
  * Servicio para exportar datos de clientes y chats analizados en diferentes formatos
  */
 
-const fs = require('fs');
-const path = require('path');
-const pool = require('./db');
+import fs from 'fs';
+import path from 'path';
+import { query as pool } from './db.js';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Convertir array de objetos a CSV
@@ -71,7 +75,7 @@ async function exportAnalyzedChatsToCSV(tenantId) {
       ORDER BY ac.lead_score DESC, ac.updated_at DESC
     `;
 
-    const result = await pool.query(query, [tenantId]);
+    const result = await pool(query, [tenantId]);
     const data = result.rows;
 
     // Formatear datos para CSV
@@ -135,7 +139,7 @@ async function exportChatsByCategoryToCSV(tenantId, category) {
       ORDER BY ac.lead_score DESC
     `;
 
-    const result = await pool.query(query, [tenantId, category]);
+    const result = await pool(query, [tenantId, category]);
     const data = result.rows;
 
     const csvData = data.map(row => ({
@@ -195,7 +199,7 @@ async function exportHighValueLeadsToCSV(tenantId, minScore = 70) {
       ORDER BY ac.lead_score DESC
     `;
 
-    const result = await pool.query(query, [tenantId, minScore]);
+    const result = await pool(query, [tenantId, minScore]);
     const data = result.rows;
 
     const csvData = data.map(row => ({
@@ -243,7 +247,7 @@ async function exportStatisticsToCSV(tenantId) {
       ORDER BY ps.month_year DESC
     `;
 
-    const result = await pool.query(query, [tenantId]);
+    const result = await pool(query, [tenantId]);
     const data = result.rows;
 
     const csvData = data.map(row => ({
@@ -322,7 +326,7 @@ async function exportAssignedChatsToCSV(tenantId, assignedTo) {
       ORDER BY ac.lead_score DESC
     `;
 
-    const result = await pool.query(query, [tenantId, assignedTo]);
+    const result = await pool(query, [tenantId, assignedTo]);
     const data = result.rows;
 
     const csvData = data.map(row => ({
@@ -351,7 +355,17 @@ async function exportAssignedChatsToCSV(tenantId, assignedTo) {
   }
 }
 
-module.exports = {
+export {
+  convertToCSV,
+  exportAnalyzedChatsToCSV,
+  exportChatsByCategoryToCSV,
+  exportHighValueLeadsToCSV,
+  exportStatisticsToCSV,
+  saveCSVFile,
+  exportAssignedChatsToCSV
+};
+
+export default {
   convertToCSV,
   exportAnalyzedChatsToCSV,
   exportChatsByCategoryToCSV,

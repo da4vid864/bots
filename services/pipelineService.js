@@ -1,5 +1,5 @@
 // services/pipelineService.js
-const pool = require('./db');
+import { query as pool, dbPool as poolObj } from './db.js';
 
 /**
  * Retrieves all pipelines for the current tenant.
@@ -9,7 +9,7 @@ const pool = require('./db');
  */
 async function getPipelines() {
     // 1. Get Pipelines
-    const pipelinesResult = await pool.query(
+    const pipelinesResult = await pool(
         `SELECT * FROM pipelines 
          WHERE tenant_id = COALESCE(current_setting('app.current_tenant', true), '')::uuid 
          ORDER BY is_default DESC, created_at ASC`
@@ -22,7 +22,7 @@ async function getPipelines() {
 
     // 2. Get Stages for all retrieved pipelines
     const pipelineIds = pipelines.map(p => p.id);
-    const stagesResult = await pool.query(
+    const stagesResult = await pool(
         `SELECT * FROM pipeline_stages 
          WHERE pipeline_id = ANY($1::uuid[]) 
          ORDER BY position ASC`,
@@ -44,7 +44,7 @@ async function getPipelines() {
  * @returns {Promise<Object>} The created pipeline with stages
  */
 async function createPipeline(name) {
-    const client = await pool.connect();
+    const client = await poolObj.connect();
     try {
         await client.query('BEGIN');
 
@@ -97,7 +97,7 @@ async function createPipeline(name) {
  * @param {Array<{id: string, position: number}>} stageUpdates 
  */
 async function reorderStages(stageUpdates) {
-    const client = await pool.connect();
+    const client = await poolObj.connect();
     try {
         await client.query('BEGIN');
         
@@ -129,7 +129,7 @@ async function reorderStages(stageUpdates) {
  * @param {string} userEmail - For audit
  */
 async function moveLead(leadId, pipelineId, stageId, userEmail) {
-    const client = await pool.connect();
+    const client = await poolObj.connect();
     try {
         await client.query('BEGIN');
 
@@ -167,7 +167,14 @@ async function moveLead(leadId, pipelineId, stageId, userEmail) {
     }
 }
 
-module.exports = {
+export {
+    getPipelines,
+    createPipeline,
+    reorderStages,
+    moveLead
+};
+
+export default {
     getPipelines,
     createPipeline,
     reorderStages,

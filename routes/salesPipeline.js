@@ -5,10 +5,10 @@
  * Phase 1: Database & Backend Foundation
  */
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const pipelineStageService = require('../services/pipelineStageService');
-const sseController = require('../controllers/sseController');
+import pipelineStageService from '../services/pipelineStageService.js';
+import sseController from '../controllers/sseController.js';
 
 /**
  * Middleware to get tenant ID from request
@@ -303,4 +303,4 @@ router.get('/stats', async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

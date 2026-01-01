@@ -1,4 +1,4 @@
-const complianceService = require('../services/complianceService');
+import complianceService from '../services/complianceService.js';
 
 /**
  * Submit a new privacy request
@@ -98,7 +98,13 @@ async function reviewRequest(req, res) {
     }
 }
 
-module.exports = {
+export {
+  submitRequest,
+  listRequests,
+  reviewRequest
+};
+
+export default {
   submitRequest,
   listRequests,
   reviewRequest

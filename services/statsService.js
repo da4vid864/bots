@@ -1,7 +1,7 @@
 // services/statsService.js
-const pool = require('./db');
-const botDbService = require('./botDbService');
-const baileysManager = require('./baileysManager');
+import { query as pool } from './db.js';
+import * as botDbService from './botDbService.js';
+import * as baileysManager from './baileysManager.js';
 
 const QUALIFIED_SCORE_THRESHOLD = Number(process.env.QUALIFIED_SCORE_THRESHOLD || 70);
 
@@ -12,7 +12,7 @@ let _columnCache = {
 };
 
 async function detectLeadColumns() {
-  const res = await pool.query(
+  const res = await pool(
     `
     SELECT column_name
     FROM information_schema.columns
@@ -64,7 +64,7 @@ async function getDashboardStats(ownerEmail) {
   }
 
   // 2) Leads totales
-  const totalLeadsRes = await pool.query(
+  const totalLeadsRes = await pool(
     `SELECT COUNT(*)::int AS count
      FROM leads
      WHERE bot_id = ANY($1::text[])`,
@@ -75,7 +75,7 @@ async function getDashboardStats(ownerEmail) {
   let qualifiedLeadsCount = 0;
 
   if (_columnCache.hasIsQualified) {
-    const qualifiedLeadsRes = await pool.query(
+    const qualifiedLeadsRes = await pool(
       `SELECT COUNT(*)::int AS count
        FROM leads
        WHERE bot_id = ANY($1::text[])
@@ -84,7 +84,7 @@ async function getDashboardStats(ownerEmail) {
     );
     qualifiedLeadsCount = qualifiedLeadsRes.rows[0]?.count || 0;
   } else if (_columnCache.hasScore) {
-    const qualifiedLeadsRes = await pool.query(
+    const qualifiedLeadsRes = await pool(
       `SELECT COUNT(*)::int AS count
        FROM leads
        WHERE bot_id = ANY($1::text[])
@@ -96,14 +96,14 @@ async function getDashboardStats(ownerEmail) {
     qualifiedLeadsCount = 0;
   }
 
-// 4) Leads creados hoy (en tu esquema real: captured_at)
-const todayLeadsRes = await pool.query(
-  `SELECT COUNT(*)::int AS count
-   FROM leads
-   WHERE bot_id = ANY($1::text[])
-     AND captured_at::date = CURRENT_DATE`,
-  [botIds]
-);
+  // 4) Leads creados hoy (en tu esquema real: captured_at)
+  const todayLeadsRes = await pool(
+    `SELECT COUNT(*)::int AS count
+     FROM leads
+     WHERE bot_id = ANY($1::text[])
+       AND captured_at::date = CURRENT_DATE`,
+    [botIds]
+  );
 
   return {
     botsTotal: bots.length,
@@ -115,4 +115,6 @@ const todayLeadsRes = await pool.query(
   };
 }
 
-module.exports = { getDashboardStats };
+export { getDashboardStats };
+
+export default { getDashboardStats };

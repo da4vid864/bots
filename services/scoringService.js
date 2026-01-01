@@ -1,12 +1,12 @@
 // services/scoringService.js
-const pool = require('./db');
+import { query as pool } from './db.js';
 
 /**
  * Obtiene las reglas de scoring activas para un bot
  */
 async function getScoringRules(botId) {
     try {
-        const result = await pool.query(
+        const result = await pool(
             'SELECT * FROM scoring_rules WHERE bot_id = $1 ORDER BY id ASC',
             [botId]
         );
@@ -77,7 +77,7 @@ async function applyScoring(leadId, evaluationResult) {
 
     try {
         // 1. Obtener lead actual para ver sus tags
-        const leadRes = await pool.query('SELECT tags, score FROM leads WHERE id = $1', [leadId]);
+        const leadRes = await pool('SELECT tags, score FROM leads WHERE id = $1', [leadId]);
         if (leadRes.rows.length === 0) return null;
         
         const currentLead = leadRes.rows[0];
@@ -90,7 +90,7 @@ async function applyScoring(leadId, evaluationResult) {
         const newTags = [...new Set([...currentTags, ...evaluationResult.tags])];
 
         // 3. Actualizar DB
-        const updateRes = await pool.query(
+        const updateRes = await pool(
             'UPDATE leads SET score = $1, tags = $2 WHERE id = $3 RETURNING *',
             [newScore, newTags, leadId]
         );
@@ -108,7 +108,7 @@ async function applyScoring(leadId, evaluationResult) {
 async function createScoringRule(botId, ruleData) {
     const { keyword, match_type, points, response_message, tag_to_add } = ruleData;
     
-    const result = await pool.query(
+    const result = await pool(
         `INSERT INTO scoring_rules
         (bot_id, keyword, match_type, points, response_message, tag_to_add, tenant_id)
         VALUES ($1, $2, $3, $4, $5, $6, COALESCE(current_setting('app.current_tenant', true), '')::uuid)
@@ -123,13 +123,21 @@ async function createScoringRule(botId, ruleData) {
  * Elimina una regla de scoring
  */
 async function deleteScoringRule(ruleId, botId) {
-    await pool.query(
+    await pool(
         'DELETE FROM scoring_rules WHERE id = $1 AND bot_id = $2',
         [ruleId, botId]
     );
 }
 
-module.exports = {
+export {
+    getScoringRules,
+    evaluateMessage,
+    applyScoring,
+    createScoringRule,
+    deleteScoringRule
+};
+
+export default {
     getScoringRules,
     evaluateMessage,
     applyScoring,

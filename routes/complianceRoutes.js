@@ -1,8 +1,8 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const complianceController = require('../controllers/complianceController');
-const complianceAlertsService = require('../services/complianceAlertsService');
-const { requireAuth, requireAdmin } = require('../auth/authMiddleware');
+import complianceController from '../controllers/complianceController.js';
+import complianceAlertsService from '../services/complianceAlertsService.js';
+import { requireAuth, requireAdmin } from '../auth/authMiddleware.js';
 
 // ========== Rutas Legacy ==========
 // Submit a request (Access, Rectify, Cancel, Oppose)
@@ -217,4 +217,4 @@ router.post('/start-monitoring', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

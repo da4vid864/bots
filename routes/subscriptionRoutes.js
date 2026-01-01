@@ -1,8 +1,8 @@
 // routes/subscriptionRoutes.js
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const subscriptionService = require('../services/subscriptionService');
-const { requireAuth } = require('../auth/authMiddleware');
+import subscriptionService from '../services/subscriptionService.js';
+import { requireAuth } from '../auth/authMiddleware.js';
 
 // 1. INICIAR COMPRA / TRIAL
 router.get('/purchase/pro', async (req, res) => {
@@ -63,4 +63,4 @@ router.get('/portal', requireAuth, async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

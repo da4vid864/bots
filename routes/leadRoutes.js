@@ -3,11 +3,11 @@
  * API endpoints para manejo de leads en el pipeline
  */
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const leadDbService = require('../services/leadDbService');
-const pipelineService = require('../services/pipelineService');
-const sseController = require('../controllers/sseController');
+import leadDbService from '../services/leadDbService.js';
+import pipelineService from '../services/pipelineService.js';
+import sseController from '../controllers/sseController.js';
 
 /**
  * GET /api/leads
@@ -191,4 +191,4 @@ router.post('/:id/assign', async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

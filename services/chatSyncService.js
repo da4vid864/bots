@@ -1,15 +1,15 @@
 // services/chatSyncService.js
-const { extractLeadInfo } = require('./leadExtractionService');
-const scoringService = require('./scoringService');
-const sseController = require('../controllers/sseController');
-const {
+import { extractLeadInfo } from './leadExtractionService.js';
+import scoringService from './scoringService.js';
+import sseController from '../controllers/sseController.js';
+import {
     getOrCreateLead,
     updateLeadInfo,
     addLeadMessage,
     getLeadMessages,
     isLeadComplete,
     qualifyLead,
-} = require('./leadDbService');
+} from './leadDbService.js';
 
 /**
  * Sincroniza chats existentes de WhatsApp cuando el bot se conecta
@@ -301,7 +301,13 @@ async function syncSingleChat(botId, socket, chatId, session) {
     }
 }
 
-module.exports = {
+export {
+    syncExistingChats,
+    syncSingleChat,
+    extractAndUpdateLead,
+};
+
+export default {
     syncExistingChats,
     syncSingleChat,
     extractAndUpdateLead,

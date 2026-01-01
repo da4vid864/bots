@@ -1,6 +1,8 @@
 // services/subscriptionService.js
-const pool = require('./db');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+import { query as pool } from './db.js';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Planes Freemium
 const PLANS = {
@@ -24,14 +26,14 @@ const PLANS = {
  */
 async function getOrCreateSubscription(userEmail) {
     try {
-        let result = await pool.query(
+        let result = await pool(
             'SELECT * FROM subscriptions WHERE user_email = $1',
             [userEmail]
         );
 
         if (result.rows.length === 0) {
             // Crear suscripción gratuita por defecto
-            result = await pool.query(
+            result = await pool(
                 'INSERT INTO subscriptions (user_email, plan, status, bot_limit) VALUES ($1, $2, $3, $4) RETURNING *',
                 [userEmail, 'free', 'active', 1]
             );
@@ -40,12 +42,12 @@ async function getOrCreateSubscription(userEmail) {
             const sub = result.rows[0];
             if (sub.status === 'trial' && sub.trial_ends_at && new Date() > new Date(sub.trial_ends_at)) {
                 console.log(`⏳ Trial expirado para ${userEmail}. Regresando a Free.`);
-                await pool.query(
+                await pool(
                     "UPDATE subscriptions SET plan = 'free', status = 'active', bot_limit = 1, trial_ends_at = NULL WHERE user_email = $1",
                     [userEmail]
                 );
                 // Refetch
-                result = await pool.query('SELECT * FROM subscriptions WHERE user_email = $1', [userEmail]);
+                result = await pool('SELECT * FROM subscriptions WHERE user_email = $1', [userEmail]);
             }
         }
 
@@ -73,7 +75,7 @@ async function activateProTrial(userEmail) {
         const trialEndsAt = new Date();
         trialEndsAt.setDate(trialEndsAt.getDate() + trialDays);
 
-        const result = await pool.query(
+        const result = await pool(
             "UPDATE subscriptions SET plan = 'pro', status = 'trial', bot_limit = -1, trial_ends_at = $1 WHERE user_email = $2 RETURNING *",
             [trialEndsAt, userEmail]
         );
@@ -136,7 +138,7 @@ async function createCheckoutSession(userEmail, successUrl, cancelUrl) {
             });
             customerId = customer.id;
             
-            await pool.query(
+            await pool(
                 'UPDATE subscriptions SET stripe_customer_id = $1 WHERE user_email = $2',
                 [customerId, userEmail]
             );
@@ -203,7 +205,7 @@ async function updateSubscriptionFromStripe(stripeSubscriptionId) {
         const customer = await stripe.customers.retrieve(customerId);
         const userEmail = customer.email;
         
-        await pool.query(`
+        await pool(`
             UPDATE subscriptions 
             SET stripe_subscription_id = $1,
                 plan = 'pro',
@@ -238,7 +240,7 @@ async function handleSubscriptionCanceled(stripeSubscriptionId) {
         const customer = await stripe.customers.retrieve(customerId);
         const userEmail = customer.email;
 
-        await pool.query(`
+        await pool(`
             UPDATE subscriptions 
             SET plan = 'free',
                 status = 'canceled',
@@ -256,7 +258,19 @@ async function handleSubscriptionCanceled(stripeSubscriptionId) {
     }
 }
 
-module.exports = {
+export {
+    PLANS,
+    getOrCreateSubscription,
+    canCreateBot,
+    getBotLimitInfo,
+    createCheckoutSession,
+    createBillingPortalSession,
+    updateSubscriptionFromStripe,
+    handleSubscriptionCanceled,
+    activateProTrial
+};
+
+export default {
     PLANS,
     getOrCreateSubscription,
     canCreateBot,

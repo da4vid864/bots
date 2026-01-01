@@ -3,10 +3,10 @@
  * Servicio para persistir y recuperar sesiones de Baileys entre reinicios
  */
 
-const fs = require('fs');
-const path = require('path');
-const pool = require('./db');
-const { hasValidDBSession, clearDBSession } = require('./baileysAuthService');
+import fs from 'fs';
+import path from 'path';
+import { query as pool } from './db.js';
+import { hasValidDBSession, clearDBSession } from './baileysAuthService.js';
 
 const SESSION_STORAGE_TABLE = 'bot_sessions';
 
@@ -25,7 +25,7 @@ async function hasValidSessionCredentials(botId) {
 
   // 2. Fallback to filesystem (Legacy/Migration)
   try {
-    const authDir = path.join(__dirname, '..', 'auth-sessions', botId);
+    const authDir = path.join(process.cwd(), 'auth-sessions', botId);
     
     if (!fs.existsSync(authDir)) {
       return false;
@@ -67,7 +67,7 @@ async function saveSessionMetadata(botId, data) {
         metadata = EXCLUDED.metadata
     `;
 
-    await pool.query(query, [
+    await pool(query, [
       botId,
       data.phoneNumber || null,
       data.authenticatedAt || new Date(),
@@ -92,7 +92,7 @@ async function saveSessionMetadata(botId, data) {
  */
 async function getSessionMetadata(botId) {
   try {
-    const result = await pool.query(
+    const result = await pool(
       'SELECT * FROM bot_sessions WHERE bot_id = $1',
       [botId]
     );
@@ -115,7 +115,7 @@ async function cleanInvalidSession(botId) {
     await clearDBSession(botId);
 
     // Clean local files (legacy)
-    const authDir = path.join(__dirname, '..', 'auth-sessions', botId);
+    const authDir = path.join(process.cwd(), 'auth-sessions', botId);
     if (fs.existsSync(authDir)) {
       const backupDir = `${authDir}.backup.${Date.now()}`;
       fs.renameSync(authDir, backupDir);
@@ -135,14 +135,14 @@ async function cleanInvalidSession(botId) {
  */
 function exportSessionBackup(botId, exportPath = null) {
   try {
-    const authDir = path.join(__dirname, '..', 'auth-sessions', botId);
+    const authDir = path.join(process.cwd(), 'auth-sessions', botId);
     
     if (!fs.existsSync(authDir)) {
       console.log(`[${botId}] ⚠️  No hay sesión para exportar`);
       return null;
     }
 
-    const backupPath = exportPath || path.join(__dirname, '..', 'session-backups', `${botId}.backup.json`);
+    const backupPath = exportPath || path.join(process.cwd(), 'session-backups', `${botId}.backup.json`);
     const backupDir = path.dirname(backupPath);
 
     if (!fs.existsSync(backupDir)) {
@@ -198,7 +198,7 @@ function restoreSessionFromBackup(botId, backupPath) {
  */
 async function cleanupOldSessions() {
   try {
-    const result = await pool.query(`
+    const result = await pool(`
       DELETE FROM bot_sessions 
       WHERE last_activity < NOW() - INTERVAL '30 days'
       RETURNING bot_id
@@ -214,7 +214,17 @@ async function cleanupOldSessions() {
   }
 }
 
-module.exports = {
+export {
+  hasValidSessionCredentials,
+  saveSessionMetadata,
+  getSessionMetadata,
+  cleanInvalidSession,
+  exportSessionBackup,
+  restoreSessionFromBackup,
+  cleanupOldSessions,
+};
+
+export default {
   hasValidSessionCredentials,
   saveSessionMetadata,
   getSessionMetadata,

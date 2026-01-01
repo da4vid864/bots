@@ -1,12 +1,12 @@
 // services/initDb.js
-const pool = require('./db');
+import { query as pool } from './db.js';
 
 async function initializeDatabase() {
     console.log('🔄 Inicializando base de datos...');
     
     try {
         // 1. Tabla de usuarios
-        await pool.query(`
+        await pool(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 email TEXT NOT NULL UNIQUE,
@@ -20,7 +20,7 @@ async function initializeDatabase() {
         console.log('✅ Tabla users verificada');
 
         // 2. Tabla de bots
-        await pool.query(`
+        await pool(`
             CREATE TABLE IF NOT EXISTS bots (
                 id TEXT PRIMARY KEY NOT NULL,
                 name TEXT NOT NULL,
@@ -34,7 +34,7 @@ async function initializeDatabase() {
         console.log('✅ Tabla bots verificada');
 
         // 3. Tabla de leads
-        await pool.query(`
+        await pool(`
             CREATE TABLE IF NOT EXISTS leads (
                 id SERIAL PRIMARY KEY,
                 bot_id TEXT NOT NULL,
@@ -54,7 +54,7 @@ async function initializeDatabase() {
         console.log('✅ Tabla leads verificada');
 
         // 4. Tabla de mensajes de leads
-        await pool.query(`
+        await pool(`
             CREATE TABLE IF NOT EXISTS lead_messages (
                 id SERIAL PRIMARY KEY,
                 lead_id INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
@@ -66,7 +66,7 @@ async function initializeDatabase() {
         console.log('✅ Tabla lead_messages verificada');
 
         // 5. Tabla de features
-        await pool.query(`
+        await pool(`
             CREATE TABLE IF NOT EXISTS bot_features (
                 id SERIAL PRIMARY KEY,
                 bot_id TEXT NOT NULL UNIQUE,
@@ -82,7 +82,7 @@ async function initializeDatabase() {
         console.log('✅ Tabla bot_features verificada');
 
         // 6. Tabla de schedules
-        await pool.query(`
+        await pool(`
             CREATE TABLE IF NOT EXISTS schedules (
                 id SERIAL PRIMARY KEY,
                 bot_id TEXT NOT NULL,
@@ -98,7 +98,7 @@ async function initializeDatabase() {
         console.log('✅ Tabla schedules verificada');
 
         // 7. Tabla de imágenes del bot
-        await pool.query(`
+        await pool(`
             CREATE TABLE IF NOT EXISTS bot_images (
                 id SERIAL PRIMARY KEY,
                 bot_id TEXT NOT NULL,
@@ -111,7 +111,7 @@ async function initializeDatabase() {
         console.log('✅ Tabla bot_images verificada');
 
         // === 8. NUEVA TABLA DE SUSCRIPCIONES (AQUÍ ESTABA EL ERROR) ===
-        await pool.query(`
+        await pool(`
             CREATE TABLE IF NOT EXISTS subscriptions (
                 id SERIAL PRIMARY KEY,
                 user_email TEXT NOT NULL UNIQUE,
@@ -128,7 +128,7 @@ async function initializeDatabase() {
         `);
         
         // Migración para agregar trial_ends_at si no existe
-        await pool.query(`
+        await pool(`
             ALTER TABLE subscriptions
             ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMP;
         `);
@@ -136,7 +136,7 @@ async function initializeDatabase() {
         console.log('✅ Tabla subscriptions verificada (NUEVA)');
 
         // 9. Tabla de reglas de scoring
-        await pool.query(`
+        await pool(`
             CREATE TABLE IF NOT EXISTS scoring_rules (
                 id SERIAL PRIMARY KEY,
                 bot_id TEXT NOT NULL,
@@ -152,7 +152,7 @@ async function initializeDatabase() {
         console.log('✅ Tabla scoring_rules verificada');
 
         // 10. Tabla de productos
-        await pool.query(`
+        await pool(`
             CREATE TABLE IF NOT EXISTS products (
                 id SERIAL PRIMARY KEY,
                 bot_id TEXT NOT NULL,
@@ -172,7 +172,7 @@ async function initializeDatabase() {
         console.log('✅ Tabla products verificada');
 
         // 11. Migración de columnas para leads (score y tags)
-        await pool.query(`
+        await pool(`
             ALTER TABLE leads
             ADD COLUMN IF NOT EXISTS score INTEGER DEFAULT 0,
             ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
@@ -187,4 +187,6 @@ async function initializeDatabase() {
     }
 }
 
-module.exports = { initializeDatabase };
+export { initializeDatabase };
+
+export default { initializeDatabase };

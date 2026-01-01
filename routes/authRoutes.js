@@ -1,7 +1,7 @@
 // routes/authRoutes.js
-const express = require('express');
-const passport = require('passport');
-const { handleGoogleCallback, logout } = require('../auth/authController');
+import express from 'express';
+import passport from 'passport';
+import { handleGoogleCallback, logout } from '../auth/authController.js';
 const router = express.Router();
 
 // Redirige al usuario a Google para iniciar sesión
@@ -19,4 +19,4 @@ router.get('/google/callback',
 // Cierra la sesión del usuario
 router.get('/logout', logout);
 
-module.exports = router;
+export default router;

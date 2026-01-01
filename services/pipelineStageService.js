@@ -5,7 +5,7 @@
  * Phase 1: Database & Backend Foundation
  */
 
-const pool = require('./db');
+import { query as pool } from './db.js';
 
 /**
  * @typedef {Object} PipelineStage
@@ -27,7 +27,7 @@ const pool = require('./db');
  * @returns {Promise<string>} Tenant UUID
  */
 async function getCurrentTenantId() {
-    const result = await pool.query(
+    const result = await pool(
         "SELECT current_setting('app.current_tenant', true)::uuid as tenant_id"
     );
     return result.rows[0]?.tenant_id;
@@ -57,7 +57,7 @@ async function getPipelineStages(activeOnly = true) {
 
     query += ` ORDER BY display_order ASC`;
 
-    const result = await pool.query(query, params);
+    const result = await pool(query, params);
     return result.rows;
 }
 
@@ -73,7 +73,7 @@ async function getStageById(stageId) {
         throw new Error('Tenant context not available');
     }
 
-    const result = await pool.query(
+    const result = await pool(
         'SELECT * FROM pipeline_stages WHERE id = $1 AND tenant_id = $2',
         [stageId, tenantId]
     );
@@ -113,7 +113,7 @@ async function createStage(data) {
     }
 
     // Check for duplicate name
-    const existing = await pool.query(
+    const existing = await pool(
         'SELECT id FROM pipeline_stages WHERE tenant_id = $1 AND name = $2',
         [tenantId, name]
     );
@@ -125,14 +125,14 @@ async function createStage(data) {
     // Get next display order if not provided
     let order = display_order;
     if (order === undefined || order === null) {
-        const maxOrder = await pool.query(
+        const maxOrder = await pool(
             'SELECT MAX(display_order) FROM pipeline_stages WHERE tenant_id = $1',
             [tenantId]
         );
         order = (maxOrder.rows[0].max || 0) + 1;
     }
 
-    const result = await pool.query(
+    const result = await pool(
         `INSERT INTO pipeline_stages (
             tenant_id, name, display_name, description, color_code, stage_type, display_order
         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -211,7 +211,7 @@ async function updateStage(stageId, data) {
     updateFields.push(`updated_at = NOW()`);
     params.push(stageId, tenantId);
 
-    const result = await pool.query(
+    const result = await pool(
         `UPDATE pipeline_stages 
          SET ${updateFields.join(', ')}
          WHERE id = $${paramIndex++} AND tenant_id = $${paramIndex}
@@ -239,7 +239,7 @@ async function deleteStage(stageId) {
     }
 
     // Check if any leads are in this stage
-    const leadsInStage = await pool.query(
+    const leadsInStage = await pool(
         'SELECT COUNT(*) FROM leads WHERE pipeline_stage_id = $1 AND tenant_id = $2',
         [stageId, tenantId]
     );
@@ -248,7 +248,7 @@ async function deleteStage(stageId) {
         throw new Error('Cannot delete stage with leads. Move leads first.');
     }
 
-    const result = await pool.query(
+    const result = await pool(
         'DELETE FROM pipeline_stages WHERE id = $1 AND tenant_id = $2 RETURNING id',
         [stageId, tenantId]
     );
@@ -274,7 +274,7 @@ async function reorderStages(stageIds) {
 
     // Update each stage's display order
     for (let i = 0; i < stageIds.length; i++) {
-        await pool.query(
+        await pool(
             `UPDATE pipeline_stages 
              SET display_order = $1, updated_at = NOW()
              WHERE id = $2 AND tenant_id = $3`,
@@ -300,7 +300,7 @@ async function getPipelineStats(dateRange = {}) {
     const { from, to } = dateRange;
 
     // Get stage distribution
-    const stageStats = await pool.query(
+    const stageStats = await pool(
         `SELECT 
             ps.id,
             ps.name,
@@ -332,7 +332,7 @@ async function getPipelineStats(dateRange = {}) {
         dateParams.push(to);
     }
 
-    const overallStats = await pool.query(
+    const overallStats = await pool(
         `SELECT 
             COUNT(*) as total_leads,
             COUNT(CASE WHEN qualification_status = 'qualified' THEN 1 END) as qualified_leads,
@@ -346,7 +346,7 @@ async function getPipelineStats(dateRange = {}) {
     );
 
     // Get stage progression (moves between stages)
-    const progressionStats = await pool.query(
+    const progressionStats = await pool(
         `SELECT 
             ps.stage_type,
             COUNT(*) as transitions
@@ -406,7 +406,7 @@ async function getStageByType(stageType) {
         throw new Error('Tenant context not available');
     }
 
-    const result = await pool.query(
+    const result = await pool(
         'SELECT * FROM pipeline_stages WHERE tenant_id = $1 AND stage_type = $2 AND is_active = true ORDER BY display_order ASC LIMIT 1',
         [tenantId, stageType]
     );
@@ -414,7 +414,19 @@ async function getStageByType(stageType) {
     return result.rows[0] || null;
 }
 
-module.exports = {
+export {
+    getPipelineStages,
+    getStageById,
+    createStage,
+    updateStage,
+    deleteStage,
+    reorderStages,
+    getPipelineStats,
+    getStageTypes,
+    getStageByType
+};
+
+export default {
     getPipelineStages,
     getStageById,
     createStage,

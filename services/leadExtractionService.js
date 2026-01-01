@@ -1,5 +1,5 @@
 // services/leadExtractionService.js
-const axios = require('axios');
+import axios from 'axios';
 
 /**
  * @typedef {Object} ExtractedLeadInfo
@@ -98,7 +98,12 @@ async function generateFollowUpQuestion(lead) {
     return questions[missingFields[0]];
 }
 
-module.exports = {
+export {
+    extractLeadInfo,
+    generateFollowUpQuestion
+};
+
+export default {
     extractLeadInfo,
     generateFollowUpQuestion
 };

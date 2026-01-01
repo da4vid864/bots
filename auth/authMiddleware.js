@@ -1,7 +1,7 @@
 // auth/authMiddleware.js
-const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = process.env;
-const userService = require('../services/userService');
+import jwt from 'jsonwebtoken';
+const JWT_SECRET = process.env.JWT_SECRET;
+import userService from '../services/userService.js';
 
 // Middleware para adjuntar el usuario a `req` si existe un token válido
 const attachUser = async (req, res, next) => {
@@ -107,4 +107,10 @@ const requireAuth = (req, res, next) => {
   next();
 };
 
-module.exports = { attachUser, requireAdmin, requireAuth };
+export { attachUser, requireAdmin, requireAuth };
+
+export default {
+  attachUser,
+  requireAdmin,
+  requireAuth
+};

@@ -1,5 +1,5 @@
 // services/leadDbService.js
-const pool = require('./db');
+import { pool } from './db.js';
 
 /**
  * @typedef {Object} Lead
@@ -498,7 +498,7 @@ async function searchLeads(tenantId, filters = {}) {
 }
 
 // Añadir al module.exports:
-module.exports = {
+export {
     getOrCreateLead,
     updateLeadInfo,
     updateLead,          // <-- NUEVA
@@ -514,4 +514,22 @@ module.exports = {
     getAllLeads,         // <-- NUEVA
     getLeadsByPipeline,  // <-- NUEVA
     searchLeads          // <-- NUEVA
+};
+
+export default {
+    getOrCreateLead,
+    updateLeadInfo,
+    updateLead,
+    qualifyLead,
+    assignLead,
+    getLeadById,
+    getLeadsByBot,
+    getQualifiedLeads,
+    getLeadsByVendor,
+    addLeadMessage,
+    getLeadMessages,
+    isLeadComplete,
+    getAllLeads,
+    getLeadsByPipeline,
+    searchLeads
 };

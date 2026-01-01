@@ -1,47 +1,50 @@
-// server.js - REST API for WhatsApp Bot Manager
-require('dotenv').config();
-const express = require('express');
-const http = require('http');
-const sseController = require('./controllers/sseController');
-const path = require('path');
-const compression = require('compression');
-const cookieParser = require('cookie-parser');
-const passport = require('passport');
-const multer = require('multer');
-const cors = require('cors');
+import 'dotenv/config';
+import express from 'express';
+import http from 'http';
+import sseController from './controllers/sseController.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import passport from 'passport';
+import multer from 'multer';
+import cors from 'cors';
 
-const botDbService = require('./services/botDbService');
-const leadDbService = require('./services/leadDbService');
-const botConfigService = require('./services/botConfigService');
-const schedulerService = require('./services/schedulerService');
-const userService = require('./services/userService');
-const botImageService = require('./services/botImageService');
-const baileysManager = require('./services/baileysManager');
-const scoringService = require('./services/scoringService');
-const productService = require('./services/productService');
-const storageService = require('./services/storageService');
-const statsService = require('./services/statsService');
-const pipelineService = require('./services/pipelineService');
-const deepseekService = require('./services/deepseekService');
-const chatAnalysisService = require('./services/chatAnalysisService');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const { startSchedulerExecutor } = require('./services/schedulerExecutor');
-const authRoutes = require('./routes/authRoutes');
-const subscriptionRoutes = require('./routes/subscriptionRoutes');
-const complianceRoutes = require('./routes/complianceRoutes');
-const webChatRoutes = require('./routes/webChatRoutes');
-const analyticsRoutes = require('./routes/analyticsRoutes');
-const dataIntegrityRoutes = require('./routes/dataIntegrityRoutes');
-const analyzedChatsRoutes = require('./routes/analyzedChatsRoutes');
-const { handleStripeWebhook } = require('./controllers/webhookController');
+import botDbService from './services/botDbService.js';
+import leadDbService from './services/leadDbService.js';
+import botConfigService from './services/botConfigService.js';
+import schedulerService from './services/schedulerService.js';
+import userService from './services/userService.js';
+import botImageService from './services/botImageService.js';
+import baileysManager from './services/baileysManager.js';
+import scoringService from './services/scoringService.js';
+import productService from './services/productService.js';
+import storageService from './services/storageService.js';
+import statsService from './services/statsService.js';
+import pipelineService from './services/pipelineService.js';
+import deepseekService from './services/deepseekService.js';
+import chatAnalysisService from './services/chatAnalysisService.js';
 
-const { attachUser, requireAdmin, requireAuth } = require('./auth/authMiddleware');
-const tenantMiddleware = require('./middleware/tenantMiddleware');
-const leadRoutes = require('./routes/leadRoutes');
-const salesLeadsRoutes = require('./routes/salesLeads');
-const salesPipelineRoutes = require('./routes/salesPipeline');
-const salesMetricsRoutes = require('./routes/salesMetrics');
-require('./auth/passport');
+import { startSchedulerExecutor } from './services/schedulerExecutor.js';
+import authRoutes from './routes/authRoutes.js';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
+import complianceRoutes from './routes/complianceRoutes.js';
+import webChatRoutes from './routes/webChatRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
+import dataIntegrityRoutes from './routes/dataIntegrityRoutes.js';
+import analyzedChatsRoutes from './routes/analyzedChatsRoutes.js';
+import { handleStripeWebhook } from './controllers/webhookController.js';
+
+import { attachUser, requireAdmin, requireAuth } from './auth/authMiddleware.js';
+import tenantMiddleware from './middleware/tenantMiddleware.js';
+import leadRoutes from './routes/leadRoutes.js';
+import salesLeadsRoutes from './routes/salesLeads.js';
+import salesPipelineRoutes from './routes/salesPipeline.js';
+import salesMetricsRoutes from './routes/salesMetrics.js';
+import './auth/passport.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -998,7 +1001,7 @@ if (process.env.NODE_ENV === 'production') {
 // === INICIO SERVIDOR ===
 async function startServer() {
   try {
-    const { initializeDatabase } = require('./services/initDb');
+    const { initializeDatabase } = await import('./services/initDb.js');
     await initializeDatabase();
 
     startSchedulerExecutor(async (botId, action) => {

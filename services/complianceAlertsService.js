@@ -4,7 +4,7 @@
  * Extiende complianceService existente con capacidades proactivas
  */
 
-const pool = require('./db');
+import { query as pool } from './db.js';
 
 class ComplianceAlertsService {
   constructor() {
@@ -46,7 +46,7 @@ class ComplianceAlertsService {
    */
   async checkMissingConsents(tenantId) {
     try {
-      const missingConsents = await pool.query(
+      const missingConsents = await pool(
         `SELECT l.id, l.email, l.name, l.created_at
          FROM leads l
          LEFT JOIN privacy_consents pc ON l.id = pc.lead_id AND l.tenant_id = pc.tenant_id
@@ -97,7 +97,7 @@ class ComplianceAlertsService {
       let detectedPII = [];
 
       // Escanear mensajes recientes
-      const messages = await pool.query(
+      const messages = await pool(
         `SELECT id, lead_id, content, created_at FROM lead_messages
          WHERE tenant_id = $1 AND created_at > NOW() - INTERVAL '7 days'
          LIMIT 500`,
@@ -133,7 +133,7 @@ class ComplianceAlertsService {
 
         // Automáticamente marcar mensajes como sensibles
         for (const pii of detectedPII.slice(0, 10)) {
-          await pool.query(
+          await pool(
             `UPDATE lead_messages SET contains_pii = true WHERE id = $1`,
             [pii.messageId]
           );
@@ -157,7 +157,7 @@ class ComplianceAlertsService {
   async checkARCORequests(tenantId) {
     try {
       // Buscar solicitudes cerca de timeout
-      const pendingARCO = await pool.query(
+      const pendingARCO = await pool(
         `SELECT id, request_type, created_at,
                 EXTRACT(DAY FROM NOW() - created_at) as days_elapsed
          FROM privacy_requests
@@ -216,7 +216,7 @@ class ComplianceAlertsService {
   async checkSuspiciousAccess(tenantId) {
     try {
       // Detectar múltiples accesos desde ubicaciones diferentes
-      const suspiciousPatterns = await pool.query(
+      const suspiciousPatterns = await pool(
         `SELECT user_id, COUNT(DISTINCT ip_address) as unique_ips, COUNT(*) as access_count
          FROM audit_logs
          WHERE tenant_id = $1 
@@ -296,7 +296,7 @@ class ComplianceAlertsService {
    */
   async getRecentAlerts(tenantId, limit = 20) {
     try {
-      const alerts = await pool.query(
+      const alerts = await pool(
         `SELECT * FROM compliance_alerts
          WHERE tenant_id = $1
          ORDER BY created_at DESC
@@ -324,7 +324,7 @@ class ComplianceAlertsService {
       };
 
       // Resumen de alertas
-      const alerts = await pool.query(
+      const alerts = await pool(
         `SELECT level, type, COUNT(*) as count FROM compliance_alerts
          WHERE tenant_id = $1 AND created_at BETWEEN $2 AND $3
          GROUP BY level, type`,
@@ -334,7 +334,7 @@ class ComplianceAlertsService {
       report.sections.alerts = alerts.rows;
 
       // Solicitudes ARCO procesadas
-      const arcoClosed = await pool.query(
+      const arcoClosed = await pool(
         `SELECT request_type, COUNT(*) as count FROM privacy_requests
          WHERE tenant_id = $1 AND status = 'completed' 
          AND completed_at BETWEEN $2 AND $3
@@ -345,7 +345,7 @@ class ComplianceAlertsService {
       report.sections.arcoRequests = arcoClosed.rows;
 
       // Consentimientos registrados
-      const consents = await pool.query(
+      const consents = await pool(
         `SELECT COUNT(*) as total FROM privacy_consents
          WHERE tenant_id = $1 AND created_at BETWEEN $2 AND $3`,
         [tenantId, startDate, endDate]
@@ -354,7 +354,7 @@ class ComplianceAlertsService {
       report.sections.consentsCollected = consents.rows[0].total;
 
       // Auditoría de accesos
-      const auditedAccess = await pool.query(
+      const auditedAccess = await pool(
         `SELECT action, COUNT(*) as count FROM audit_logs
          WHERE tenant_id = $1 AND created_at BETWEEN $2 AND $3
          GROUP BY action`,
@@ -377,7 +377,7 @@ class ComplianceAlertsService {
    */
   async _createAlert(tenantId, level, type, message, metadata = {}) {
     try {
-      await pool.query(
+      await pool(
         `INSERT INTO compliance_alerts 
          (tenant_id, level, type, message, metadata, created_at)
          VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -389,7 +389,7 @@ class ComplianceAlertsService {
         await this._notifyAdmins(tenantId, type, message);
       }
     } catch (error) {
-      console.error('⚠️ Error creando alerta:', error.message);
+      console.warn('⚠️ Error creando alerta:', error.message);
     }
   }
 
@@ -426,4 +426,4 @@ class ComplianceAlertsService {
   }
 }
 
-module.exports = new ComplianceAlertsService();
+export default new ComplianceAlertsService();

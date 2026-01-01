@@ -5,10 +5,10 @@
  * Phase 1: Database & Backend Foundation
  */
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const leadService = require('../services/leadService');
-const sseController = require('../controllers/sseController');
+import leadService from '../services/leadService.js';
+import sseController from '../controllers/sseController.js';
 
 /**
  * Middleware to get tenant ID from request
@@ -539,4 +539,4 @@ router.get('/:id/activities', async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

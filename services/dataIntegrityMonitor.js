@@ -5,8 +5,8 @@
  * for the WhatsApp bot system.
  */
 
-const { pool } = require('./db');
-const { withTransaction } = require('./transactionUtils');
+import { query as pool } from './db.js';
+import { withTransaction } from './transactionUtils.js';
 
 /**
  * Data integrity check results
@@ -87,7 +87,7 @@ class DataIntegrityMonitor {
         const metrics = {};
         
         // Check leads without assigned bot
-        const leadsResult = await pool.query(`
+        const leadsResult = await pool(`
             SELECT COUNT(*) as count
             FROM leads l
             LEFT JOIN bots b ON l.bot_id = b.id
@@ -102,7 +102,7 @@ class DataIntegrityMonitor {
         }
         
         // Check lead_messages without lead
-        const messagesResult = await pool.query(`
+        const messagesResult = await pool(`
             SELECT COUNT(*) as count
             FROM lead_messages lm
             LEFT JOIN leads l ON lm.lead_id = l.id
@@ -117,7 +117,7 @@ class DataIntegrityMonitor {
         }
         
         // Check bot_images without bot
-        const imagesResult = await pool.query(`
+        const imagesResult = await pool(`
             SELECT COUNT(*) as count
             FROM bot_images bi
             LEFT JOIN bots b ON bi.bot_id = b.id
@@ -147,7 +147,7 @@ class DataIntegrityMonitor {
         
         try {
             // Check leads.assigned_to references users.email
-            const assignedCheck = await pool.query(`
+            const assignedCheck = await pool(`
                 SELECT COUNT(*) as count
                 FROM leads l
                 LEFT JOIN users u ON l.assigned_to = u.email
@@ -162,7 +162,7 @@ class DataIntegrityMonitor {
             }
             
             // Check leads.owner_user_id references users.id
-            const ownerCheck = await pool.query(`
+            const ownerCheck = await pool(`
                 SELECT COUNT(*) as count
                 FROM leads l
                 LEFT JOIN users u ON l.owner_user_id = u.id
@@ -202,7 +202,7 @@ class DataIntegrityMonitor {
         
         for (const check of checks) {
             try {
-                const result = await pool.query(`
+                const result = await pool(`
                     SELECT COUNT(*) as count
                     FROM ${check.table}
                     WHERE ${check.column} IS NULL
@@ -236,7 +236,7 @@ class DataIntegrityMonitor {
         
         for (const table of uuidTables) {
             try {
-                const result = await pool.query(`
+                const result = await pool(`
                     SELECT COUNT(*) as count
                     FROM ${table}
                     WHERE id::text !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
@@ -256,7 +256,7 @@ class DataIntegrityMonitor {
         
         // Check email format consistency
         try {
-            const emailResult = await pool.query(`
+            const emailResult = await pool(`
                 SELECT COUNT(*) as count
                 FROM users
                 WHERE email !~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
@@ -285,7 +285,7 @@ class DataIntegrityMonitor {
         
         // Check for duplicate WhatsApp numbers in leads
         try {
-            const duplicatePhones = await pool.query(`
+            const duplicatePhones = await pool(`
                 SELECT whatsapp_number, COUNT(*) as count
                 FROM leads
                 GROUP BY whatsapp_number
@@ -309,7 +309,7 @@ class DataIntegrityMonitor {
         
         // Check for duplicate emails in users
         try {
-            const duplicateEmails = await pool.query(`
+            const duplicateEmails = await pool(`
                 SELECT email, COUNT(*) as count
                 FROM users
                 GROUP BY email
@@ -353,7 +353,7 @@ class DataIntegrityMonitor {
         
         for (const rel of relationships) {
             try {
-                const result = await pool.query(`
+                const result = await pool(`
                     SELECT COUNT(*) as count
                     FROM ${rel.child} c
                     LEFT JOIN ${rel.parent} p ON c.${rel.fk} = p.${rel.pk}
@@ -388,7 +388,7 @@ class DataIntegrityMonitor {
         
         for (const table of tables) {
             try {
-                const result = await pool.query(`
+                const result = await pool(`
                     SELECT COUNT(*) as count
                     FROM ${table}
                     WHERE tenant_id IS NULL
@@ -419,7 +419,7 @@ class DataIntegrityMonitor {
         
         // Check if audit_logs table exists
         try {
-            const tableExists = await pool.query(`
+            const tableExists = await pool(`
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables 
                     WHERE table_name = 'audit_logs'
@@ -432,7 +432,7 @@ class DataIntegrityMonitor {
             }
             
             // Check for recent audit activity (last 24 hours)
-            const recentActivity = await pool.query(`
+            const recentActivity = await pool(`
                 SELECT COUNT(*) as count
                 FROM audit_logs
                 WHERE created_at >= NOW() - INTERVAL '24 hours'
@@ -446,7 +446,7 @@ class DataIntegrityMonitor {
             }
             
             // Check for NULL required fields
-            const nullChecks = await pool.query(`
+            const nullChecks = await pool(`
                 SELECT 
                     SUM(CASE WHEN tenant_id IS NULL THEN 1 ELSE 0 END) as null_tenant,
                     SUM(CASE WHEN user_email IS NULL THEN 1 ELSE 0 END) as null_user,
@@ -490,7 +490,7 @@ class DataIntegrityMonitor {
         
         // Also log to database if audit_logs table exists
         try {
-            await pool.query(`
+            await pool(`
                 INSERT INTO audit_logs (tenant_id, user_email, action, resource_id, details)
                 VALUES (
                     (SELECT id FROM tenants WHERE name = 'Default Tenant' LIMIT 1),
@@ -558,7 +558,7 @@ class DataIntegrityMonitor {
         
         // Fix orphaned records by deleting them
         try {
-            const orphanedLeads = await pool.query(`
+            const orphanedLeads = await pool(`
                 DELETE FROM leads
                 WHERE bot_id IS NOT NULL
                 AND bot_id NOT IN (SELECT id FROM bots)
@@ -574,7 +574,7 @@ class DataIntegrityMonitor {
         
         // Fix NULL tenant_id by setting to default tenant
         try {
-            const defaultTenant = await pool.query(`
+            const defaultTenant = await pool(`
                 SELECT id FROM tenants WHERE name = 'Default Tenant' LIMIT 1
             `);
             
@@ -584,7 +584,7 @@ class DataIntegrityMonitor {
                 const tables = ['users', 'bots', 'leads', 'products', 'schedules'];
                 for (const table of tables) {
                     try {
-                        const fixed = await pool.query(`
+                        const fixed = await pool(`
                             UPDATE ${table}
                             SET tenant_id = $1
                             WHERE tenant_id IS NULL
@@ -607,7 +607,7 @@ class DataIntegrityMonitor {
         // Log the fixes
         if (fixes.length > 0) {
             try {
-                await pool.query(`
+                await pool(`
                     INSERT INTO audit_logs (tenant_id, user_email, action, resource_id, details)
                     VALUES (
                         (SELECT id FROM tenants WHERE name = 'Default Tenant' LIMIT 1),
@@ -650,8 +650,6 @@ class DataIntegrityMonitor {
 // Export singleton instance
 const monitor = new DataIntegrityMonitor();
 
-module.exports = {
-    DataIntegrityMonitor,
-    IntegrityCheckResult,
-    monitor
-};
+export { DataIntegrityMonitor, IntegrityCheckResult, monitor };
+
+export default monitor;

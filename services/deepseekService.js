@@ -1,5 +1,5 @@
-  // services/deepseekService.js
-  const axios = require('axios');
+// services/deepseekService.js
+import axios from 'axios';
 
   async function getChatReply(message, history = [], systemPrompt) {
     try {
@@ -72,4 +72,6 @@
     }
   }
 
-  module.exports = { getChatReply, detectUserIntent };
+export { getChatReply, detectUserIntent };
+
+export default { getChatReply, detectUserIntent };

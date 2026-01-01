@@ -1,11 +1,10 @@
 // services/baileysManager.js - VERSIÓN COMPLETA CON ANÁLISIS AUTOMÁTICO
-let baileys;
-let Boom;
-const path = require('path');
-const fs = require('fs');
-const QRCode = require('qrcode');
-const pino = require('pino');
-const axios = require('axios');
+import path from 'path';
+import fs from 'fs';
+import QRCode from 'qrcode';
+import pino from 'pino';
+import axios from 'axios';
+import packageJson from '../package.json' with { type: 'json' };
 
 // Dynamically import ESM modules
 async function loadBaileys() {
@@ -18,16 +17,29 @@ async function loadBaileys() {
     return { baileys, Boom };
 }
 
-const { getChatReply, detectUserIntent } = require('./deepseekService');
-const { extractLeadInfo, generateFollowUpQuestion } = require('./leadExtractionService');
-const botImageService = require('./botImageService');
-const scoringService = require('./scoringService');
-const productService = require('./productService');
-const sseController = require('../controllers/sseController');
-const chatAnalysisService = require('./chatAnalysisService');
-const sessionPersistenceService = require('./sessionPersistenceService');
-const { usePostgresAuthState } = require('./baileysAuthService');
-const bulkAnalysisService = require('./bulkAnalysisService'); // NUEVO SERVICIO
+let baileys;
+let Boom;
+
+// ESM imports for services
+import botImageService from './botImageService.js';
+import scoringService from './scoringService.js';
+import productService from './productService.js';
+import sseController from '../controllers/sseController.js';
+import chatAnalysisService from './chatAnalysisService.js';
+import sessionPersistenceService from './sessionPersistenceService.js';
+import { usePostgresAuthState } from './baileysAuthService.js';
+import bulkAnalysisService from './bulkAnalysisService.js';
+import db, { query, pool, runWithTenant, setTenantContext, rawPool } from './db.js';
+import botDbService from './botDbService.js';
+
+const {
+    getChatReply,
+    detectUserIntent,
+} = await import('./deepseekService.js');
+const {
+    extractLeadInfo,
+    generateFollowUpQuestion,
+} = await import('./leadExtractionService.js');
 
 const {
     getOrCreateLead,
@@ -38,7 +50,7 @@ const {
     isLeadComplete,
     getLeadsByBot,
     getLeadById,
-} = require('./leadDbService');
+} = await import('./leadDbService.js');
 
 /**
  * In-memory Map for active sessions.
@@ -63,7 +75,6 @@ async function initializeBaileysConnection(botConfig, onStatusUpdate) {
     try {
         let fullBotConfig = botConfig;
         if (!botConfig.tenantId && !botConfig.tenant_id) {
-            const botDbService = require('./botDbService');
             // Al no establecer un contexto, esto se ejecuta en el contexto del sistema/público
             // Si las políticas RLS lo permiten, obtendremos el bot.
             // Si necesitamos tenant_id, el bot devuelto debe tenerlo.
@@ -168,7 +179,7 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
         status: 'connected',
         authenticatedAt: new Date(),
         metadata: {
-          version: require('../package.json').version,
+          version: packageJson.version,
           connectedAt: new Date().toISOString()
         }
       });
@@ -277,7 +288,6 @@ function setupEventHandlers(botId, socket, saveCreds, onStatusUpdate, Disconnect
         
         for (const msg of messages) {
             if (currentSession.tenantId) {
-                const { runWithTenant } = require('./db');
                 await runWithTenant(currentSession.tenantId, async () => {
                     await handleIncomingMessage(botId, msg);
                 });
@@ -441,7 +451,6 @@ async function forceHistorySync(botId) {
 
         // Ejecutar con tenant context
         if (tenantId) {
-            const { runWithTenant } = require('./db');
             await runWithTenant(tenantId, processLeadsFromDB);
         } else {
             await processLeadsFromDB();
@@ -624,7 +633,6 @@ async function processSingleChatHistory(botId, chatId, messages, tenantId, sessi
     };
 
     if (tenantId) {
-        const { runWithTenant } = require('./db');
         return await runWithTenant(tenantId, processChat);
     } else {
         return await processChat();
@@ -658,7 +666,6 @@ async function handleIncomingMessage(botId, msg) {
         // Si tenemos tenantId en la sesión y NO estamos ya en un contexto (chequeo simple), usamos runWithTenant
         // Nota: Si handleIncomingMessage ya fue llamado dentro de runWithTenant en upsert, esto es anidado seguro.
         if (session.tenantId) {
-             const { runWithTenant } = require('./db');
              await runWithTenant(session.tenantId, processLeadOperations);
         } else {
              await processLeadOperations();
@@ -1307,7 +1314,7 @@ async function disconnectBot(botId) {
     }
 }
 
-module.exports = {
+export {
     initializeBaileysConnection,
     sendMessage,
     sendImage,
@@ -1321,4 +1328,20 @@ module.exports = {
     analyzeLeadChat,
     syncAndAnalyzeAllChats,
     autoAnalyzeAllChatsOnConnect, // 🆕 EXPORTAR LA NUEVA FUNCIÓN
+};
+
+export default {
+    initializeBaileysConnection,
+    sendMessage,
+    sendImage,
+    sendImageUrl,
+    setBotStatus,
+    refreshBotImages,
+    getBotStatus,
+    isBotReady,
+    disconnectBot,
+    loadBaileys,
+    analyzeLeadChat,
+    syncAndAnalyzeAllChats,
+    autoAnalyzeAllChatsOnConnect,
 };

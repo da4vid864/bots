@@ -5,7 +5,7 @@
  * Phase 1: Database & Backend Foundation
  */
 
-const pool = require('./db');
+import { query as pool } from './db.js';
 
 /**
  * @typedef {Object} SalesMetric
@@ -33,7 +33,7 @@ const pool = require('./db');
  * @returns {Promise<string>} Tenant UUID
  */
 async function getCurrentTenantId() {
-    const result = await pool.query(
+    const result = await pool(
         "SELECT current_setting('app.current_tenant', true)::uuid as tenant_id"
     );
     return result.rows[0]?.tenant_id;
@@ -80,7 +80,7 @@ async function getDashboardMetrics(options = {}) {
     }
 
     // Get lead metrics
-    const leadMetrics = await pool.query(
+    const leadMetrics = await pool(
         `SELECT 
             COUNT(*) as total_leads,
             COUNT(CASE WHEN created_at >= $1 THEN 1 END) as new_leads_period,
@@ -115,7 +115,7 @@ async function getDashboardMetrics(options = {}) {
         : 0;
 
     // Get pipeline distribution
-    const pipelineDist = await pool.query(
+    const pipelineDist = await pool(
         `SELECT 
             ps.stage_type,
             ps.display_name,
@@ -131,7 +131,7 @@ async function getDashboardMetrics(options = {}) {
     );
 
     // Get activity metrics
-    const activityMetrics = await pool.query(
+    const activityMetrics = await pool(
         `SELECT 
             activity_type,
             COUNT(*) as count
@@ -143,7 +143,7 @@ async function getDashboardMetrics(options = {}) {
     );
 
     // Get response time metrics (from conversation timestamps)
-    const responseTime = await pool.query(
+    const responseTime = await pool(
         `SELECT 
             COALESCE(AVG(
                 EXTRACT(EPOCH FROM (lc2.created_at - lc1.created_at))
@@ -161,7 +161,7 @@ async function getDashboardMetrics(options = {}) {
     );
 
     // Get top performers (vendors with most conversions)
-    const topPerformers = await pool.query(
+    const topPerformers = await pool(
         `SELECT 
             au.id,
             au.name,
@@ -180,7 +180,7 @@ async function getDashboardMetrics(options = {}) {
     );
 
     // Get recent trends (daily breakdown for last 7 days)
-    const trends = await pool.query(
+    const trends = await pool(
         `SELECT 
             DATE(created_at) as date,
             COUNT(*) as leads,
@@ -266,15 +266,15 @@ async function recordMetric(metricType, value, count = 1, metadata = {}) {
 
     const today = new Date().toISOString().split('T')[0];
 
-    const result = await pool.query(
+    const result = await pool(
         `INSERT INTO sales_metrics (tenant_id, metric_date, metric_type, metric_value, metric_count, metadata)
          VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (tenant_id, metric_date, metric_type)
          DO UPDATE SET 
-            metric_value = $4,
-            metric_count = sales_metrics.metric_count + $5,
-            metadata = $6,
-            created_at = NOW()
+             metric_value = $4,
+             metric_count = sales_metrics.metric_count + $5,
+             metadata = $6,
+             created_at = NOW()
          RETURNING *`,
         [tenantId, today, metricType, value, count, JSON.stringify(metadata)]
     );
@@ -299,7 +299,7 @@ async function getMetricsTrend(metricType, dateRange) {
 
     const { from, to } = dateRange;
 
-    const result = await pool.query(
+    const result = await pool(
         `SELECT 
             metric_date as date,
             metric_type,
@@ -332,7 +332,7 @@ async function calculateConversionRate(dateRange) {
 
     const { from, to } = dateRange;
 
-    const result = await pool.query(
+    const result = await pool(
         `SELECT 
             COUNT(*) as total_leads,
             COUNT(CASE WHEN qualification_status = 'converted' THEN 1 END) as converted,
@@ -379,7 +379,7 @@ async function getTopPerformers(dateRange, limit = 10) {
 
     const { from, to } = dateRange;
 
-    const result = await pool.query(
+    const result = await pool(
         `SELECT 
             au.id,
             au.name,
@@ -424,7 +424,7 @@ async function getPipelineMetrics() {
         throw new Error('Tenant context not available');
     }
 
-    const stages = await pool.query(
+    const stages = await pool(
         `SELECT 
             ps.id,
             ps.name,
@@ -447,7 +447,7 @@ async function getPipelineMetrics() {
     );
 
     // Calculate stage transitions
-    const transitions = await pool.query(
+    const transitions = await pool(
         `SELECT 
             ps.stage_type,
             COUNT(*) as transitions_in
@@ -460,7 +460,7 @@ async function getPipelineMetrics() {
     );
 
     // Get total leads for calculations
-    const totalResult = await pool.query(
+    const totalResult = await pool(
         'SELECT COUNT(*) as total FROM leads WHERE tenant_id = $1',
         [tenantId]
     );
@@ -500,7 +500,7 @@ async function getDailyMetrics(days = 30) {
         throw new Error('Tenant context not available');
     }
 
-    const result = await pool.query(
+    const result = await pool(
         `SELECT 
             DATE(created_at) as date,
             COUNT(*) as leads,
@@ -519,7 +519,17 @@ async function getDailyMetrics(days = 30) {
     return result.rows;
 }
 
-module.exports = {
+export {
+    getDashboardMetrics,
+    recordMetric,
+    getMetricsTrend,
+    calculateConversionRate,
+    getTopPerformers,
+    getPipelineMetrics,
+    getDailyMetrics
+};
+
+export default {
     getDashboardMetrics,
     recordMetric,
     getMetricsTrend,

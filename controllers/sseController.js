@@ -438,7 +438,7 @@ const salesEvents = {
   },
 };
 
-module.exports = {
+export {
   eventsHandler,
   sendEventToUser,
   broadcastEvent,
@@ -449,4 +449,17 @@ module.exports = {
   getConnectedClientsCount,
   getClientsByUser,
   salesEvents,           // Sales-specific event emitters
+};
+
+export default {
+  eventsHandler,
+  sendEventToUser,
+  broadcastEvent,
+  broadcastToTenant,
+  broadcastToUser,
+  sendBotUpdate,
+  sendNewMessageForSales,
+  getConnectedClientsCount,
+  getClientsByUser,
+  salesEvents,
 };

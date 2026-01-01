@@ -4,8 +4,8 @@
  * Base para evolución del scoringService existente
  */
 
-const pool = require('./db');
-const { getChatReply } = require('./deepseekService');
+import { query as pool } from './db.js';
+import { getChatReply } from './deepseekService.js';
 
 class PredictiveEngine {
   constructor() {
@@ -22,7 +22,7 @@ class PredictiveEngine {
    */
   async calculateAdvancedLeadScore(tenantId, leadId) {
     try {
-      const lead = await pool.query(
+      const lead = await pool(
         'SELECT * FROM leads WHERE id = $1 AND tenant_id = $2',
         [leadId, tenantId]
       );
@@ -149,7 +149,7 @@ class PredictiveEngine {
    */
   async _predictChurnRisk(tenantId, leadId) {
     try {
-      const lead = await pool.query(
+      const lead = await pool(
         `SELECT last_message_date, created_at, score 
          FROM leads WHERE id = $1 AND tenant_id = $2`,
         [leadId, tenantId]
@@ -209,7 +209,7 @@ class PredictiveEngine {
    */
   async _analyzeResponsePatterns(tenantId, leadId) {
     try {
-      const messages = await pool.query(
+      const messages = await pool(
         `SELECT role, created_at FROM lead_messages 
          WHERE lead_id = $1 AND tenant_id = $2 
          ORDER BY created_at DESC LIMIT 20`,
@@ -245,7 +245,7 @@ class PredictiveEngine {
    */
   async _calculateTemporalScore(tenantId, leadId) {
     try {
-      const lead = await pool.query(
+      const lead = await pool(
         `SELECT created_at, last_message_date FROM leads 
          WHERE id = $1 AND tenant_id = $2`,
         [leadId, tenantId]
@@ -278,7 +278,7 @@ class PredictiveEngine {
    */
   async _analyzeIntention(tenantId, leadId) {
     try {
-      const recentMessages = await pool.query(
+      const recentMessages = await pool(
         `SELECT content FROM lead_messages 
          WHERE lead_id = $1 AND tenant_id = $2 AND role = 'user'
          ORDER BY created_at DESC LIMIT 5`,
@@ -358,7 +358,7 @@ class PredictiveEngine {
    */
   async _logScoreChange(tenantId, leadId, oldScore, newScore, reason) {
     try {
-      await pool.query(
+      await pool(
         `INSERT INTO lead_score_history (tenant_id, lead_id, old_score, new_score, reason, created_at)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [tenantId, leadId, oldScore, newScore, reason, new Date()]
@@ -373,7 +373,7 @@ class PredictiveEngine {
    */
   async logEvent(tenantId, eventType, data) {
     try {
-      await pool.query(
+      await pool(
         `INSERT INTO analytics_events (tenant_id, event_type, event_data, created_at)
          VALUES ($1, $2, $3, $4)`,
         [tenantId, eventType, JSON.stringify(data), new Date()]
@@ -384,4 +384,4 @@ class PredictiveEngine {
   }
 }
 
-module.exports = new PredictiveEngine();
+export default new PredictiveEngine();

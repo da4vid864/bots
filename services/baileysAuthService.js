@@ -1,4 +1,6 @@
-const pool = require('./db');
+// services/baileysAuthService.js
+import { query as pool } from './db.js';
+
 let baileys;
 
 async function loadBaileys() {
@@ -18,7 +20,7 @@ async function usePostgresAuthState(botId) {
     // 1. Load creds (if exists) or init new
     let creds;
     try {
-        const res = await pool.query(
+        const res = await pool(
             'SELECT session_value FROM bailey_sessions WHERE bot_id = $1 AND session_key = $2',
             [botId, 'creds']
         );
@@ -36,7 +38,7 @@ async function usePostgresAuthState(botId) {
     // 2. Define saveCreds function
     const saveCreds = async () => {
         try {
-            await pool.query(
+            await pool(
                 `INSERT INTO bailey_sessions (bot_id, session_key, session_value) 
                  VALUES ($1, $2, $3)
                  ON CONFLICT (bot_id, session_key) 
@@ -58,23 +60,17 @@ async function usePostgresAuthState(botId) {
                 
                 if (keysToFetch.length === 0) return data;
 
-                const res = await pool.query(
+                const res = await pool(
                     'SELECT session_key, session_value FROM bailey_sessions WHERE bot_id = $1 AND session_key = ANY($2)',
                     [botId, keysToFetch]
                 );
 
                 for (const row of res.rows) {
-                    // Extract ID from key (remove "type-")
-                    // Actually, simpler to just map by key since we reconstructed them
-                    // But Baileys expects map of { id: value }
-                    
                     const value = JSON.parse(JSON.stringify(row.session_value), BufferJSON.reviver);
-                    // key format is `${type}-${id}`
-                    // We need to extract `id`
-                    let keyId = row.session_key.substring(type.length + 1); // +1 for '-'
+                    let keyId = row.session_key.substring(type.length + 1);
                     
                     if (type === 'app-state-sync-key' && row.session_key.startsWith('app-state-sync-key-')) {
-                        // Special handling if needed, but logic stands
+                        // Special handling if needed
                     }
 
                     data[keyId] = value;
@@ -136,7 +132,7 @@ async function usePostgresAuthState(botId) {
  */
 async function hasValidDBSession(botId) {
     try {
-        const res = await pool.query(
+        const res = await pool(
             "SELECT session_value FROM bailey_sessions WHERE bot_id = $1 AND session_key = 'creds'",
             [botId]
         );
@@ -160,7 +156,7 @@ async function hasValidDBSession(botId) {
  */
 async function clearDBSession(botId) {
     try {
-        await pool.query('DELETE FROM bailey_sessions WHERE bot_id = $1', [botId]);
+        await pool('DELETE FROM bailey_sessions WHERE bot_id = $1', [botId]);
         console.log(`[${botId}] 🗑️ DB Session cleared`);
         return true;
     } catch (error) {
@@ -169,7 +165,13 @@ async function clearDBSession(botId) {
     }
 }
 
-module.exports = {
+export {
+    usePostgresAuthState,
+    hasValidDBSession,
+    clearDBSession
+};
+
+export default {
     usePostgresAuthState,
     hasValidDBSession,
     clearDBSession

@@ -5,7 +5,7 @@
  * for critical data operations in the WhatsApp bot system.
  */
 
-const { pool } = require('./db');
+import { query as pool } from './db.js';
 
 /**
  * Execute a database operation within a transaction
@@ -268,7 +268,17 @@ async function logTransactionAudit(client, action, resourceType, resourceId, det
     }
 }
 
-module.exports = {
+export {
+    withTransaction,
+    batchTransaction,
+    retryOnSerializationFailure,
+    createSavepoint,
+    validateTransactionData,
+    validationSchemas,
+    logTransactionAudit
+};
+
+export default {
     withTransaction,
     batchTransaction,
     retryOnSerializationFailure,

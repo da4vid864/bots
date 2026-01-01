@@ -1,9 +1,10 @@
-const pool = require('./db');
+// services/productService.js
+import { query as pool } from './db.js';
 
 async function addProduct(botId, productData) {
   const { sku, name, description, price, currency, image_url, tags, stock_status } = productData;
 
-  const result = await pool.query(
+  const result = await pool(
     `INSERT INTO products (bot_id, sku, name, description, price, currency, image_url, tags, stock_status)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING *`,
@@ -13,7 +14,7 @@ async function addProduct(botId, productData) {
 }
 
 async function getProductsByBot(botId) {
-  const result = await pool.query(
+  const result = await pool(
     `SELECT * FROM products WHERE bot_id = $1 ORDER BY created_at DESC`,
     [botId]
   );
@@ -21,7 +22,7 @@ async function getProductsByBot(botId) {
 }
 
 async function getProductBySku(botId, sku) {
-  const result = await pool.query(
+  const result = await pool(
     `SELECT * FROM products WHERE bot_id = $1 AND sku = $2`,
     [botId, sku]
   );
@@ -31,7 +32,7 @@ async function getProductBySku(botId, sku) {
 async function updateProduct(id, productData) {
   const { sku, name, description, price, currency, image_url, tags, stock_status } = productData;
 
-  const result = await pool.query(
+  const result = await pool(
     `UPDATE products
      SET sku = $1, name = $2, description = $3, price = $4, currency = $5, image_url = $6, tags = $7, stock_status = $8
      WHERE id = $9
@@ -45,7 +46,7 @@ async function updateProduct(id, productData) {
 async function updateProductImage(id, { image_url, image_storage_key }) {
   // Intentar guardar ambos campos (si existe la columna image_storage_key)
   try {
-    const result = await pool.query(
+    const result = await pool(
       `UPDATE products
        SET image_url = $1, image_storage_key = $2
        WHERE id = $3
@@ -55,7 +56,7 @@ async function updateProductImage(id, { image_url, image_storage_key }) {
     return result.rows[0];
   } catch (e) {
     // Fallback si la columna image_storage_key no existe aún
-    const result = await pool.query(
+    const result = await pool(
       `UPDATE products
        SET image_url = $1
        WHERE id = $2
@@ -67,14 +68,23 @@ async function updateProductImage(id, { image_url, image_storage_key }) {
 }
 
 async function deleteProduct(id) {
-  const result = await pool.query(
+  const result = await pool(
     `DELETE FROM products WHERE id = $1 RETURNING id`,
     [id]
   );
   return result.rowCount > 0;
 }
 
-module.exports = {
+export {
+  addProduct,
+  getProductsByBot,
+  getProductBySku,
+  updateProduct,
+  updateProductImage,
+  deleteProduct,
+};
+
+export default {
   addProduct,
   getProductsByBot,
   getProductBySku,

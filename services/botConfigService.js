@@ -1,5 +1,5 @@
 // services/botConfigService.js
-const pool = require('./db');
+import { pool } from './db.js';
 
 /**
  * @typedef {Object} BotFeatures
@@ -233,7 +233,15 @@ async function deleteBotFeatures(botId) {
     }
 }
 
-module.exports = {
+export {
+    getBotFeatures,
+    updateBotFeature,
+    updateBotFeatures,
+    createBotFeatures,
+    deleteBotFeatures
+};
+
+export default {
     getBotFeatures,
     updateBotFeature,
     updateBotFeatures,

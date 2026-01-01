@@ -1,6 +1,6 @@
 // services/schedulerService.js
-const pool = require('./db');
-const botConfigService = require('./botConfigService');
+import { pool } from './db.js';
+import botConfigService from './botConfigService.js';
 
 /**
  * Crear una nueva tarea programada
@@ -133,7 +133,18 @@ async function isSchedulingEnabled(botId) {
     }
 }
 
-module.exports = {
+export {
+    createSchedule,
+    getPendingSchedules,
+    markScheduleAsExecuted,
+    cancelSchedule,
+    getSchedulesByBot,
+    getPendingSchedulesByBot,
+    deleteSchedulesByBot,
+    isSchedulingEnabled
+};
+
+export default {
     createSchedule,
     getPendingSchedules,
     markScheduleAsExecuted,

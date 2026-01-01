@@ -5,10 +5,11 @@
  * in the WhatsApp bot system.
  */
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { monitor } = require('../services/dataIntegrityMonitor');
-const authMiddleware = require('../auth/authMiddleware');
+import { monitor } from '../services/dataIntegrityMonitor.js';
+import { query as pool } from '../services/db.js';
+import authMiddleware from '../auth/authMiddleware.js';
 
 /**
  * @route GET /api/data-integrity/status
@@ -123,8 +124,7 @@ router.post('/fix-issues', authMiddleware.requireAuth, authMiddleware.requireAdm
 router.get('/alerts', authMiddleware.requireAuth, authMiddleware.requireAdmin, async (req, res) => {
     try {
         // Get alerts from the last 7 days from database
-        const { pool } = require('../services/db');
-        const alerts = await pool.query(`
+        const alerts = await pool(`
             SELECT * FROM audit_logs 
             WHERE action = 'DATA_INTEGRITY_ALERT'
             AND created_at >= NOW() - INTERVAL '7 days'
@@ -156,15 +156,13 @@ router.get('/alerts', authMiddleware.requireAuth, authMiddleware.requireAdmin, a
  */
 router.get('/metrics', authMiddleware.requireAuth, authMiddleware.requireAdmin, async (req, res) => {
     try {
-        const { pool } = require('../services/db');
-        
         // Get database size
-        const dbSize = await pool.query(`
+        const dbSize = await pool(`
             SELECT pg_database_size(current_database()) as size_bytes
         `);
         
         // Get table row counts
-        const tableStats = await pool.query(`
+        const tableStats = await pool(`
             SELECT 
                 schemaname,
                 tablename,
@@ -176,7 +174,7 @@ router.get('/metrics', authMiddleware.requireAuth, authMiddleware.requireAdmin, 
         `);
         
         // Get recent growth rate (last 7 days)
-        const growthRate = await pool.query(`
+        const growthRate = await pool(`
             SELECT 
                 COUNT(*) as total_leads,
                 COUNT(CASE WHEN created_at >= NOW() - INTERVAL '7 days' THEN 1 END) as leads_last_7_days,
@@ -185,7 +183,7 @@ router.get('/metrics', authMiddleware.requireAuth, authMiddleware.requireAdmin, 
         `);
         
         // Get data quality metrics
-        const dataQuality = await pool.query(`
+        const dataQuality = await pool(`
             SELECT 
                 -- Completeness
                 ROUND(AVG(CASE WHEN email IS NOT NULL THEN 1.0 ELSE 0.0 END) * 100, 2) as email_completeness,
@@ -226,8 +224,7 @@ router.get('/metrics', authMiddleware.requireAuth, authMiddleware.requireAdmin, 
 router.get('/health', async (req, res) => {
     try {
         // Quick health check - can we connect to database?
-        const { pool } = require('../services/db');
-        await pool.query('SELECT 1');
+        await pool('SELECT 1');
         
         // Run a quick integrity check
         const summary = await monitor.getSummary();
@@ -259,4 +256,4 @@ router.get('/health', async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

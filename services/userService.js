@@ -1,5 +1,5 @@
 // services/userService.js
-const pool = require('./db');
+import { pool } from './db.js';
 
 // WARNING: Most functions here deal with User/Team Management.
 // Since 'users' table is RLS-protected, normal queries will only see users in the current tenant.
@@ -191,7 +191,18 @@ function isAdmin(email) {
     return adminEmails.includes(email.toLowerCase().trim());
 }
 
-module.exports = {
+export {
+    addTeamMember,
+    getTeamMembers,
+    getUserByEmail,
+    updateLastLogin,
+    toggleUserStatus,
+    removeTeamMember,
+    isAdmin,
+    createUser
+};
+
+export default {
     addTeamMember,
     getTeamMembers,
     getUserByEmail,

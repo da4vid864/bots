@@ -3,10 +3,10 @@
  * API endpoints para dashboards de métricas y analytics
  */
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const analyticsService = require('../services/analyticsService');
-const complianceAlertsService = require('../services/complianceAlertsService');
+import analyticsService from '../services/analyticsService.js';
+import complianceAlertsService from '../services/complianceAlertsService.js';
 
 /**
  * GET /api/analytics/dashboard
@@ -189,4 +189,4 @@ router.post('/event', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

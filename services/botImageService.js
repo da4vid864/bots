@@ -1,5 +1,5 @@
 // services/botImageService.js
-const pool = require('./db');
+import { pool } from './db.js';
 
 /**
  * Guarda la referencia de una imagen en la base de datos
@@ -106,7 +106,15 @@ async function getImageMedia(keyword, botId) {
   }
 }
 
-module.exports = {
+export {
+  addImage,
+  getImagesByBot,
+  getImageByKeyword,
+  getImageMedia,
+  deleteImage,
+};
+
+export default {
   addImage,
   getImagesByBot,
   getImageByKeyword,
