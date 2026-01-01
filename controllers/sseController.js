@@ -271,12 +271,182 @@ function getClientsByUser(userEmail) {
   return [...set].map((id) => clientsById.get(id)).filter(Boolean);
 }
 
+/**
+ * Broadcast event to specific tenant users
+ */
+function broadcastToTenant(tenantId, type, event) {
+  if (!tenantId) {
+    // Broadcast to all users if no tenant specified
+    return broadcastEvent(type, event);
+  }
+  
+  // For tenant-based broadcasting, we broadcast to all clients
+  // The client-side should filter based on tenant
+  return broadcastEvent(type, event);
+}
+
+/**
+ * Broadcast event to specific user
+ */
+function broadcastToUser(userEmail, type, event) {
+  return sendEventToUser(userEmail, type, event);
+}
+
+/**
+ * Sales-specific event emitters for real-time sales updates
+ */
+const salesEvents = {
+  /**
+   * Emit lead created event
+   * @param {Object} lead - Created lead object
+   */
+  emitLeadCreated: (lead) => {
+    const event = {
+      type: 'LEAD_CREATED',
+      payload: lead,
+      timestamp: new Date().toISOString(),
+    };
+    console.log('[SalesEvents] Emitting LEAD_CREATED:', lead?.id);
+    broadcastToTenant(lead?.tenantId, 'LEAD_CREATED', event);
+  },
+
+  /**
+   * Emit lead updated event
+   * @param {Object} lead - Updated lead object
+   */
+  emitLeadUpdated: (lead) => {
+    const event = {
+      type: 'LEAD_UPDATED',
+      payload: lead,
+      timestamp: new Date().toISOString(),
+    };
+    console.log('[SalesEvents] Emitting LEAD_UPDATED:', lead?.id);
+    broadcastToTenant(lead?.tenantId, 'LEAD_UPDATED', event);
+  },
+
+  /**
+   * Emit stage changed event
+   * @param {string} leadId - Lead ID
+   * @param {string} oldStageId - Previous stage ID
+   * @param {string} newStageId - New stage ID
+   * @param {Object} lead - Updated lead object
+   */
+  emitStageChanged: (leadId, oldStageId, newStageId, lead) => {
+    const event = {
+      type: 'STAGE_CHANGED',
+      payload: { leadId, oldStageId, newStageId, lead },
+      timestamp: new Date().toISOString(),
+    };
+    console.log('[SalesEvents] Emitting STAGE_CHANGED:', { leadId, oldStageId, newStageId });
+    broadcastToTenant(null, 'STAGE_CHANGED', event);
+  },
+
+  /**
+   * Emit lead assigned event
+   * @param {string} leadId - Lead ID
+   * @param {string} userId - Assigned user ID
+   * @param {Object} lead - Updated lead object
+   */
+  emitLeadAssigned: (leadId, userId, lead) => {
+    const event = {
+      type: 'LEAD_ASSIGNED',
+      payload: { leadId, userId, lead },
+      timestamp: new Date().toISOString(),
+    };
+    console.log('[SalesEvents] Emitting LEAD_ASSIGNED:', { leadId, userId });
+    // Send to specific user
+    broadcastToUser(null, 'LEAD_ASSIGNED', event);
+    // Also broadcast to all for visibility
+    broadcastEvent('LEAD_ASSIGNED', event);
+  },
+
+  /**
+   * Emit new message event
+   * @param {string} leadId - Lead ID
+   * @param {Object} message - Message object
+   */
+  emitNewMessage: (leadId, message) => {
+    const event = {
+      type: 'NEW_MESSAGE',
+      payload: { leadId, message },
+      timestamp: new Date().toISOString(),
+    };
+    console.log('[SalesEvents] Emitting NEW_MESSAGE:', { leadId, messageId: message?.id });
+    broadcastToTenant(null, 'NEW_MESSAGE', event);
+  },
+
+  /**
+   * Emit metrics update event
+   * @param {string} tenantId - Tenant ID
+   * @param {Object} metrics - Updated metrics data
+   */
+  emitMetricsUpdate: (tenantId, metrics) => {
+    const event = {
+      type: 'METRICS_UPDATE',
+      payload: metrics,
+      timestamp: new Date().toISOString(),
+    };
+    console.log('[SalesEvents] Emitting METRICS_UPDATE');
+    broadcastToTenant(tenantId, 'METRICS_UPDATE', event);
+  },
+
+  /**
+   * Emit lead score changed event
+   * @param {string} leadId - Lead ID
+   * @param {number} oldScore - Previous score
+   * @param {number} newScore - New score
+   * @param {Object} lead - Updated lead object
+   */
+  emitScoreChanged: (leadId, oldScore, newScore, lead) => {
+    const event = {
+      type: 'SCORE_CHANGED',
+      payload: { leadId, oldScore, newScore, lead },
+      timestamp: new Date().toISOString(),
+    };
+    console.log('[SalesEvents] Emitting SCORE_CHANGED:', { leadId, oldScore, newScore });
+    broadcastToTenant(lead?.tenantId, 'SCORE_CHANGED', event);
+  },
+
+  /**
+   * Emit lead qualified event
+   * @param {string} leadId - Lead ID
+   * @param {Object} lead - Updated lead object
+   */
+  emitLeadQualified: (leadId, lead) => {
+    const event = {
+      type: 'LEAD_QUALIFIED',
+      payload: { leadId, lead },
+      timestamp: new Date().toISOString(),
+    };
+    console.log('[SalesEvents] Emitting LEAD_QUALIFIED:', leadId);
+    broadcastToTenant(lead?.tenantId, 'LEAD_QUALIFIED', event);
+  },
+
+  /**
+   * Emit lead deleted event
+   * @param {string} leadId - Deleted lead ID
+   * @param {string} tenantId - Tenant ID
+   */
+  emitLeadDeleted: (leadId, tenantId) => {
+    const event = {
+      type: 'LEAD_DELETED',
+      payload: { leadId },
+      timestamp: new Date().toISOString(),
+    };
+    console.log('[SalesEvents] Emitting LEAD_DELETED:', leadId);
+    broadcastToTenant(tenantId, 'LEAD_DELETED', event);
+  },
+};
+
 module.exports = {
   eventsHandler,
   sendEventToUser,
   broadcastEvent,
-  sendBotUpdate,          // ✅ Para sistema de bots
-  sendNewMessageForSales, // ✅ Para sistema de bots
+  broadcastToTenant,
+  broadcastToUser,
+  sendBotUpdate,          // For bot system
+  sendNewMessageForSales, // For bot system
   getConnectedClientsCount,
   getClientsByUser,
+  salesEvents,           // Sales-specific event emitters
 };

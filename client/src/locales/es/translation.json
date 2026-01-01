@@ -165,5 +165,74 @@
       "updates_title": "Actualizaciones en Tiempo Real",
       "updates_desc": "Los nuevos leads aparecen instantáneamente a través de la conexión en tiempo real con el servidor."
     }
+  },
+  "sales": {
+    "pipeline": {
+      "title": "Pipeline de Ventas",
+      "kanban": "Kanban",
+      "stages": {
+        "new": "Nuevos",
+        "contacted": "Contactados",
+        "scheduled": "Cita Agendada",
+        "proposal": "Propuesta",
+        "negotiation": "Negociación",
+        "won": "Cerrado Ganado",
+        "lost": "Cerrado Perdido"
+      }
+    },
+    "leads": {
+      "title": "Leads",
+      "add": "Agregar Lead",
+      "all": "Todos los Leads",
+      "assignedToMe": "Asignados a mí",
+      "unassigned": "Sin asignar",
+      "newToday": "Nuevos hoy"
+    },
+    "lead": {
+      "details": "Detalles",
+      "conversations": "Conversaciones",
+      "activity": "Actividad",
+      "contactInfo": "Información de Contacto",
+      "phone": "Teléfono",
+      "email": "Email",
+      "createdAt": "Creado",
+      "score": "Puntuación",
+      "pipelineStage": "Etapa del Pipeline",
+      "notes": "Notas",
+      "noNotes": "Sin notas"
+    },
+    "intent": {
+      "high": "Alto",
+      "medium": "Medio",
+      "low": "Bajo",
+      "none": "Ninguno"
+    },
+    "conversations": {
+      "title": "Conversaciones",
+      "noMessages": "Sin mensajes",
+      "typeMessage": "Escribe un mensaje...",
+      "send": "Enviar"
+    },
+    "metrics": {
+      "title": "Métricas",
+      "totalLeads": "Total Leads",
+      "conversionRate": "Tasa de Conversión",
+      "pipelineValue": "Valor del Pipeline",
+      "responseTime": "Tiempo de Respuesta",
+      "trends": "Tendencias",
+      "conversionFunnel": "Embudo de Conversión",
+      "topPerformers": "Top Vendedores",
+      "quickStats": "Estadísticas Rápidas",
+      "newToday": "Nuevos Hoy",
+      "convertedToday": "Convertidos Hoy",
+      "avgDealValue": "Valor Promedio"
+    }
+  },
+  "errors": {
+    "somethingWentWrong": "Algo salió mal",
+    "unknownError": "Error desconocido",
+    "reloadPage": "Recargar Página",
+    "tryAgain": "Intentar de Nuevo",
+    "viewDetails": "Ver Detalles"
   }
 }

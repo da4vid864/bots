@@ -38,7 +38,9 @@ const { handleStripeWebhook } = require('./controllers/webhookController');
 const { attachUser, requireAdmin, requireAuth } = require('./auth/authMiddleware');
 const tenantMiddleware = require('./middleware/tenantMiddleware');
 const leadRoutes = require('./routes/leadRoutes');
-
+const salesLeadsRoutes = require('./routes/salesLeads');
+const salesPipelineRoutes = require('./routes/salesPipeline');
+const salesMetricsRoutes = require('./routes/salesMetrics');
 require('./auth/passport');
 
 const app = express();
@@ -66,7 +68,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(passport.initialize());
-
 // CORS configuration for React frontend
 app.use(
   cors({
@@ -122,6 +123,9 @@ app.use('/auth', authRoutes);
 app.use('/subs', subscriptionRoutes);
 app.use('/api/compliance', complianceRoutes);
 app.use('/api/leads', leadRoutes);
+app.use('/api/sales/leads', salesLeadsRoutes);
+app.use('/api/sales/pipeline', salesPipelineRoutes);
+app.use('/api/sales/metrics', salesMetricsRoutes);
 app.use('/api/web-chat', webChatRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/data-integrity', dataIntegrityRoutes);
@@ -210,6 +214,9 @@ app.get('/api/sales', requireAuth, (req, res) => {
 
 // === SSE EVENTS ROUTE ===
 app.get('/api/events', requireAuth, sseController.eventsHandler);
+
+// === SALES SSE EVENTS ROUTE ===
+app.get('/api/sales/events', requireAuth, sseController.eventsHandler);
 
 // === FUNCIÓN: Obtener estado runtime del bot ===
 function getRuntimeStatus(bot) {
