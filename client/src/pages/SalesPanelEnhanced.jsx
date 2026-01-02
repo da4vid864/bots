@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useBots } from '../context/BotsContext';
 import { useTranslation } from 'react-i18next';
 import { BarChart3, MessageSquare, TrendingUp, Zap, Download, ChevronDown, Star, FileText, RefreshCw, AlertCircle } from 'lucide-react';
+import { TargetIcon, ChatIcon, LightningIcon } from '../components/Icons';
 import KanbanPipeline from '../components/organisms/KanbanPipeline';
 import AnalyzedChatsGrid from '../components/organisms/AnalyzedChatsGrid';
 import ChatDetailsPanel from '../components/organisms/ChatDetailsPanel';
@@ -333,7 +334,12 @@ const SalesPanelEnhanced = () => {
       {/* DEBUG INFO */}
       {process.env.NODE_ENV === 'development' && (
         <div className="bg-slate-800/50 border-b border-slate-700 px-4 py-2 text-xs text-slate-300">
-          <p>🔍 DEBUG: Chats={analyzedChats.length} | Categories={pipelineCategories.length} | Loading={loading ? 'yes' : 'no'}</p>
+          <p className="flex items-center gap-1">
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+            DEBUG: Chats={analyzedChats.length} | Categories={pipelineCategories.length} | Loading={loading ? 'yes' : 'no'}
+          </p>
         </div>
       )}
 
@@ -341,8 +347,9 @@ const SalesPanelEnhanced = () => {
       <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white">
-              🎯 Sales Pipeline
+            <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
+              <TargetIcon className="w-7 h-7 sm:w-8 sm:h-8 text-blue-400" />
+              Sales Pipeline
             </h1>
             <p className="text-slate-400 text-sm sm:text-base">
               Gestiona tus leads y chats analizados en tiempo real
@@ -509,17 +516,32 @@ const SalesPanelEnhanced = () => {
       <div className="border-b border-slate-800 bg-slate-900/50 px-4 sm:px-6 lg:px-8">
         <div className="flex gap-1 py-3">
           <TabButton
-            label="🎯 Kanban Pipeline"
+            label={
+              <span className="flex items-center gap-2">
+                <TargetIcon className="w-4 h-4" />
+                Kanban Pipeline
+              </span>
+            }
             active={activeTab === 'kanban'}
             onClick={() => setActiveTab('kanban')}
           />
           <TabButton
-            label="💬 Chats Analizados"
+            label={
+              <span className="flex items-center gap-2">
+                <ChatIcon className="w-4 h-4" />
+                Chats Analizados
+              </span>
+            }
             active={activeTab === 'grid'}
             onClick={() => setActiveTab('grid')}
           />
           <TabButton
-            label="⚡ Tiempo Real"
+            label={
+              <span className="flex items-center gap-2">
+                <LightningIcon className="w-4 h-4" />
+                Tiempo Real
+              </span>
+            }
             active={activeTab === 'live'}
             onClick={() => setActiveTab('live')}
           />

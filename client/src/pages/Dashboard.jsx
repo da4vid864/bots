@@ -22,6 +22,13 @@ import {
   ExpandLessIcon,
   StarsIcon,
   InventoryIcon,
+  WaveIcon,
+  ChartIcon,
+  BotIcon,
+  TargetIcon,
+  PackageIcon,
+  ClockIcon,
+  CelebrationIcon,
 } from '../components/Icons';
 
 // Iconos adicionales para métricas (simple SVGs)
@@ -90,7 +97,7 @@ const Dashboard = () => {
     if (trialParam === 'started') {
       setNotification({
         type: 'success',
-        title: '🎉 ¡Trial Activado!',
+        title: '¡Trial Activado!',
         message: 'Tu prueba de 14 días sin tarjeta ha comenzado.',
         duration: 5000,
       });
@@ -366,8 +373,9 @@ const Dashboard = () => {
                   <WarningIcon />
                 </div>
                 <div className="ml-4 flex-1">
-                  <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">
-                    ⏰ Tu prueba vence pronto
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2 flex items-center gap-2">
+                    <ClockIcon className="w-5 h-5 text-amber-400" />
+                    Tu prueba vence pronto
                   </h3>
                   <p className="text-amber-200 text-sm sm:text-base">
                     Te quedan <strong>{trialWarning.daysLeft}</strong> día
@@ -392,8 +400,9 @@ const Dashboard = () => {
           {/* Header Bienvenida + resumen bots */}
           <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-1">
-                Hola, {user?.name || 'Usuario'} 👋
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-1 flex items-center gap-2">
+                <WaveIcon className="w-8 h-8 sm:w-10 sm:h-10 text-blue-400" />
+                Hola, {user?.name || 'Usuario'}
               </h1>
               <p className="text-slate-400 text-sm sm:text-base">
                 Bienvenido a tu dashboard de bots inteligentes
@@ -419,8 +428,9 @@ const Dashboard = () => {
 
           {/* MÉTRICAS (por SSE) */}
           <section className="mb-8 sm:mb-12">
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">
-              Tu desempeño en tiempo real 📊
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2">
+              <ChartIcon className="w-6 h-6 text-blue-400" />
+              Tu desempeño en tiempo real
             </h2>
 
             {!showStats ? null : statsLoading ? (
@@ -471,7 +481,10 @@ const Dashboard = () => {
             <section className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white">Tus Bots Inteligentes 🤖</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                    <BotIcon className="w-6 h-6 text-blue-400" />
+                    Tus Bots Inteligentes
+                  </h2>
                   <p className="text-slate-400 text-sm">
                     Conecta, gestiona y escala tus bots de WhatsApp
                   </p>
@@ -574,7 +587,10 @@ const Dashboard = () => {
             <section className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white">Scoring Rules 🎯</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                    <TargetIcon className="w-6 h-6 text-blue-400" />
+                    Scoring Rules
+                  </h2>
                   <p className="text-slate-400 text-sm">
                     Define cómo se puntúan tus leads automáticamente
                   </p>
@@ -611,7 +627,10 @@ const Dashboard = () => {
             <section className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white">Product Management 📦</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                    <PackageIcon className="w-6 h-6 text-blue-400" />
+                    Product Management
+                  </h2>
                   <p className="text-slate-400 text-sm">
                     Gestiona tus productos y servicios que tus bots pueden ofrecer
                   </p>

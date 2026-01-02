@@ -45,7 +45,12 @@ const PaywallView = () => {
               </ul>
             </div>
             <div className="space-y-3">
-              <h3 className="font-semibold text-gray-900">Pro Plan 🚀</h3>
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                Pro Plan
+                <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M2.81 14.12L5.64 11.3l8.49 8.49-2.83 2.83zm4.24-4.24l1.41 1.41L4.93 19.34l-1.41-1.41 3.53-3.57zM19.07 4.93l-1.41 1.41-3.53-3.57-1.41-1.41 3.53 3.57 1.41 1.41zm-4.24 4.24l1.41 1.41-3.53 3.57-1.41-1.41 3.53-3.57z"/>
+                </svg>
+              </h3>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-center"><span className="text-green-500 mr-2">✓</span> Advanced Sales Panel</li>
                 <li className="flex items-center"><span className="text-green-500 mr-2">✓</span> Unlimited Bots</li>

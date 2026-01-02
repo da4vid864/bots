@@ -160,8 +160,11 @@ const ChatDetailsPanel = ({ chat, onClose, onAssign, categories = [] }) => {
 
             {analysis.banderaBuena && analysis.banderaBuena.length > 0 && (
               <div>
-                <label className="text-xs font-semibold text-emerald-400 block mb-2">
-                  ✅ Señales Positivas
+                <label className="text-xs font-semibold text-emerald-400 block mb-2 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                  </svg>
+                  Señales Positivas
                 </label>
                 <ul className="space-y-1">
                   {analysis.banderaBuena.map((signal, idx) => (
@@ -176,8 +179,9 @@ const ChatDetailsPanel = ({ chat, onClose, onAssign, categories = [] }) => {
 
             {analysis.banderaRoja && analysis.banderaRoja.length > 0 && (
               <div>
-                <label className="text-xs font-semibold text-red-400 block mb-2">
-                  ⚠️ Señales Negativas
+                <label className="text-xs font-semibold text-red-400 block mb-2 flex items-center gap-1">
+                  <WarningIcon className="w-4 h-4" />
+                  Señales Negativas
                 </label>
                 <ul className="space-y-1">
                   {analysis.banderaRoja.map((signal, idx) => (

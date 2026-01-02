@@ -137,7 +137,21 @@ const LeadCard = ({ lead, isSelected, onClick, onAssign, user, t }) => {
                 ? '✓ Asignado a ti' 
                 : isAssigned 
                 ? `→ ${lead.assigned_to.split('@')[0]}`
-                : lead.status === 'qualified' ? '⭐ Calificado' : '📝 En captura'
+                : lead.status === 'qualified' ? (
+                  <span className="flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                    </svg>
+                    Calificado
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                    </svg>
+                    En captura
+                  </span>
+                )
               }
             </span>
 
@@ -650,7 +664,15 @@ const ChatInterface = () => {
               {/* AI Suggest */}
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs text-slate-500">
-                  {suggesting && '✨ Generando sugerencia...'}
+                  {suggesting && (
+                    <span className="flex items-center gap-1">
+                      <svg className="w-3 h-3 animate-spin" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" opacity="0.3"/>
+                        <path d="M12 2v4c2.21 0 4 1.79 4 4s-1.79 4-4 4V2z"/>
+                      </svg>
+                      Generando sugerencia...
+                    </span>
+                  )}
                 </span>
                 <button
                   onClick={handleAiSuggest}
@@ -684,7 +706,12 @@ const ChatInterface = () => {
 
               {!canSendMessage && selectedLead.assigned_to && (
                 <p className="text-xs text-amber-400 mt-2">
-                  ⚠️ Este lead está asignado a {selectedLead.assigned_to.split('@')[0]}
+                  <span className="flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                    </svg>
+                    Este lead está asignado a {selectedLead.assigned_to.split('@')[0]}
+                  </span>
                 </p>
               )}
             </div>
