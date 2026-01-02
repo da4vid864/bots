@@ -257,7 +257,8 @@ const Sidebar = ({ activePage, onPageChange }) => {
           <span>{t('sidebar.logout')}</span>
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 };
 
