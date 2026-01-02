@@ -20,7 +20,7 @@ export const Input = ({
             {label && (
                 <label 
                     htmlFor={inputId} 
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                    className="block text-sm font-medium text-slate-300 mb-1"
                 >
                     {label}
                 </label>
@@ -33,22 +33,24 @@ export const Input = ({
                     value={value}
                     onChange={onChange}
                     placeholder={placeholder}
+                    aria-invalid={error ? 'true' : 'false'}
+                    aria-describedby={error ? `${inputId}-error` : undefined}
                     className={`
-                        block w-full px-3 py-2 border rounded-lg shadow-sm placeholder-gray-400
+                        block w-full px-3 py-2.5 sm:py-2 bg-slate-800/50 border rounded-lg shadow-sm 
+                        text-white placeholder-slate-500 text-base sm:text-sm
                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                        disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed
-                        dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-500
-                        dark:focus:ring-blue-500 dark:focus:border-blue-500
+                        disabled:bg-slate-800/30 disabled:text-slate-500 disabled:cursor-not-allowed
+                        transition-colors duration-200
                         ${error 
-                            ? 'border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500 dark:border-red-500 dark:text-red-300' 
-                            : 'border-gray-300'
+                            ? 'border-red-500/50 text-red-300 focus:ring-red-500 focus:border-red-500' 
+                            : 'border-slate-700'
                         }
                     `}
                     {...props}
                 />
             </div>
             {error && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                <p id={`${inputId}-error`} className="mt-1 text-sm text-red-400" role="alert" aria-live="polite">
                     {error}
                 </p>
             )}

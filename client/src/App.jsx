@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation, Outlet, useNavigate } from 'react
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BotsProvider } from './context/BotsContext';
 import Sidebar from './components/Sidebar';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 
 // --- Lazy Loading for Performance Optimization ---
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -127,7 +128,7 @@ const DashboardLayout = () => {
         onPageChange={handlePageChange}
       />
       <main
-        className="flex-1 overflow-y-auto relative focus:outline-none bg-slate-950"
+        className="flex-1 overflow-y-auto relative focus:outline-none bg-slate-950 lg:ml-0"
         id="main-content"
         tabIndex="-1"
       >
@@ -178,11 +179,13 @@ const AppContent = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <BotsProvider>
-        <AppContent />
-      </BotsProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <BotsProvider>
+          <AppContent />
+        </BotsProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
