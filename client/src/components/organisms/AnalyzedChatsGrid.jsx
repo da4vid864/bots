@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo, useCallback } from 'react';
 import { Search, Filter, ChevronUp, ChevronDown, BarChart3, User, Clock, TrendingUp } from 'lucide-react';
+import { useDebounce } from '../../hooks/useOptimizations';
 
 /**
  * AnalyzedChatsGrid.jsx - Vista de tabla/grid de chats analizados
@@ -20,6 +21,9 @@ const AnalyzedChatsGrid = ({
 }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'lead_score', direction: 'desc' });
   const [expandedChat, setExpandedChat] = useState(null);
+  
+  // Debounce de búsqueda para mejor performance
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // Filtrar y ordenar chats
   const filteredChats = useMemo(() => {
@@ -30,9 +34,9 @@ const AnalyzedChatsGrid = ({
       filtered = filtered.filter(c => c.pipeline_category === filterCategory);
     }
 
-    // Aplicar búsqueda
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+    // Aplicar búsqueda (usando término debounced)
+    if (debouncedSearchTerm) {
+      const term = debouncedSearchTerm.toLowerCase();
       filtered = filtered.filter(c =>
         (c.contact_name && c.contact_name.toLowerCase().includes(term)) ||
         (c.contact_phone && c.contact_phone.includes(term)) ||
@@ -56,14 +60,14 @@ const AnalyzedChatsGrid = ({
     }
 
     return filtered;
-  }, [chats, filterCategory, searchTerm, sortConfig]);
+  }, [chats, filterCategory, debouncedSearchTerm, sortConfig]);
 
-  const handleSort = (key) => {
+  const handleSort = useCallback((key) => {
     setSortConfig(prev => ({
       key,
       direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
     }));
-  };
+  }, []);
 
   const getCategoryColor = (categoryName) => {
     const category = categories.find(c => c.name === categoryName);
@@ -90,6 +94,7 @@ const AnalyzedChatsGrid = ({
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+            aria-label="Buscar chats"
           />
         </div>
 

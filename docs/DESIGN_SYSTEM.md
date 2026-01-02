@@ -1,271 +1,370 @@
-# Sistema de Diseño WhatsAuto
+# Design System - BotInteligente
 
-## Overview
-Este sistema de diseño define la base visual para la landing page de WhatsAuto SaaS, alineándose con la voz de la marca: **profesional-empático, dinámico-tecnológico, confiable**. Audiencia objetivo: Equipos de ventas y marketing en PYMES de alto crecimiento en comercio electrónico y servicios.
+## 📋 Visión General
 
-## 1. Sistema de Color
+Este documento define el sistema de diseño unificado para BotInteligente, asegurando consistencia visual y de experiencia en toda la aplicación.
 
-### 1.1 Colores Semánticos
+**Última actualización**: 2024
+**Versión**: 1.0
 
-#### Primario (Acción de Marca)
-- **Propósito:** Acciones primarias, CTAs principales, elementos interactivos clave.
-- **Impacto Psicológico:** El azul transmite confianza, fiabilidad y profesionalidad, esencial para una herramienta que gestiona conversaciones con clientes y datos sensibles.
-- **Variantes:**
-  - `primary-50` `#eff6ff` (fondo claro)
-  - `primary-100` `#dbeafe` (estados hover)
-  - `primary-200` `#bfdbfe` (bordes)
-  - `primary-300` `#93c5fd` (botones secundarios)
-  - `primary-400` `#60a5fa` (estados activos)
-  - `primary-500` `#2872fa` **Azul de Marca** (CTAs principales)
-  - `primary-600` `#1559ed` (hover en primario)
-  - `primary-700` `#1d4ed8` (activo/presionado)
-  - `primary-800` `#1e40af` (modo oscuro primario)
-  - `primary-900` `#1e3a8a` (acentos modo oscuro)
+---
 
-#### Secundario (Fondos, Acentos Suaves)
-- **Propósito:** Fondos, bordes sutiles, acentos neutrales.
-- **Impacto Psicológico:** El azul-gris suave crea un ambiente tranquilo y enfocado, reduciendo el ruido visual mientras mantiene una sensación tecnológica.
-- **Variantes:**
-  - `secondary-50` `#f2f5f7` (fondo más claro)
-  - `secondary-100` `#e1e8ed` (fondos de tarjetas)
-  - `secondary-200` `#c8d4de` (divisores)
-  - `secondary-300` `#a0b4c8` (elementos deshabilitados)
-  - `secondary-400` `#7b95ad` (texto placeholder)
-  - `secondary-500` `#5a738c` (texto secundario)
-  - `secondary-600` `#3a4f66` (texto del cuerpo)
-  - `secondary-700` `#2d3f52` (encabezados)
-  - `secondary-800` `#192a3d` (fondos modo oscuro)
-  - `secondary-900` `#0f1a26` (superficies modo oscuro)
+## 🎨 Paleta de Colores
 
-#### Acento (CTAs Secundarios, Highlights)
-- **Propósito:** Highlights, estados de éxito, botones secundarios, elementos orientados al crecimiento.
-- **Impacto Psicológico:** El verde simboliza el crecimiento, la positividad y la empatía, alineándose con la promesa del producto de aumentar los leads y mejorar las relaciones con los clientes.
-- **Variantes:**
-  - `accent-50` `#ecfdf5`
-  - `accent-100` `#d1fae5`
-  - `accent-200` `#a7f3d0`
-  - `accent-300` `#6ee7b7`
-  - `accent-400` `#34d399`
-  - `accent-500` `#10b981` **Verde de Marca** (CTAs de acento)
-  - `accent-600` `#059669`
-  - `accent-700` `#047857`
-  - `accent-800` `#065f46`
-  - `accent-900` `#064e3b`
+### Tema Oscuro (Principal)
 
-### 1.2 Colores de Estado
-- **Éxito:** `#10b981` (accent-500) – refuerza resultados positivos (ej., "lead capturado").
-- **Error:** `#ef4444` – claro, llama la atención para problemas críticos.
-- **Advertencia:** `#f59e0b` – alerta a los usuarios sin causar pánico.
-- **Info:** `#3b82f6` – azul familiar para mensajes informativos.
+#### Colores Base
+```css
+/* Backgrounds */
+--bg-primary: #0f172a;      /* slate-950 */
+--bg-secondary: #1e293b;    /* slate-800 */
+--bg-tertiary: #334155;     /* slate-700 */
+--bg-surface: rgba(15, 23, 42, 0.5); /* slate-900/50 */
 
-### 1.3 Escala de Grises
-- **Uso:** Texto neutral, bordes y fondos.
-- **Escala:**
-  - `gray-50` `#f9fafb` (fondo)
-  - `gray-100` `#f3f4f6` (fondos sutiles)
-  - `gray-200` `#e5e7eb` (bordes)
-  - `gray-300` `#d1d5db` (divisores)
-  - `gray-400` `#9ca3af` (placeholder)
-  - `gray-500` `#6b7280` (texto secundario)
-  - `gray-600` `#4b5563` (texto del cuerpo)
-  - `gray-700` `#374151` (encabezados)
-  - `gray-800` `#1f2937` (texto modo oscuro)
-  - `gray-900` `#111827` (encabezados modo oscuro)
+/* Texto */
+--text-primary: #f1f5f9;    /* slate-100 */
+--text-secondary: #94a3b8;  /* slate-400 */
+--text-tertiary: #64748b;  /* slate-500 */
 
-### 1.4 Degradados Funcionales
-- **Degradado Hero:** `linear-gradient(135deg, #2872fa 0%, #10b981 100%)`
-  - Combina confianza (azul) con crecimiento (verde) para una sección dinámica y atractiva sobre el pliegue.
-- **Degradado Botón:** `linear-gradient(90deg, #2872fa, #1559ed)`
-  - Añade profundidad a los botones primarios, mejorando la percepción de click-through.
+/* Bordes */
+--border-primary: #1e293b;  /* slate-800 */
+--border-secondary: #334155; /* slate-700 */
+```
 
-### 1.5 Mapeo de Modo Oscuro
-| Token Modo Claro | Token Modo Oscuro | Justificación |
-|---|---|---|
-| `primary-500` | `primary-400` | Mejor contraste en fondos oscuros |
-| `secondary-50` | `secondary-900` | Invertir relación fondo/primer plano |
-| `secondary-100` | `secondary-800` | Superficies más suaves en tema oscuro |
-| `gray-50` | `gray-900` | Inversión de fondo |
-| `gray-100` | `gray-800` | Inversión de fondo sutil |
-| `gray-900` | `gray-50` | Inversión de texto |
-| `white` | `secondary-900` | El blanco puro es demasiado duro en modo oscuro |
+#### Colores de Acento
+```css
+/* Primary (Azul) */
+--blue-500: #3b82f6;
+--blue-600: #2563eb;
+--blue-700: #1d4ed8;
 
-### 1.6 Cumplimiento de WCAG AA
-Todos los pares de colores utilizados para el texto cumplen con una relación de contraste de al menos **4.5:1** (texto normal) y **3:1** para texto grande. Ejemplos:
-- `primary-500` en `white` = 4.6:1 ✅
-- `secondary-600` en `secondary-50` = 7.2:1 ✅
-- `accent-600` en `white` = 4.54:1 ✅
-- `gray-900` en `gray-100` = 10.2:1 ✅
+/* Success (Verde) */
+--green-500: #22c55e;
+--green-600: #16a34a;
 
-## 2. Sistema de Tipografía
+/* Warning (Amarillo) */
+--yellow-500: #eab308;
+--yellow-600: #ca8a04;
 
-### 2.1 Font Stack
-- **Encabezados:** `Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`
-  - **Justificación:** Inter es una sans-serif moderna, geométrica con excelente legibilidad y una personalidad tecnológica. Soporta múltiples pesos y está optimizada para pantallas.
-- **Cuerpo:** `system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif`
-  - **Justificación:** Las fuentes del sistema aseguran una carga rápida y un renderizado consistente en todas las plataformas, manteniendo un tono profesional.
+/* Error (Rojo) */
+--red-500: #ef4444;
+--red-600: #dc2626;
+```
 
-### 2.2 Escala de Tipos (Base: 1rem = 16px)
-| Elemento | Tamaño de Fuente (rem) | Altura de Línea | Clase Tailwind | Uso |
-|---|---|---|---|---|
-| H1 | 3.5 rem (56px) | 1.1 | `text-5xl md:text-6xl font-bold tracking-tight` | Encabezado principal |
-| H2 | 2.5 rem (40px) | 1.2 | `text-4xl font-semibold tracking-tight` | Títulos de sección |
-| H3 | 2.0 rem (32px) | 1.3 | `text-3xl font-semibold` | Encabezados de características |
-| H4 | 1.5 rem (24px) | 1.4 | `text-2xl font-semibold` | Títulos de tarjetas |
-| H5 | 1.25 rem (20px) | 1.5 | `text-xl font-medium` | Subencabezados |
-| H6 | 1.125 rem (18px) | 1.5 | `text-lg font-medium` | Encabezados menores |
-| Cuerpo (largo) | 1.125 rem (18px) | 1.7 | `text-lg` | Párrafos introductorios |
-| Cuerpo | 1 rem (16px) | 1.6 | `text-base` | Texto del cuerpo predeterminado |
-| Pequeño | 0.875 rem (14px) | 1.5 | `text-sm` | Subtítulos, metainformación |
-| Extra Pequeño | 0.75 rem (12px) | 1.4 | `text-xs` | Etiquetas, letra pequeña |
+### Uso de Colores
 
-### 2.3 Jerarquía de Sección
-- **Hero:** H1 con texto degradado, H2 para subencabezado, cuerpo grande para propuesta de valor.
-- **Características:** Título de sección H2, tarjetas de características H3, texto del cuerpo para descripciones.
-- **Testimonios:** Título de sección H2, nombres de clientes H4, cuerpo para citas.
-- **Precios:** Título de sección H2, nombres de planes H4, cuerpo para características.
-- **FAQ:** Título de sección H2, preguntas H5, respuestas del cuerpo.
+| Contexto | Color | Uso |
+|----------|-------|-----|
+| Acciones principales | `blue-600` | Botones primarios, enlaces |
+| Éxito | `green-500` | Confirmaciones, estados positivos |
+| Advertencia | `yellow-500` | Alertas, estados de atención |
+| Error | `red-500` | Errores, acciones destructivas |
+| Información | `blue-500` | Notificaciones informativas |
 
-Esta jerarquía guía el seguimiento ocular de mayor a menor, creando un flujo visual claro que enfatiza los mensajes clave.
+---
 
-## 3. Configuración de Tailwind CSS
+## 📝 Tipografía
 
-### 3.1 `tailwind.config.js` Completo
-```javascript
-/** @type {import('tailwindcss').Config} */
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
-  darkMode: 'class', // or 'media' based on preference
-  theme: {
-    extend: {
-      colors: {
-        primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#2872fa',
-          600: '#1559ed',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-        },
-        secondary: {
-          50: '#f2f5f7',
-          100: '#e1e8ed',
-          200: '#c8d4de',
-          300: '#a0b4c8',
-          400: '#7b95ad',
-          500: '#5a738c',
-          600: '#3a4f66',
-          700: '#2d3f52',
-          800: '#192a3d',
-          900: '#0f1a26',
-        },
-        accent: {
-          50: '#ecfdf5',
-          100: '#d1fae5',
-          200: '#a7f3d0',
-          300: '#6ee7b7',
-          400: '#34d399',
-          500: '#10b981',
-          600: '#059669',
-          700: '#047857',
-          800: '#065f46',
-          900: '#064e3b',
-        },
-        gray: {
-          50: '#f9fafb',
-          100: '#f3f4f6',
-          200: '#e5e7eb',
-          300: '#d1d5db',
-          400: '#9ca3af',
-          500: '#6b7280',
-          600: '#4b5563',
-          700: '#374151',
-          800: '#1f2937',
-          900: '#111827',
-        },
-        success: '#10b981',
-        error: '#ef4444',
-        warning: '#f59e0b',
-        info: '#3b82f6',
-      },
-      fontFamily: {
-        heading: ['Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
-        body: ['system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', '"Open Sans"', 'sans-serif'],
-      },
-      backgroundImage: {
-        'gradient-primary': 'linear-gradient(135deg, #2872fa 0%, #10b981 100%)',
-        'gradient-button': 'linear-gradient(90deg, #2872fa, #1559ed)',
-      },
-    },
-  },
-  plugins: [],
+### Fuentes
+- **Familia**: `system-ui, -apple-system, sans-serif`
+- **Monospace**: `'Courier New', monospace` (solo para código)
+
+### Escala Tipográfica
+
+| Elemento | Tamaño | Peso | Uso |
+|----------|--------|------|-----|
+| H1 | `2.25rem` (36px) | `900` (black) | Títulos principales |
+| H2 | `1.875rem` (30px) | `800` (extrabold) | Títulos de sección |
+| H3 | `1.5rem` (24px) | `700` (bold) | Subtítulos |
+| H4 | `1.25rem` (20px) | `600` (semibold) | Títulos de tarjeta |
+| Body | `1rem` (16px) | `400` (normal) | Texto principal |
+| Small | `0.875rem` (14px) | `400` (normal) | Texto secundario |
+| XS | `0.75rem` (12px) | `400` (normal) | Metadatos, labels |
+
+### Line Height
+- **Headings**: `1.2`
+- **Body**: `1.5`
+- **Small**: `1.4`
+
+---
+
+## 📐 Espaciado
+
+### Sistema de Espaciado (Base: 4px)
+
+| Nombre | Valor | Uso |
+|--------|-------|-----|
+| xs | `0.25rem` (4px) | Espaciado mínimo |
+| sm | `0.5rem` (8px) | Espaciado pequeño |
+| md | `1rem` (16px) | Espaciado estándar |
+| lg | `1.5rem` (24px) | Espaciado grande |
+| xl | `2rem` (32px) | Espaciado extra grande |
+| 2xl | `3rem` (48px) | Espaciado sección |
+
+### Padding de Componentes
+
+| Componente | Padding |
+|-----------|---------|
+| Botones (sm) | `0.375rem 0.75rem` |
+| Botones (md) | `0.5rem 1rem` |
+| Botones (lg) | `0.75rem 1.5rem` |
+| Cards | `1.5rem` (24px) |
+| Inputs | `0.5rem 0.75rem` |
+| Modales | `1.5rem` |
+
+---
+
+## 🧩 Componentes
+
+### Button
+
+**Variantes**:
+- `primary`: Acción principal (gradiente azul)
+- `secondary`: Acción secundaria (slate-800)
+- `danger`: Acción destructiva (gradiente rojo)
+- `ghost`: Acción sutil (transparente)
+- `success`: Acción de éxito (gradiente verde)
+
+**Tamaños**:
+- `sm`: `px-3 py-1.5 text-sm`
+- `md`: `px-4 py-2 text-base` (default)
+- `lg`: `px-6 py-3 text-lg`
+
+**Estados**:
+- Default: Color base
+- Hover: Color más oscuro + escala 1.02
+- Active: Escala 0.95
+- Disabled: Opacidad 50% + cursor not-allowed
+- Loading: Spinner + texto
+
+**Ejemplo**:
+```jsx
+<Button variant="primary" size="md" loading={isLoading}>
+  Guardar
+</Button>
+```
+
+### Input
+
+**Estados**:
+- Default: `bg-slate-800/50 border-slate-700`
+- Focus: `ring-2 ring-blue-500 border-blue-500`
+- Error: `border-red-500/50 text-red-300`
+- Disabled: `bg-slate-800/30 opacity-50`
+
+**Accesibilidad**:
+- `aria-invalid` en estado de error
+- `aria-describedby` apunta al mensaje de error
+- Label asociado con `htmlFor`
+
+### Card
+
+**Estructura**:
+- Header (opcional): Título y subtítulo
+- Body: Contenido principal
+- Footer (opcional): Acciones o información adicional
+
+**Estilos**:
+- Background: `bg-gradient-to-br from-slate-900/50 to-slate-950/50`
+- Border: `border border-slate-800`
+- Hover: `hover:border-slate-700`
+
+### Modal
+
+**Tamaños**:
+- `sm`: `max-w-md`
+- `md`: `max-w-lg` (default)
+- `lg`: `max-w-2xl`
+- `xl`: `max-w-4xl`
+- `full`: `max-w-full mx-4`
+
+**Características**:
+- Backdrop blur
+- Focus trap
+- Cierre con ESC
+- Cierre con click fuera (opcional)
+
+### LoadingSpinner
+
+**Tamaños**:
+- `sm`: `w-4 h-4`
+- `md`: `w-8 h-8` (default)
+- `lg`: `w-12 h-12`
+- `xl`: `w-16 h-16`
+
+**Modos**:
+- Inline: Spinner simple
+- FullScreen: Overlay completo con mensaje
+
+### Toast
+
+**Tipos**:
+- `success`: Verde
+- `error`: Rojo
+- `warning`: Amarillo
+- `info`: Azul
+
+**Duración**:
+- Default: 5000ms
+- Error: 7000ms (más tiempo para leer)
+
+---
+
+## 🎯 Accesibilidad
+
+### Principios
+
+1. **Contraste**: Mínimo 4.5:1 para texto normal, 3:1 para texto grande
+2. **Navegación por teclado**: Todos los componentes interactivos son accesibles
+3. **ARIA**: Atributos apropiados en todos los componentes
+4. **Focus visible**: Indicadores claros de foco
+
+### Atributos ARIA Comunes
+
+```jsx
+// Botones
+<button aria-label="Descripción de la acción">
+
+// Formularios
+<input aria-invalid={hasError} aria-describedby="error-id">
+
+// Modales
+<div role="dialog" aria-modal="true" aria-labelledby="modal-title">
+
+// Estados de carga
+<div role="status" aria-label="Cargando...">
+
+// Alertas
+<div role="alert" aria-live="assertive">
+```
+
+### Navegación por Teclado
+
+| Acción | Tecla |
+|--------|-------|
+| Navegar hacia abajo | `ArrowDown` |
+| Navegar hacia arriba | `ArrowUp` |
+| Navegar hacia la derecha | `ArrowRight` |
+| Navegar hacia la izquierda | `ArrowLeft` |
+| Seleccionar | `Enter` o `Space` |
+| Cerrar modal | `Escape` |
+| Abrir detalles | `Ctrl/Cmd + D` |
+
+---
+
+## 🎭 Animaciones
+
+### Transiciones
+
+**Duración estándar**: `200ms`
+
+**Easing**:
+- Default: `ease-in-out`
+- Hover: `ease-out`
+- Active: `ease-in`
+
+### Micro-interacciones
+
+1. **Hover**: Escala 1.02, cambio de color
+2. **Active**: Escala 0.95
+3. **Loading**: Spinner rotativo
+4. **Toast**: Slide in desde la derecha
+
+### Animaciones Prohibidas
+
+- ❌ Animaciones que causan movimiento excesivo
+- ❌ Parpadeos rápidos (pueden causar convulsiones)
+- ❌ Animaciones que bloquean la interacción
+
+---
+
+## 📱 Responsive Design
+
+### Breakpoints
+
+| Nombre | Tamaño | Uso |
+|--------|--------|-----|
+| sm | `640px` | Móvil grande |
+| md | `768px` | Tablet |
+| lg | `1024px` | Desktop |
+| xl | `1280px` | Desktop grande |
+| 2xl | `1536px` | Pantalla extra grande |
+
+### Estrategia Mobile-First
+
+Todos los estilos se escriben primero para móvil y luego se ajustan con breakpoints:
+
+```css
+/* Móvil (default) */
+.component {
+  padding: 1rem;
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .component {
+    padding: 2rem;
+  }
 }
 ```
 
-### 3.2 Ejemplos de Uso
-```html
-<!-- Botón Primario -->
-<button class="bg-primary-500 hover:bg-primary-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
-  Iniciar Prueba Gratuita
-</button>
+---
 
-<!-- Botón de Acento -->
-<button class="bg-accent-600 hover:bg-accent-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
-  Ver Precios
-</button>
+## 🚫 Anti-Patrones
 
-<!-- Sección Hero con degradado -->
-<section class="bg-gradient-primary text-white">
-  <h1 class="font-heading text-5xl md:text-6xl font-bold tracking-tight">Automatice las conversaciones de ventas y soporte</h1>
-</section>
+### ❌ No Hacer
 
-<!-- Tarjeta con fondo secundario -->
-<div class="bg-secondary-50 dark:bg-secondary-900 p-6 rounded-xl">
-  <h3 class="font-heading text-2xl font-semibold text-secondary-800 dark:text-secondary-100">Intención Predictiva del Cliente</h3>
-</div>
+1. **Mezclar temas**: No usar tema claro y oscuro en el mismo componente
+2. **Colores hardcodeados**: Usar siempre las variables del sistema
+3. **Espaciado inconsistente**: No usar valores arbitrarios
+4. **Sin estados de carga**: Siempre mostrar feedback durante operaciones
+5. **Sin manejo de errores**: Todos los errores deben tener UI apropiada
+6. **Ignorar accesibilidad**: Todos los componentes deben ser accesibles
+
+### ✅ Mejores Prácticas
+
+1. **Reutilizar componentes**: Usar componentes del sistema antes de crear nuevos
+2. **Documentar variantes**: Si un componente tiene variantes, documentarlas
+3. **Probar accesibilidad**: Verificar con herramientas (Lighthouse, axe)
+4. **Mantener consistencia**: Seguir este sistema de diseño estrictamente
+
+---
+
+## 🔧 Implementación Técnica
+
+### Tailwind Config
+
+```js
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        // Usar colores del sistema
+      },
+      spacing: {
+        // Sistema de 4px
+      }
+    }
+  }
+}
 ```
 
-## 4. Microinteracciones y Estados Hover
+### Componentes Base
 
-### 4.1 Estados Hover de Botones
-- **Botón Primario:** `transition-all duration-200 hover:scale-[1.02] hover:shadow-lg`
-- **Botón Secundario:** `transition-all duration-200 hover:scale-[1.02] hover:shadow-md`
-- **Botón de Esquema:** `transition-all duration-200 hover:scale-[1.01] hover:shadow-sm`
-- **Botón Fantasma:** `transition-colors duration-200 hover:bg-secondary-100 dark:hover:bg-secondary-800`
+Todos los componentes base están en:
+- `client/src/components/atoms/` - Componentes atómicos
+- `client/src/components/ui/` - Componentes de UI reutilizables
 
-### 4.2 Estados Hover de Tarjetas
-Las tarjetas deben tener un levantamiento sutil y un aumento de sombra al pasar el ratón para indicar interactividad.
+---
 
-```html
-<div class="bg-white dark:bg-secondary-900 rounded-xl p-6 shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
-  <!-- contenido de la tarjeta -->
-</div>
-```
+## 📚 Recursos
 
-**Clases Tailwind:** `transition-all duration-300 hover:scale-[1.02] hover:shadow-xl`
+- [Tailwind CSS Docs](https://tailwindcss.com/docs)
+- [WCAG Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
+- [ARIA Patterns](https://www.w3.org/WAI/ARIA/apg/)
 
-### 4.3 Estados Hover de Enlaces de Navegación
-Los enlaces de navegación deben tener un subrayado sutil y un cambio de color.
+---
 
-```html
-<a class="text-secondary-700 dark:text-secondary-300 hover:text-primary-500 dark:hover:text-primary-400 transition-colors duration-200 border-b-2 border-transparent hover:border-primary-500">
-  Enlace
-</a>
-```
-
-**Clases Tailwind:** `transition-colors duration-200 hover:text-primary-500 dark:hover:text-primary-400 hover:border-primary-500`
-
-## 5. Justificaciones Estratégicas Resumen
-
-- **Psicología del Color:** Azul (confianza) + Verde (crecimiento) = una paleta que tranquiliza al tiempo que promete una mejora comercial.
-- **Tipografía:** Inter y las fuentes del sistema equilibran el rendimiento con una estética moderna y profesional.
-- **Modo Oscuro:** Los tokens asignados garantizan la legibilidad y reducen la fatiga visual para un uso prolongado.
-- **Cumplimiento de WCAG:** Todos los contrastes cumplen con los estándares AA, lo que hace que la página de destino sea accesible para un público más amplio.
-- **Integración de Tailwind:** Los colores y fuentes tokenizados permiten un desarrollo rápido y coherente en todo el proyecto.
-- **Microinteracciones:** Las animaciones sutiles y los efectos de desplazamiento mejoran la calidad percibida y la participación del usuario, haciendo que la interfaz sea dinámica y receptiva.
+**Mantenedor**: Equipo de Desarrollo BotInteligente
+**Revisión**: Trimestral
