@@ -7,6 +7,12 @@ node_modules/
 .env.production
 .kilocode
 .idx
+.cursor
+.cursorrules
+.github
+.vscode
+.wwebjs_auth
+.wwebjs_cache
 
 # Database files
 data/

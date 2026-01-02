@@ -1,0 +1,211 @@
+/**
+ * Product Extraction Service
+ * Extracts products and services mentioned in conversations
+ * 
+ * Phase 1: Core Analysis Engine
+ */
+
+// Product category patterns
+const PRODUCT_CATEGORIES = {
+    digital: {
+        keywords: ['software', 'app', 'aplicacion', 'sistema', 'plataforma', 'saas',
+                   'curso', 'curso online', 'capacitacion', 'training', 'certificacion',
+                   'digital', 'online', 'web', 'cloud'],
+        patterns: [/\b(app|saas|software)\b/gi]
+    },
+    physical: {
+        keywords: ['producto', 'mercancia', 'inventario', 'stock', 'articulo',
+                   'pieza', 'unidad', 'item', 'goods', 'merchandise'],
+        patterns: [/\b(producto|articulo|pieza)\b/gi]
+    },
+    services: {
+        keywords: ['servicio', 'consultoria', 'asesoria', 'implementacion',
+                   'mantenimiento', 'soporte tecnico', 'outsourcing', 'outsource',
+                   'installation', 'setup', 'configuration'],
+        patterns: [/\b(servicio|consultoria|asesoria)\b/gi]
+    },
+    subscription: {
+        keywords: ['planes', 'paquetes', 'membresia', 'suscripcion', 'plan',
+                   'package', 'subscription', 'membership', 'premium'],
+        patterns: [/\b(plan|paquete|suscripcion)\b/gi]
+    }
+};
+
+// Price-related patterns
+const PRICE_PATTERNS = [
+    /precio[s]?\s*(de|del|para)?\s*(\w+)?/gi,
+    /cuanto[s]?\s*(cuesta|vales?|es)?/gi,
+    /costo[s]?\s*(de|del)?/gi,
+    /\$\s*[\d,]+(?:\.\d{2})?/g,
+    /[\d,]+(?:\.\d{2})?\s*(pesos?|mxn|usd|dollars?|eur|€)/gi
+];
+
+/**
+ * Extracts products and services from conversation data
+ * @param {Object} conversationData - Aggregated conversation data
+ * @returns {Object} Extraction result with products, services, and price inquiries
+ */
+export function extractProducts(conversationData) {
+    const { allText } = conversationData;
+    const lowerText = allText.toLowerCase();
+    
+    const products = [];
+    const services = [];
+    const priceInquiries = [];
+    const categories = {};
+    
+    // Extract by category
+    for (const [category, config] of Object.entries(PRODUCT_CATEGORIES)) {
+        const items = [];
+        
+        for (const keyword of config.keywords) {
+            const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+            const matches = lowerText.match(regex);
+            if (matches) {
+                items.push({
+                    name: keyword,
+                    mentionCount: matches.length,
+                    category: category,
+                    context: extractContext(allText, keyword)
+                });
+            }
+        }
+        
+        categories[category] = items;
+        
+        // Categorize as product or service
+        if (['services', 'subscription'].includes(category)) {
+            services.push(...items);
+        } else {
+            products.push(...items);
+        }
+    }
+    
+    // Extract price inquiries
+    for (const pattern of PRICE_PATTERNS) {
+        const matches = allText.match(pattern);
+        if (matches) {
+            for (const match of matches) {
+                priceInquiries.push({
+                    text: match.trim(),
+                    type: detectPriceType(match)
+                });
+            }
+        }
+    }
+    
+    // Deduplicate and rank
+    const rankAndDedup = (items) => {
+        const grouped = {};
+        for (const item of items) {
+            const key = item.name.toLowerCase();
+            if (!grouped[key]) {
+                grouped[key] = { ...item, name: item.name };
+            } else {
+                grouped[key].mentionCount += item.mentionCount;
+            }
+        }
+        return Object.values(grouped)
+            .sort((a, b) => b.mentionCount - a.mentionCount)
+            .slice(0, 10);
+    };
+    
+    // Detect product mentions from context
+    const contextProducts = detectProductsFromContext(allText);
+    
+    return {
+        products: [...rankAndDedup(products), ...contextProducts.filter(p => !rankAndDedup(products).find(rp => rp.name === p.name))].slice(0, 10),
+        services: rankAndDedup(services),
+        priceInquiries: [...new Set(priceInquiries.map(p => p.text))].slice(0, 5),
+        categories,
+        rawText: allText.substring(0, 500) // For debugging
+    };
+}
+
+/**
+ * Extracts context around a keyword
+ */
+function extractContext(text, keyword, windowSize = 50) {
+    const regex = new RegExp(`.{0,${windowSize}}\\b${keyword}\\b.{0,${windowSize}}`, 'gi');
+    const match = regex.exec(text);
+    return match ? '...' + match[0].trim() + '...' : null;
+}
+
+/**
+ * Detects the type of price mention
+ */
+function detectPriceType(text) {
+    const lower = text.toLowerCase();
+    if (lower.includes('precio') || lower.includes('price')) return 'price_inquiry';
+    if (lower.includes('costo') || lower.includes('cost')) return 'cost_inquiry';
+    if (/\$|mxn|usd|eur|€/.test(text)) return 'specific_amount';
+    return 'general_inquiry';
+}
+
+/**
+ * Detects products mentioned in conversational context
+ */
+function detectProductsFromContext(text) {
+    const patterns = [
+        { regex: /(?:el|la|los|las|un|una)\s+(\w+)/gi, type: 'article_noun' },
+        { regex: /habl[oa]s?\s+de\s+(\w+)/gi, type: 'topic_reference' },
+        { regex: /interesad[oa]\s+en\s+(\w+)/gi, type: 'interest_reference' }
+    ];
+    
+    const detected = [];
+    
+    for (const pattern of patterns) {
+        const matches = text.match(pattern.regex);
+        if (matches) {
+            for (const match of matches) {
+                const words = match.split(/\s+/);
+                const noun = words[words.length - 1];
+                if (noun && noun.length > 3) {
+                    detected.push({
+                        name: noun,
+                        mentionCount: 1,
+                        type: pattern.type,
+                        context: match
+                    });
+                }
+            }
+        }
+    }
+    
+    return detected;
+}
+
+/**
+ * Categorize extracted items by confidence
+ */
+export function categorizeByConfidence(extractionResult) {
+    const { products, services, priceInquiries } = extractionResult;
+    
+    const highConfidence = [];
+    const mediumConfidence = [];
+    const lowConfidence = [];
+    
+    const allItems = [
+        ...products.map(p => ({ ...p, category: 'product' })),
+        ...services.map(s => ({ ...s, category: 'service' }))
+    ];
+    
+    for (const item of allItems) {
+        if (item.mentionCount >= 3) {
+            highConfidence.push(item);
+        } else if (item.mentionCount >= 2) {
+            mediumConfidence.push(item);
+        } else {
+            lowConfidence.push(item);
+        }
+    }
+    
+    return {
+        highConfidence,
+        mediumConfidence,
+        lowConfidence,
+        priceInquiries
+    };
+}
+
+export default { extractProducts, categorizeByConfidence };
